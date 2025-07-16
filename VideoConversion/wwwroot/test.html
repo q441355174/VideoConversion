@@ -1,0 +1,183 @@
+<!DOCTYPE html >
+<meta charset="utf-8"></meta>
+<html>
+<head>
+    <title>API测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 5px; }
+        #results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>VideoConversion API 测试页面</h1>
+    
+    <div class="test-section">
+        <h3>1. 基础连接测试</h3>
+        <button onclick="testHealth()">测试健康检查</button>
+        <button onclick="testRecent()">测试最近任务</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. SignalR连接测试</h3>
+        <button onclick="testSignalR()">测试SignalR连接</button>
+        <button onclick="disconnectSignalR()">断开SignalR</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 文件上传测试</h3>
+        <input type="file" id="testFile" accept="video/*,.mkv,.mp4,.avi,.mov,.wmv,.flv,.webm,.m4v,.3gp">
+        <button onclick="testUpload()">测试文件上传</button>
+        <button onclick="testFileValidation()">测试文件验证</button>
+        <div id="fileInfo"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script src="/lib/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        let connection = null;
+        const results = document.getElementById('results');
+        
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = isError ? 'error' : 'success';
+            div.innerHTML = new Date().toLocaleTimeString() + ': ' + message;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function testHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                log('✅ 健康检查成功: ' + JSON.stringify(data));
+            } catch (error) {
+                log('❌ 健康检查失败: ' + error.message, true);
+            }
+        }
+        
+        async function testRecent() {
+            try {
+                const response = await fetch('/api/conversion/recent');
+                const data = await response.json();
+                log('✅ 最近任务API成功: ' + JSON.stringify(data));
+            } catch (error) {
+                log('❌ 最近任务API失败: ' + error.message, true);
+            }
+        }
+        
+        async function testSignalR() {
+            try {
+                if (connection) {
+                    await connection.stop();
+                }
+                
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/conversionHub")
+                    .build();
+                
+                connection.onclose(function (error) {
+                    log('SignalR连接关闭: ' + (error || '正常关闭'));
+                });
+                
+                await connection.start();
+                log('✅ SignalR连接成功');
+            } catch (error) {
+                log('❌ SignalR连接失败: ' + error.message, true);
+            }
+        }
+        
+        async function disconnectSignalR() {
+            if (connection) {
+                await connection.stop();
+                log('SignalR连接已断开');
+            }
+        }
+        
+        function testFileValidation() {
+            const fileInput = document.getElementById('testFile');
+            const fileInfo = document.getElementById('fileInfo');
+
+            if (!fileInput.files[0]) {
+                log('❌ 请先选择一个文件', true);
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+            const fileExt = file.name.split('.').pop().toLowerCase();
+
+            fileInfo.innerHTML = `
+                <strong>文件信息:</strong><br>
+                名称: ${file.name}<br>
+                大小: ${fileSize} MB<br>
+                类型: ${file.type}<br>
+                扩展名: .${fileExt}<br>
+            `;
+
+            log(`📁 文件信息: ${file.name} (${fileSize}MB, .${fileExt})`);
+
+            // 检查文件扩展名
+            const supportedExts = ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.3gp'];
+            if (supportedExts.includes('.' + fileExt)) {
+                log('✅ 文件格式支持: .' + fileExt);
+            } else {
+                log('❌ 文件格式不支持: .' + fileExt, true);
+            }
+
+            // 检查文件大小 (2GB限制)
+            if (file.size <= 2147483648) {
+                log('✅ 文件大小符合要求: ' + fileSize + 'MB');
+            } else {
+                log('❌ 文件大小超过限制: ' + fileSize + 'MB (最大2048MB)', true);
+            }
+        }
+
+        async function testUpload() {
+            const fileInput = document.getElementById('testFile');
+            if (!fileInput.files[0]) {
+                log('❌ 请先选择一个文件', true);
+                return;
+            }
+
+            const file = fileInput.files[0];
+
+            try {
+                const formData = new FormData();
+                formData.append('VideoFile', file);
+                formData.append('TaskName', 'Test Upload - ' + file.name);
+                formData.append('Preset', 'Fast 1080p30');
+
+                log('开始上传文件: ' + file.name + ' (' + (file.size / (1024 * 1024)).toFixed(2) + 'MB)');
+
+                const response = await fetch('/api/conversion/start', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    log('✅ 文件上传成功: ' + JSON.stringify(result));
+                } else {
+                    log('❌ 文件上传失败 (' + response.status + '): ' + JSON.stringify(result), true);
+                }
+            } catch (error) {
+                log('❌ 文件上传错误: ' + error.message, true);
+                log('错误详情: ' + error.toString(), true);
+            }
+        }
+        
+        // 页面加载时自动测试基础连接
+        window.onload = function() {
+            log('页面加载完成，开始自动测试...');
+            testHealth();
+            setTimeout(testSignalR, 1000);
+        };
+    </script>
+</body>
+</html>

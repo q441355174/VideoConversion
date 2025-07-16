@@ -157,7 +157,7 @@ namespace VideoConversion.Services
 
                     var duration = DateTime.Now - startTime;
                     _logger.LogInformation("视频转换完成: {TaskId}", task.Id);
-                    _loggingService.LogConversionCompleted(task.Id, task.TaskName, duration, task.OutputFileSize ?? 0);
+                    _loggingService.LogConversionCompleted(task.Id, task.TaskName, duration, task.OutputFileSize);
                 }
                 else
                 {
@@ -211,14 +211,14 @@ namespace VideoConversion.Services
             var isAudioOnly = IsAudioOnlyFormat(task.OutputFormat);
 
             // 时间范围设置
-            if (!string.IsNullOrEmpty(task.StartTime))
+            if (task.StartTime.HasValue && task.StartTime.Value > 0)
             {
-                parameters.Add($"-ss {task.StartTime}");
+                parameters.Add($"-ss {task.StartTime.Value}");
             }
 
-            if (!string.IsNullOrEmpty(task.DurationLimit))
+            if (task.DurationLimit.HasValue && task.DurationLimit.Value > 0)
             {
-                parameters.Add($"-t {task.DurationLimit}");
+                parameters.Add($"-t {task.DurationLimit.Value}");
             }
 
             // 视频设置（非纯音频格式）
@@ -311,9 +311,9 @@ namespace VideoConversion.Services
             }
 
             // 去隔行扫描
-            if (!string.IsNullOrEmpty(task.Deinterlace))
+            if (task.Deinterlace)
             {
-                parameters.Add($"-vf {task.Deinterlace}");
+                parameters.Add("-vf yadif");
             }
 
             // 降噪
@@ -378,9 +378,9 @@ namespace VideoConversion.Services
             }
 
             // 音量调整
-            if (task.AudioVolume.HasValue && task.AudioVolume != 100)
+            if (!string.IsNullOrEmpty(task.AudioVolume) && int.TryParse(task.AudioVolume, out var volume) && volume != 100)
             {
-                var volumeFilter = $"volume={task.AudioVolume.Value / 100.0:F2}";
+                var volumeFilter = $"volume={volume / 100.0:F2}";
                 var existingAf = parameters.FirstOrDefault(p => p.StartsWith("-af"));
                 if (existingAf != null)
                 {

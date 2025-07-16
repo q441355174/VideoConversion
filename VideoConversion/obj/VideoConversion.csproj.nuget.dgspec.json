@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "E:\\newcode\\VideoConversion\\VideoConversion.csproj": {}
+    "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj": {}
   },
   "projects": {
-    "E:\\newcode\\VideoConversion\\VideoConversion.csproj": {
+    "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\newcode\\VideoConversion\\VideoConversion.csproj",
+        "projectUniqueName": "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj",
         "projectName": "VideoConversion",
-        "projectPath": "E:\\newcode\\VideoConversion\\VideoConversion.csproj",
+        "projectPath": "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj",
         "packagesPath": "C:\\Users\\administer\\.nuget\\packages\\",
-        "outputPath": "E:\\newcode\\VideoConversion\\obj\\",
+        "outputPath": "E:\\newcode\\VideoConversion\\VideoConversion\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -65,6 +65,10 @@
             "SQLite": {
               "target": "Package",
               "version": "[3.13.0, )"
+            },
+            "Serilog.AspNetCore": {
+              "target": "Package",
+              "version": "[9.0.0, )"
             },
             "SqlSugarCore": {
               "target": "Package",

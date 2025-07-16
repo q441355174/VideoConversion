@@ -150,7 +150,7 @@ namespace VideoConversion.Controllers
                     successRate = todayTasks.Count > 0 ? 
                         (double)todayTasks.Count(t => t.Status == ConversionStatus.Completed) / todayTasks.Count * 100 : 0,
                     totalInputSize = todayTasks.Sum(t => t.OriginalFileSize),
-                    totalOutputSize = todayTasks.Where(t => t.OutputFileSize.HasValue).Sum(t => t.OutputFileSize!.Value),
+                    totalOutputSize = todayTasks.Where(t => t.OutputFileSize > 0).Sum(t => t.OutputFileSize),
                     averageProcessingTime = todayTasks
                         .Where(t => t.StartedAt.HasValue && t.CompletedAt.HasValue)
                         .Select(t => (t.CompletedAt!.Value - t.StartedAt!.Value).TotalMinutes)

@@ -56,13 +56,24 @@ namespace VideoConversion.Services
         {
             try
             {
+                _logger.LogInformation("📝 开始插入任务到数据库");
+                _logger.LogInformation("任务ID: {TaskId}", task.Id);
+                _logger.LogInformation("任务名称: {TaskName}", task.TaskName);
+                _logger.LogInformation("原始文件: {OriginalFileName}", task.OriginalFileName);
+                _logger.LogInformation("输出格式: {OutputFormat}", task.OutputFormat);
+
+                var startTime = DateTime.Now;
                 await _db.Insertable(task).ExecuteCommandAsync();
-                _logger.LogInformation("创建转换任务: {TaskId}", task.Id);
+                var duration = DateTime.Now - startTime;
+
+                _logger.LogInformation("✅ 数据库插入成功: {TaskId} (耗时: {Duration}ms)", task.Id, duration.TotalMilliseconds);
                 return task;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "创建转换任务失败: {TaskId}", task.Id);
+                _logger.LogError(ex, "❌ 数据库插入失败: {TaskId}", task.Id);
+                _logger.LogError("错误详情: {ErrorMessage}", ex.Message);
+                _logger.LogError("SQL错误: {SqlError}", ex.InnerException?.Message);
                 throw;
             }
         }

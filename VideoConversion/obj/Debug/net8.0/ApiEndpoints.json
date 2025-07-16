@@ -113,13 +113,143 @@
         "IsRequired": false
       },
       {
+        "Name": "CustomWidth",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "CustomHeight",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "AspectRatio",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "VideoCodec",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "FrameRate",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "QualityMode",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
         "Name": "VideoQuality",
         "Type": "System.String",
         "IsRequired": false
       },
       {
-        "Name": "AudioQuality",
+        "Name": "VideoBitrate",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "EncodingPreset",
         "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Profile",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioCodec",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioChannels",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioQualityMode",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioBitrate",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "CustomAudioBitrateValue",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioQualityValue",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "SampleRate",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioVolume",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "StartTime",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Duration",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Deinterlace",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Denoise",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "ColorSpace",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "PixelFormat",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "CustomParams",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "TwoPass",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "FastStart",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "CopyTimestamps",
+        "Type": "System.Boolean",
         "IsRequired": false
       }
     ],
