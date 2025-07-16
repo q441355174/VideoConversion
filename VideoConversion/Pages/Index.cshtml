@@ -1,0 +1,978 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "视频转换工具";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="text-center mb-4">
+                <h1 class="display-4">
+                    <i class="fas fa-video text-primary"></i>
+                    视频转换工具
+                </h1>
+                <p class="lead">基于HandBrake的强大视频转换功能，支持多种格式和预设选项</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 左侧：文件上传和设置 -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-upload"></i>
+                        文件上传和设置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="conversionForm" enctype="multipart/form-data">
+                        <!-- 文件选择 -->
+                        <div class="mb-3">
+                            <label for="videoFile" class="form-label">选择视频文件</label>
+                            <input type="file" class="form-control" id="videoFile" name="videoFile"
+                                   accept="@string.Join(",", Model.SupportedExtensions.Select(ext => ext))" required>
+                            <div class="form-text">
+                                支持格式: @string.Join(", ", Model.SupportedExtensions)
+                                <br>最大文件大小: @Model.MaxFileSizeFormatted
+                            </div>
+                        </div>
+
+                        <!-- 任务名称 -->
+                        <div class="mb-3">
+                            <label for="taskName" class="form-label">任务名称</label>
+                            <input type="text" class="form-control" id="taskName" name="taskName"
+                                   placeholder="可选，留空将使用文件名">
+                        </div>
+
+                        <!-- 转换预设 -->
+                        <div class="mb-3">
+                            <label for="preset" class="form-label">转换预设</label>
+                            <select class="form-select" id="preset" name="preset">
+                                @foreach (var preset in Model.ConversionPresets)
+                                {
+                                    <option value="@preset.Name" selected="@preset.IsDefault">
+                                        @preset.Name - @preset.Description
+                                    </option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- 详细转码设置 -->
+                        <div class="accordion mb-3" id="advancedSettings">
+                            <!-- 基本设置 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#basicPanel">
+                                        <i class="fas fa-cogs"></i>&nbsp;基本设置
+                                    </button>
+                                </h2>
+                                <div id="basicPanel" class="accordion-collapse collapse show">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="outputFormat" class="form-label">输出格式</label>
+                                                <select class="form-select" id="outputFormat" name="outputFormat">
+                                                    <option value="mp4">MP4 (H.264)</option>
+                                                    <option value="mp4_h265">MP4 (H.265/HEVC)</option>
+                                                    <option value="webm">WebM (VP9)</option>
+                                                    <option value="avi">AVI</option>
+                                                    <option value="mkv">MKV</option>
+                                                    <option value="mov">MOV</option>
+                                                    <option value="mp3">MP3 (仅音频)</option>
+                                                    <option value="aac">AAC (仅音频)</option>
+                                                    <option value="flac">FLAC (仅音频)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="resolution" class="form-label">分辨率</label>
+                                                <select class="form-select" id="resolution" name="resolution">
+                                                    <option value="">保持原始</option>
+                                                    <option value="3840x2160">4K (3840x2160)</option>
+                                                    <option value="2560x1440">2K (2560x1440)</option>
+                                                    <option value="1920x1080">1080p (1920x1080)</option>
+                                                    <option value="1280x720">720p (1280x720)</option>
+                                                    <option value="854x480">480p (854x480)</option>
+                                                    <option value="640x360">360p (640x360)</option>
+                                                    <option value="custom">自定义</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2" id="customResolution" style="display: none;">
+                                            <div class="col-md-3">
+                                                <label for="customWidth" class="form-label">宽度</label>
+                                                <input type="number" class="form-control" id="customWidth" placeholder="1920">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label for="customHeight" class="form-label">高度</label>
+                                                <input type="number" class="form-control" id="customHeight" placeholder="1080">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="aspectRatio" class="form-label">宽高比</label>
+                                                <select class="form-select" id="aspectRatio">
+                                                    <option value="">保持原始</option>
+                                                    <option value="16:9">16:9</option>
+                                                    <option value="4:3">4:3</option>
+                                                    <option value="1:1">1:1 (正方形)</option>
+                                                    <option value="21:9">21:9 (超宽屏)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 视频设置 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#videoPanel">
+                                        <i class="fas fa-video"></i>&nbsp;视频设置
+                                    </button>
+                                </h2>
+                                <div id="videoPanel" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="videoCodec" class="form-label">视频编解码器</label>
+                                                <select class="form-select" id="videoCodec" name="videoCodec">
+                                                    <option value="libx264">H.264 (x264)</option>
+                                                    <option value="libx265">H.265 (x265)</option>
+                                                    <option value="libvpx-vp9">VP9</option>
+                                                    <option value="libvpx">VP8</option>
+                                                    <option value="libaom-av1">AV1</option>
+                                                    <option value="mpeg4">MPEG-4</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="frameRate" class="form-label">帧率 (FPS)</label>
+                                                <select class="form-select" id="frameRate" name="frameRate">
+                                                    <option value="">保持原始</option>
+                                                    <option value="23.976">23.976 (电影)</option>
+                                                    <option value="24">24</option>
+                                                    <option value="25">25 (PAL)</option>
+                                                    <option value="29.97">29.97 (NTSC)</option>
+                                                    <option value="30">30</option>
+                                                    <option value="50">50</option>
+                                                    <option value="60">60</option>
+                                                    <option value="120">120</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">质量控制模式</label>
+                                                <div class="btn-group w-100" role="group">
+                                                    <input type="radio" class="btn-check" name="qualityMode" id="crfMode" value="crf" checked>
+                                                    <label class="btn btn-outline-primary" for="crfMode">CRF (质量)</label>
+
+                                                    <input type="radio" class="btn-check" name="qualityMode" id="bitrateMode" value="bitrate">
+                                                    <label class="btn btn-outline-primary" for="bitrateMode">比特率</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div id="crfSettings">
+                                                    <label for="videoQuality" class="form-label">CRF值</label>
+                                                    <input type="range" class="form-range" id="videoQuality"
+                                                           min="0" max="51" value="23">
+                                                    <div class="form-text">
+                                                        <span id="qualityValue">23</span> (0=无损, 18=高质量, 23=默认, 28=低质量)
+                                                    </div>
+                                                </div>
+                                                <div id="bitrateSettings" style="display: none;">
+                                                    <label for="videoBitrate" class="form-label">视频比特率 (kbps)</label>
+                                                    <input type="number" class="form-control" id="videoBitrate"
+                                                           placeholder="5000" min="100" max="50000">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label for="preset" class="form-label">编码预设 (速度vs质量)</label>
+                                                <select class="form-select" id="encodingPreset" name="encodingPreset">
+                                                    <option value="ultrafast">ultrafast (最快)</option>
+                                                    <option value="superfast">superfast</option>
+                                                    <option value="veryfast">veryfast</option>
+                                                    <option value="faster">faster</option>
+                                                    <option value="fast">fast</option>
+                                                    <option value="medium" selected>medium (平衡)</option>
+                                                    <option value="slow">slow</option>
+                                                    <option value="slower">slower</option>
+                                                    <option value="veryslow">veryslow (最慢/最高质量)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="profile" class="form-label">H.264配置文件</label>
+                                                <select class="form-select" id="profile" name="profile">
+                                                    <option value="">自动</option>
+                                                    <option value="baseline">Baseline</option>
+                                                    <option value="main">Main</option>
+                                                    <option value="high">High</option>
+                                                    <option value="high10">High 10</option>
+                                                    <option value="high422">High 4:2:2</option>
+                                                    <option value="high444">High 4:4:4</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 音频设置 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#audioPanel">
+                                        <i class="fas fa-volume-up"></i>&nbsp;音频设置
+                                    </button>
+                                </h2>
+                                <div id="audioPanel" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="audioCodec" class="form-label">音频编解码器</label>
+                                                <select class="form-select" id="audioCodec" name="audioCodec">
+                                                    <option value="aac">AAC</option>
+                                                    <option value="libmp3lame">MP3</option>
+                                                    <option value="libvorbis">Vorbis</option>
+                                                    <option value="libopus">Opus</option>
+                                                    <option value="flac">FLAC (无损)</option>
+                                                    <option value="pcm_s16le">PCM (无压缩)</option>
+                                                    <option value="ac3">AC-3</option>
+                                                    <option value="eac3">E-AC-3</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="audioChannels" class="form-label">声道数</label>
+                                                <select class="form-select" id="audioChannels" name="audioChannels">
+                                                    <option value="">保持原始</option>
+                                                    <option value="1">单声道 (1.0)</option>
+                                                    <option value="2">立体声 (2.0)</option>
+                                                    <option value="6">5.1环绕声</option>
+                                                    <option value="8">7.1环绕声</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">音频质量模式</label>
+                                                <div class="btn-group w-100" role="group">
+                                                    <input type="radio" class="btn-check" name="audioQualityMode" id="audioBitrateMode" value="bitrate" checked>
+                                                    <label class="btn btn-outline-success" for="audioBitrateMode">比特率</label>
+
+                                                    <input type="radio" class="btn-check" name="audioQualityMode" id="audioQualityMode" value="quality">
+                                                    <label class="btn btn-outline-success" for="audioQualityMode">质量</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div id="audioBitrateSettings">
+                                                    <label for="audioBitrate" class="form-label">音频比特率</label>
+                                                    <select class="form-select" id="audioBitrate" name="audioBitrate">
+                                                        <option value="64k">64 kbps</option>
+                                                        <option value="96k">96 kbps</option>
+                                                        <option value="128k" selected>128 kbps</option>
+                                                        <option value="160k">160 kbps</option>
+                                                        <option value="192k">192 kbps</option>
+                                                        <option value="256k">256 kbps</option>
+                                                        <option value="320k">320 kbps</option>
+                                                        <option value="custom">自定义</option>
+                                                    </select>
+                                                </div>
+                                                <div id="audioQualitySettings" style="display: none;">
+                                                    <label for="audioQualityValue" class="form-label">音频质量</label>
+                                                    <input type="range" class="form-range" id="audioQualityValue"
+                                                           min="0" max="9" value="2">
+                                                    <div class="form-text">
+                                                        <span id="audioQualityDisplay">2</span> (0=最高质量, 9=最低质量)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3" id="customAudioBitrate" style="display: none;">
+                                            <div class="col-md-6">
+                                                <label for="customAudioBitrateValue" class="form-label">自定义比特率 (kbps)</label>
+                                                <input type="number" class="form-control" id="customAudioBitrateValue"
+                                                       placeholder="128" min="8" max="1411">
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label for="sampleRate" class="form-label">采样率</label>
+                                                <select class="form-select" id="sampleRate" name="sampleRate">
+                                                    <option value="">保持原始</option>
+                                                    <option value="8000">8 kHz</option>
+                                                    <option value="11025">11.025 kHz</option>
+                                                    <option value="16000">16 kHz</option>
+                                                    <option value="22050">22.05 kHz</option>
+                                                    <option value="32000">32 kHz</option>
+                                                    <option value="44100">44.1 kHz (CD质量)</option>
+                                                    <option value="48000">48 kHz (DVD质量)</option>
+                                                    <option value="96000">96 kHz (高清)</option>
+                                                    <option value="192000">192 kHz (超高清)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="audioVolume" class="form-label">音量调整</label>
+                                                <input type="range" class="form-range" id="audioVolume"
+                                                       min="0" max="200" value="100">
+                                                <div class="form-text">
+                                                    <span id="volumeValue">100</span>% (100%=原始音量)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 高级选项 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#advancedPanel">
+                                        <i class="fas fa-tools"></i>&nbsp;高级选项
+                                    </button>
+                                </h2>
+                                <div id="advancedPanel" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label for="startTime" class="form-label">开始时间 (HH:MM:SS)</label>
+                                                <input type="text" class="form-control" id="startTime" name="startTime"
+                                                       placeholder="00:00:00" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+                                                <div class="form-text">留空表示从头开始</div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="duration" class="form-label">持续时间 (HH:MM:SS)</label>
+                                                <input type="text" class="form-control" id="duration" name="duration"
+                                                       placeholder="00:00:00" pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}">
+                                                <div class="form-text">留空表示到结尾</div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label for="deinterlace" class="form-label">去隔行扫描</label>
+                                                <select class="form-select" id="deinterlace" name="deinterlace">
+                                                    <option value="">不处理</option>
+                                                    <option value="yadif">YADIF (推荐)</option>
+                                                    <option value="bwdif">BWDIF</option>
+                                                    <option value="w3fdif">W3FDIF</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="denoise" class="form-label">降噪</label>
+                                                <select class="form-select" id="denoise" name="denoise">
+                                                    <option value="">不处理</option>
+                                                    <option value="nlmeans">NLMeans (高质量)</option>
+                                                    <option value="hqdn3d">HQDN3D (快速)</option>
+                                                    <option value="bm3d">BM3D (最佳)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <label for="colorSpace" class="form-label">色彩空间</label>
+                                                <select class="form-select" id="colorSpace" name="colorSpace">
+                                                    <option value="">保持原始</option>
+                                                    <option value="bt709">BT.709 (HD)</option>
+                                                    <option value="bt2020">BT.2020 (4K HDR)</option>
+                                                    <option value="smpte170m">SMPTE-170M (NTSC)</option>
+                                                    <option value="bt470bg">BT.470BG (PAL)</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="pixelFormat" class="form-label">像素格式</label>
+                                                <select class="form-select" id="pixelFormat" name="pixelFormat">
+                                                    <option value="">自动</option>
+                                                    <option value="yuv420p">YUV420P (标准)</option>
+                                                    <option value="yuv422p">YUV422P</option>
+                                                    <option value="yuv444p">YUV444P (高质量)</option>
+                                                    <option value="yuv420p10le">YUV420P10LE (10-bit)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <label for="customParams" class="form-label">自定义FFmpeg参数</label>
+                                                <textarea class="form-control" id="customParams" name="customParams"
+                                                          rows="2" placeholder="例如: -tune film -x264opts keyint=250"></textarea>
+                                                <div class="form-text">
+                                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                    高级用户选项，错误的参数可能导致转换失败
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="twoPass" name="twoPass">
+                                                    <label class="form-check-label" for="twoPass">
+                                                        启用两遍编码 (更好的质量，但速度较慢)
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="fastStart" name="fastStart" checked>
+                                                    <label class="form-check-label" for="fastStart">
+                                                        快速启动 (优化网络播放)
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="copyTimestamps" name="copyTimestamps" checked>
+                                                    <label class="form-check-label" for="copyTimestamps">
+                                                        保持时间戳
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 提交按钮 -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="startConversion">
+                                <i class="fas fa-play"></i>
+                                开始转换
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：转换进度和状态 -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks"></i>
+                        转换进度
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- 当前任务进度 -->
+                    <div id="currentTask" style="display: none;">
+                        <h6>当前任务: <span id="currentTaskName"></span></h6>
+                        <div class="progress mb-2" style="height: 25px;">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar" style="width: 0%">
+                                0%
+                            </div>
+                        </div>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">速度</small><br>
+                                <span id="conversionSpeed">-</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">剩余时间</small><br>
+                                <span id="remainingTime">-</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">状态</small><br>
+                                <span id="taskStatus">等待中</span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-outline-danger btn-sm" id="cancelTask">
+                                <i class="fas fa-stop"></i> 取消转换
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 无任务时的提示 -->
+                    <div id="noTask" class="text-center text-muted">
+                        <i class="fas fa-info-circle fa-3x mb-3"></i>
+                        <p>请选择文件并开始转换</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近任务 -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-history"></i>
+                        最近任务
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="recentTasks">
+                        <div class="text-center text-muted">
+                            <small>暂无任务记录</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        // SignalR连接
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/conversionHub")
+            .build();
+
+        let currentTaskId = null;
+
+        // 启动SignalR连接
+        connection.start().then(function () {
+            console.log("SignalR连接成功");
+        }).catch(function (err) {
+            console.error("SignalR连接失败:", err);
+        });
+
+        // 监听进度更新
+        connection.on("ProgressUpdate", function (data) {
+            updateProgress(data);
+        });
+
+        // 监听状态更新
+        connection.on("StatusUpdate", function (data) {
+            updateTaskStatus(data);
+        });
+
+        // 监听任务完成
+        connection.on("TaskCompleted", function (data) {
+            handleTaskCompleted(data);
+        });
+
+        // 表单提交处理
+        document.getElementById('conversionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const startButton = document.getElementById('startConversion');
+
+            // 禁用按钮
+            startButton.disabled = true;
+            startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+
+            try {
+                const response = await fetch('/api/conversion/start', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentTaskId = result.taskId;
+                    showCurrentTask(result.taskName);
+
+                    // 加入任务组以接收进度更新
+                    await connection.invoke("JoinTaskGroup", currentTaskId);
+                } else {
+                    alert('转换启动失败: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('请求失败: ' + error.message);
+            } finally {
+                // 恢复按钮
+                startButton.disabled = false;
+                startButton.innerHTML = '<i class="fas fa-play"></i> 开始转换';
+            }
+        });
+
+        // 取消任务
+        document.getElementById('cancelTask').addEventListener('click', async function() {
+            if (currentTaskId && confirm('确定要取消当前转换任务吗？')) {
+                try {
+                    await connection.invoke("CancelTask", currentTaskId);
+                } catch (error) {
+                    console.error('取消任务失败:', error);
+                }
+            }
+        });
+
+        // 预设选择变化时更新高级设置
+        document.getElementById('preset').addEventListener('change', function() {
+            updateAdvancedSettings(this.value);
+        });
+
+        // 分辨率选择处理
+        document.getElementById('resolution').addEventListener('change', function() {
+            const customResolution = document.getElementById('customResolution');
+            if (this.value === 'custom') {
+                customResolution.style.display = 'block';
+            } else {
+                customResolution.style.display = 'none';
+            }
+        });
+
+        // 质量控制模式切换
+        document.querySelectorAll('input[name="qualityMode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const crfSettings = document.getElementById('crfSettings');
+                const bitrateSettings = document.getElementById('bitrateSettings');
+
+                if (this.value === 'crf') {
+                    crfSettings.style.display = 'block';
+                    bitrateSettings.style.display = 'none';
+                } else {
+                    crfSettings.style.display = 'none';
+                    bitrateSettings.style.display = 'block';
+                }
+            });
+        });
+
+        // 音频质量模式切换
+        document.querySelectorAll('input[name="audioQualityMode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const bitrateSettings = document.getElementById('audioBitrateSettings');
+                const qualitySettings = document.getElementById('audioQualitySettings');
+
+                if (this.value === 'bitrate') {
+                    bitrateSettings.style.display = 'block';
+                    qualitySettings.style.display = 'none';
+                } else {
+                    bitrateSettings.style.display = 'none';
+                    qualitySettings.style.display = 'block';
+                }
+            });
+        });
+
+        // 自定义音频比特率
+        document.getElementById('audioBitrate').addEventListener('change', function() {
+            const customBitrate = document.getElementById('customAudioBitrate');
+            if (this.value === 'custom') {
+                customBitrate.style.display = 'block';
+            } else {
+                customBitrate.style.display = 'none';
+            }
+        });
+
+        // 滑块值更新
+        document.getElementById('videoQuality').addEventListener('input', function() {
+            document.getElementById('qualityValue').textContent = this.value;
+        });
+
+        document.getElementById('audioQualityValue').addEventListener('input', function() {
+            document.getElementById('audioQualityDisplay').textContent = this.value;
+        });
+
+        document.getElementById('audioVolume').addEventListener('input', function() {
+            document.getElementById('volumeValue').textContent = this.value;
+        });
+
+        // 输出格式变化时更新相关设置
+        document.getElementById('outputFormat').addEventListener('change', function() {
+            updateCodecOptions(this.value);
+            toggleVideoSettings(this.value);
+        });
+
+        // 根据输出格式更新编解码器选项
+        function updateCodecOptions(format) {
+            const videoCodec = document.getElementById('videoCodec');
+            const audioCodec = document.getElementById('audioCodec');
+
+            // 清空现有选项
+            videoCodec.innerHTML = '';
+            audioCodec.innerHTML = '';
+
+            // 根据格式添加相应的编解码器选项
+            switch(format) {
+                case 'mp4':
+                case 'mp4_h265':
+                    videoCodec.innerHTML = `
+                        <option value="libx264">H.264 (x264)</option>
+                        <option value="libx265">H.265 (x265)</option>
+                        <option value="mpeg4">MPEG-4</option>
+                    `;
+                    audioCodec.innerHTML = `
+                        <option value="aac">AAC</option>
+                        <option value="libmp3lame">MP3</option>
+                        <option value="ac3">AC-3</option>
+                    `;
+                    break;
+                case 'webm':
+                    videoCodec.innerHTML = `
+                        <option value="libvpx-vp9">VP9</option>
+                        <option value="libvpx">VP8</option>
+                        <option value="libaom-av1">AV1</option>
+                    `;
+                    audioCodec.innerHTML = `
+                        <option value="libvorbis">Vorbis</option>
+                        <option value="libopus">Opus</option>
+                    `;
+                    break;
+                case 'avi':
+                    videoCodec.innerHTML = `
+                        <option value="libx264">H.264 (x264)</option>
+                        <option value="mpeg4">MPEG-4</option>
+                        <option value="libxvid">Xvid</option>
+                    `;
+                    audioCodec.innerHTML = `
+                        <option value="libmp3lame">MP3</option>
+                        <option value="aac">AAC</option>
+                        <option value="ac3">AC-3</option>
+                    `;
+                    break;
+                case 'mkv':
+                    videoCodec.innerHTML = `
+                        <option value="libx264">H.264 (x264)</option>
+                        <option value="libx265">H.265 (x265)</option>
+                        <option value="libvpx-vp9">VP9</option>
+                        <option value="libaom-av1">AV1</option>
+                    `;
+                    audioCodec.innerHTML = `
+                        <option value="aac">AAC</option>
+                        <option value="libvorbis">Vorbis</option>
+                        <option value="libopus">Opus</option>
+                        <option value="flac">FLAC</option>
+                    `;
+                    break;
+                case 'mov':
+                    videoCodec.innerHTML = `
+                        <option value="libx264">H.264 (x264)</option>
+                        <option value="libx265">H.265 (x265)</option>
+                        <option value="mpeg4">MPEG-4</option>
+                    `;
+                    audioCodec.innerHTML = `
+                        <option value="aac">AAC</option>
+                        <option value="libmp3lame">MP3</option>
+                        <option value="pcm_s16le">PCM</option>
+                    `;
+                    break;
+                default: // 音频格式
+                    videoCodec.innerHTML = '<option value="">无 (仅音频)</option>';
+                    if (format === 'mp3') {
+                        audioCodec.innerHTML = '<option value="libmp3lame">MP3</option>';
+                    } else if (format === 'aac') {
+                        audioCodec.innerHTML = '<option value="aac">AAC</option>';
+                    } else if (format === 'flac') {
+                        audioCodec.innerHTML = '<option value="flac">FLAC</option>';
+                    }
+                    break;
+            }
+        }
+
+        // 根据格式切换视频设置显示
+        function toggleVideoSettings(format) {
+            const videoPanel = document.getElementById('videoPanel');
+            const isAudioOnly = ['mp3', 'aac', 'flac'].includes(format);
+
+            if (isAudioOnly) {
+                videoPanel.style.opacity = '0.5';
+                videoPanel.style.pointerEvents = 'none';
+            } else {
+                videoPanel.style.opacity = '1';
+                videoPanel.style.pointerEvents = 'auto';
+            }
+        }
+
+        // 宽高比计算
+        document.getElementById('aspectRatio').addEventListener('change', function() {
+            const width = document.getElementById('customWidth');
+            const height = document.getElementById('customHeight');
+
+            if (this.value && width.value) {
+                const ratios = {
+                    '16:9': 16/9,
+                    '4:3': 4/3,
+                    '1:1': 1,
+                    '21:9': 21/9
+                };
+
+                if (ratios[this.value]) {
+                    height.value = Math.round(width.value / ratios[this.value]);
+                }
+            }
+        });
+
+        // 时间格式验证
+        function validateTimeFormat(input) {
+            const timePattern = /^([0-9]{2}):([0-9]{2}):([0-9]{2})$/;
+            return timePattern.test(input.value);
+        }
+
+        document.getElementById('startTime').addEventListener('blur', function() {
+            if (this.value && !validateTimeFormat(this)) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        document.getElementById('duration').addEventListener('blur', function() {
+            if (this.value && !validateTimeFormat(this)) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        // 初始化编解码器选项
+        updateCodecOptions(document.getElementById('outputFormat').value);
+
+        // 更新进度显示
+        function updateProgress(data) {
+            if (data.TaskId !== currentTaskId) return;
+
+            const progressBar = document.getElementById('progressBar');
+            const taskStatus = document.getElementById('taskStatus');
+            const conversionSpeed = document.getElementById('conversionSpeed');
+            const remainingTime = document.getElementById('remainingTime');
+
+            progressBar.style.width = data.Progress + '%';
+            progressBar.textContent = data.Progress + '%';
+            taskStatus.textContent = data.Message;
+
+            if (data.Speed) {
+                conversionSpeed.textContent = data.Speed.toFixed(2) + 'x';
+            }
+
+            if (data.RemainingSeconds) {
+                remainingTime.textContent = formatTime(data.RemainingSeconds);
+            }
+        }
+
+        // 更新任务状态
+        function updateTaskStatus(data) {
+            if (data.TaskId !== currentTaskId) return;
+
+            const taskStatus = document.getElementById('taskStatus');
+            taskStatus.textContent = data.Status;
+
+            if (data.ErrorMessage) {
+                taskStatus.textContent += ' - ' + data.ErrorMessage;
+                taskStatus.className = 'text-danger';
+            }
+        }
+
+        // 处理任务完成
+        function handleTaskCompleted(data) {
+            if (data.TaskId !== currentTaskId) return;
+
+            if (data.Success) {
+                const progressBar = document.getElementById('progressBar');
+                progressBar.className = 'progress-bar bg-success';
+                progressBar.style.width = '100%';
+                progressBar.textContent = '完成!';
+
+                document.getElementById('taskStatus').textContent = '转换完成';
+
+                // 显示下载按钮
+                showDownloadButton(data.TaskId);
+            } else {
+                const progressBar = document.getElementById('progressBar');
+                progressBar.className = 'progress-bar bg-danger';
+                document.getElementById('taskStatus').textContent = '转换失败: ' + data.ErrorMessage;
+            }
+
+            // 隐藏取消按钮
+            document.getElementById('cancelTask').style.display = 'none';
+
+            // 更新最近任务列表
+            loadRecentTasks();
+        }
+
+        // 显示当前任务
+        function showCurrentTask(taskName) {
+            document.getElementById('noTask').style.display = 'none';
+            document.getElementById('currentTask').style.display = 'block';
+            document.getElementById('currentTaskName').textContent = taskName;
+
+            // 重置进度条
+            const progressBar = document.getElementById('progressBar');
+            progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+
+            document.getElementById('taskStatus').textContent = '准备中...';
+            document.getElementById('conversionSpeed').textContent = '-';
+            document.getElementById('remainingTime').textContent = '-';
+            document.getElementById('cancelTask').style.display = 'inline-block';
+        }
+
+        // 显示下载按钮
+        function showDownloadButton(taskId) {
+            const cancelButton = document.getElementById('cancelTask');
+            cancelButton.outerHTML = `
+                <a href="/api/conversion/download/${taskId}" class="btn btn-success btn-sm">
+                    <i class="fas fa-download"></i> 下载文件
+                </a>
+            `;
+        }
+
+        // 格式化时间
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                return `${minutes}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // 更新高级设置
+        function updateAdvancedSettings(presetName) {
+            // 这里可以根据预设更新高级设置的默认值
+            // 实际实现中可以通过AJAX获取预设详情
+        }
+
+        // 加载最近任务
+        async function loadRecentTasks() {
+            try {
+                const response = await fetch('/api/conversion/recent');
+                const tasks = await response.json();
+
+                const container = document.getElementById('recentTasks');
+                if (tasks.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted"><small>暂无任务记录</small></div>';
+                    return;
+                }
+
+                let html = '';
+                tasks.forEach(task => {
+                    const statusClass = getStatusClass(task.Status);
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                            <div>
+                                <small class="fw-bold">${task.TaskName}</small><br>
+                                <small class="text-muted">${new Date(task.CreatedAt).toLocaleString()}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge ${statusClass}">${task.Status}</span>
+                                ${task.Status === 'Completed' ?
+                                    `<br><a href="/api/conversion/download/${task.Id}" class="btn btn-sm btn-outline-primary mt-1">下载</a>` :
+                                    ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('加载最近任务失败:', error);
+            }
+        }
+
+        // 获取状态样式类
+        function getStatusClass(status) {
+            switch (status) {
+                case 'Completed': return 'bg-success';
+                case 'Failed': return 'bg-danger';
+                case 'Converting': return 'bg-primary';
+                case 'Pending': return 'bg-warning';
+                case 'Cancelled': return 'bg-secondary';
+                default: return 'bg-secondary';
+            }
+        }
+
+        // 页面加载时获取最近任务
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentTasks();
+        });
+    </script>
+}

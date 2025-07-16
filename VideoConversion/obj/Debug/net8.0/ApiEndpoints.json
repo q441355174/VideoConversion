@@ -1,0 +1,215 @@
+[
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "DeleteTask",
+    "RelativePath": "api/Conversion/{taskId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "CancelTask",
+    "RelativePath": "api/Conversion/cancel/{taskId}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "CleanupOldTasks",
+    "RelativePath": "api/Conversion/cleanup",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "daysOld",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "DownloadFile",
+    "RelativePath": "api/Conversion/download/{taskId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "GetRecentTasks",
+    "RelativePath": "api/Conversion/recent",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "count",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "StartConversion",
+    "RelativePath": "api/Conversion/start",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "VideoFile",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
+      },
+      {
+        "Name": "TaskName",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Preset",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "OutputFormat",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Resolution",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "VideoQuality",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioQuality",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "GetTaskStatus",
+    "RelativePath": "api/Conversion/status/{taskId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "GetTasks",
+    "RelativePath": "api/Conversion/tasks",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.HealthController",
+    "Method": "GetHealth",
+    "RelativePath": "api/Health",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.HealthController",
+    "Method": "GetDiagnostics",
+    "RelativePath": "api/Health/diagnostics",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.HealthController",
+    "Method": "GetTodayStats",
+    "RelativePath": "api/Health/stats/today",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.HealthController",
+    "Method": "GetSystemStatus",
+    "RelativePath": "api/Health/status",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

@@ -1,0 +1,475 @@
+@page
+@model HistoryModel
+@{
+    ViewData["Title"] = "转换历史";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="display-5">
+                    <i class="fas fa-history text-info"></i>
+                    转换历史
+                </h1>
+                <div>
+                    <button type="button" class="btn btn-outline-danger" id="cleanupBtn">
+                        <i class="fas fa-trash"></i>
+                        清理旧记录
+                    </button>
+                    <a href="/" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        新建转换
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选和搜索 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <select class="form-select" id="statusFilter">
+                <option value="">所有状态</option>
+                <option value="Pending">等待中</option>
+                <option value="Converting">转换中</option>
+                <option value="Completed">已完成</option>
+                <option value="Failed">失败</option>
+                <option value="Cancelled">已取消</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <input type="text" class="form-control" id="searchInput" placeholder="搜索任务名称或文件名...">
+        </div>
+        <div class="col-md-3">
+            <button type="button" class="btn btn-outline-secondary w-100" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i>
+                刷新
+            </button>
+        </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div id="tasksContainer">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">加载中...</span>
+                            </div>
+                            <p class="mt-2">正在加载任务列表...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分页 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="任务分页">
+                <ul class="pagination justify-content-center" id="pagination">
+                    <!-- 分页按钮将通过JavaScript生成 -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- 任务详情模态框 -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">任务详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="taskDetailContent">
+                <!-- 详情内容将通过JavaScript填充 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <div id="taskActions">
+                    <!-- 操作按钮将根据任务状态动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+    <script>
+        let currentPage = 1;
+        let pageSize = 20;
+        let currentFilter = '';
+        let currentSearch = '';
+
+        // SignalR连接
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/conversionHub")
+            .build();
+
+        connection.start().then(function () {
+            console.log("SignalR连接成功");
+        }).catch(function (err) {
+            console.error("SignalR连接失败:", err);
+        });
+
+        // 监听任务状态更新
+        connection.on("TaskCompleted", function (data) {
+            loadTasks(); // 重新加载任务列表
+        });
+
+        connection.on("StatusUpdate", function (data) {
+            updateTaskInList(data.TaskId, data.Status);
+        });
+
+        // 页面加载时获取任务列表
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTasks();
+            
+            // 绑定事件
+            document.getElementById('statusFilter').addEventListener('change', function() {
+                currentFilter = this.value;
+                currentPage = 1;
+                loadTasks();
+            });
+            
+            document.getElementById('searchInput').addEventListener('input', debounce(function() {
+                currentSearch = this.value;
+                currentPage = 1;
+                loadTasks();
+            }, 500));
+            
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                loadTasks();
+            });
+            
+            document.getElementById('cleanupBtn').addEventListener('click', function() {
+                if (confirm('确定要清理30天前的已完成/失败任务吗？此操作不可撤销。')) {
+                    cleanupOldTasks();
+                }
+            });
+        });
+
+        // 加载任务列表
+        async function loadTasks() {
+            try {
+                const params = new URLSearchParams({
+                    page: currentPage,
+                    pageSize: pageSize,
+                    status: currentFilter,
+                    search: currentSearch
+                });
+
+                const response = await fetch(`/api/conversion/tasks?${params}`);
+                const data = await response.json();
+
+                renderTasks(data.tasks);
+                renderPagination(data.totalPages, currentPage);
+            } catch (error) {
+                console.error('加载任务失败:', error);
+                document.getElementById('tasksContainer').innerHTML = 
+                    '<div class="alert alert-danger">加载任务失败，请稍后重试</div>';
+            }
+        }
+
+        // 渲染任务列表
+        function renderTasks(tasks) {
+            const container = document.getElementById('tasksContainer');
+            
+            if (tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>暂无任务记录</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += `
+                <thead class="table-light">
+                    <tr>
+                        <th>任务名称</th>
+                        <th>原始文件</th>
+                        <th>输出格式</th>
+                        <th>状态</th>
+                        <th>进度</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+
+            tasks.forEach(task => {
+                const statusBadge = getStatusBadge(task.Status);
+                const progressBar = task.Status === 'Converting' ? 
+                    `<div class="progress" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             style="width: ${task.Progress}%">${task.Progress}%</div>
+                     </div>` : 
+                    `<span class="text-muted">${task.Progress}%</span>`;
+
+                html += `
+                    <tr data-task-id="${task.Id}">
+                        <td>
+                            <strong>${task.TaskName}</strong>
+                            ${task.ErrorMessage ? `<br><small class="text-danger">${task.ErrorMessage}</small>` : ''}
+                        </td>
+                        <td>
+                            <small class="text-muted">${task.OriginalFileName}</small><br>
+                            <small>${formatFileSize(task.OriginalFileSize)}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">${task.OutputFormat.toUpperCase()}</span>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>${progressBar}</td>
+                        <td>
+                            <small>${new Date(task.CreatedAt).toLocaleString()}</small>
+                            ${task.CompletedAt ? `<br><small class="text-success">完成: ${new Date(task.CompletedAt).toLocaleString()}</small>` : ''}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info" onclick="showTaskDetail('${task.Id}')">
+                                    <i class="fas fa-info"></i>
+                                </button>
+                                ${task.Status === 'Completed' ? 
+                                    `<a href="/api/conversion/download/${task.Id}" class="btn btn-outline-success">
+                                        <i class="fas fa-download"></i>
+                                     </a>` : ''}
+                                ${task.Status === 'Converting' ? 
+                                    `<button class="btn btn-outline-warning" onclick="cancelTask('${task.Id}')">
+                                        <i class="fas fa-stop"></i>
+                                     </button>` : ''}
+                                <button class="btn btn-outline-danger" onclick="deleteTask('${task.Id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        // 渲染分页
+        function renderPagination(totalPages, currentPage) {
+            const pagination = document.getElementById('pagination');
+            let html = '';
+
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            // 上一页
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">上一页</a>
+                </li>
+            `;
+
+            // 页码
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+
+            if (startPage > 1) {
+                html += '<li class="page-item"><a class="page-link" href="#" onclick="changePage(1)">1</a></li>';
+                if (startPage > 2) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                    </li>
+                `;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${totalPages})">${totalPages}</a></li>`;
+            }
+
+            // 下一页
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">下一页</a>
+                </li>
+            `;
+
+            pagination.innerHTML = html;
+        }
+
+        // 切换页面
+        function changePage(page) {
+            if (page < 1 || page === currentPage) return;
+            currentPage = page;
+            loadTasks();
+        }
+
+        // 获取状态徽章
+        function getStatusBadge(status) {
+            const badges = {
+                'Pending': '<span class="badge bg-warning">等待中</span>',
+                'Converting': '<span class="badge bg-primary">转换中</span>',
+                'Completed': '<span class="badge bg-success">已完成</span>',
+                'Failed': '<span class="badge bg-danger">失败</span>',
+                'Cancelled': '<span class="badge bg-secondary">已取消</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">未知</span>';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            if (bytes === 0) return '0 B';
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 显示任务详情
+        async function showTaskDetail(taskId) {
+            try {
+                const response = await fetch(`/api/conversion/status/${taskId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const task = data.task;
+                    const modal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
+                    
+                    document.getElementById('taskDetailContent').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>基本信息</h6>
+                                <table class="table table-sm">
+                                    <tr><td>任务名称:</td><td>${task.TaskName}</td></tr>
+                                    <tr><td>状态:</td><td>${getStatusBadge(task.Status)}</td></tr>
+                                    <tr><td>进度:</td><td>${task.Progress}%</td></tr>
+                                    <tr><td>创建时间:</td><td>${new Date(task.CreatedAt).toLocaleString()}</td></tr>
+                                    ${task.StartedAt ? `<tr><td>开始时间:</td><td>${new Date(task.StartedAt).toLocaleString()}</td></tr>` : ''}
+                                    ${task.CompletedAt ? `<tr><td>完成时间:</td><td>${new Date(task.CompletedAt).toLocaleString()}</td></tr>` : ''}
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>文件信息</h6>
+                                <table class="table table-sm">
+                                    <tr><td>原始文件:</td><td>${task.OriginalFileName}</td></tr>
+                                    <tr><td>输出文件:</td><td>${task.OutputFileName || '-'}</td></tr>
+                                    <tr><td>输入格式:</td><td>${task.InputFormat}</td></tr>
+                                    <tr><td>输出格式:</td><td>${task.OutputFormat}</td></tr>
+                                    <tr><td>视频编解码器:</td><td>${task.VideoCodec || '-'}</td></tr>
+                                    <tr><td>音频编解码器:</td><td>${task.AudioCodec || '-'}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        ${task.ErrorMessage ? `<div class="alert alert-danger mt-3">${task.ErrorMessage}</div>` : ''}
+                    `;
+                    
+                    modal.show();
+                }
+            } catch (error) {
+                console.error('获取任务详情失败:', error);
+                alert('获取任务详情失败');
+            }
+        }
+
+        // 取消任务
+        async function cancelTask(taskId) {
+            if (!confirm('确定要取消这个转换任务吗？')) return;
+            
+            try {
+                const response = await fetch(`/api/conversion/cancel/${taskId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadTasks(); // 重新加载列表
+                } else {
+                    alert('取消任务失败: ' + result.message);
+                }
+            } catch (error) {
+                console.error('取消任务失败:', error);
+                alert('取消任务失败');
+            }
+        }
+
+        // 删除任务
+        async function deleteTask(taskId) {
+            if (!confirm('确定要删除这个任务吗？相关文件也会被删除，此操作不可撤销。')) return;
+            
+            try {
+                const response = await fetch(`/api/conversion/${taskId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadTasks(); // 重新加载列表
+                } else {
+                    alert('删除任务失败: ' + result.message);
+                }
+            } catch (error) {
+                console.error('删除任务失败:', error);
+                alert('删除任务失败');
+            }
+        }
+
+        // 清理旧任务
+        async function cleanupOldTasks() {
+            try {
+                const response = await fetch('/api/conversion/cleanup', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`清理完成: 删除了 ${result.deletedCount} 个旧任务`);
+                    loadTasks(); // 重新加载列表
+                } else {
+                    alert('清理失败: ' + result.message);
+                }
+            } catch (error) {
+                console.error('清理失败:', error);
+                alert('清理失败');
+            }
+        }
+
+        // 更新列表中的任务状态
+        function updateTaskInList(taskId, status) {
+            const row = document.querySelector(`tr[data-task-id="${taskId}"]`);
+            if (row) {
+                const statusCell = row.children[3];
+                statusCell.innerHTML = getStatusBadge(status);
+            }
+        }
+    </script>
+}
