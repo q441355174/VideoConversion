@@ -45,8 +45,9 @@ builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddScoped<VideoConversionService>();
 
-// 注册后台服务
-builder.Services.AddHostedService<ConversionQueueService>();
+// 注册后台服务（同时注册为单例以便从Hub访问）
+builder.Services.AddSingleton<ConversionQueueService>();
+builder.Services.AddHostedService<ConversionQueueService>(provider => provider.GetRequiredService<ConversionQueueService>());
 builder.Services.AddHostedService<FileCleanupService>();
 
 // 配置文件上传大小限制

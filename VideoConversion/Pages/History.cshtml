@@ -167,21 +167,38 @@
                 });
 
                 const response = await fetch(`/api/conversion/tasks?${params}`);
-                const data = await response.json();
 
-                renderTasks(data.tasks);
-                renderPagination(data.totalPages, currentPage);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('获取到任务数据:', data);
+
+                // 确保 data.tasks 存在且是数组
+                const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+                const totalPages = data.totalPages || 1;
+
+                renderTasks(tasks);
+                renderPagination(totalPages, currentPage);
             } catch (error) {
                 console.error('加载任务失败:', error);
-                document.getElementById('tasksContainer').innerHTML = 
-                    '<div class="alert alert-danger">加载任务失败，请稍后重试</div>';
+                document.getElementById('tasksContainer').innerHTML =
+                    `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        加载任务失败，请稍后重试
+                        <br><small class="text-muted">错误详情: ${error.message}</small>
+                    </div>`;
             }
         }
 
         // 渲染任务列表
         function renderTasks(tasks) {
             const container = document.getElementById('tasksContainer');
-            
+
+            console.log('渲染任务列表，任务数量:', tasks.length);
+            console.log('任务数据详情:', tasks);
+
             if (tasks.length === 0) {
                 container.innerHTML = `
                     <div class="text-center text-muted py-5">
@@ -209,47 +226,50 @@
             `;
 
             tasks.forEach(task => {
-                const statusBadge = getStatusBadge(task.Status);
-                const progressBar = task.Status === 'Converting' ? 
+                const statusBadge = getStatusBadge(task.status || 'Unknown');
+                const progress = task.progress || 0;
+                const progressBar = task.status === 'Converting' ?
                     `<div class="progress" style="height: 20px;">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             style="width: ${task.Progress}%">${task.Progress}%</div>
-                     </div>` : 
-                    `<span class="text-muted">${task.Progress}%</span>`;
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             style="width: ${progress}%">${progress}%</div>
+                     </div>` :
+                    `<span class="text-muted">${progress}%</span>`;
+
+                const taskId = task.id || '';
 
                 html += `
-                    <tr data-task-id="${task.Id}">
+                    <tr data-task-id="${taskId}">
                         <td>
-                            <strong>${task.TaskName}</strong>
-                            ${task.ErrorMessage ? `<br><small class="text-danger">${task.ErrorMessage}</small>` : ''}
+                            <strong>${task.taskName || '未命名任务'}</strong>
+                            ${task.errorMessage ? `<br><small class="text-danger">${task.errorMessage}</small>` : ''}
                         </td>
                         <td>
-                            <small class="text-muted">${task.OriginalFileName}</small><br>
-                            <small>${formatFileSize(task.OriginalFileSize)}</small>
+                            <small class="text-muted">${task.originalFileName || '未知文件'}</small><br>
+                            <small>${formatFileSize(task.originalFileSize || 0)}</small>
                         </td>
                         <td>
-                            <span class="badge bg-secondary">${task.OutputFormat.toUpperCase()}</span>
+                            <span class="badge bg-secondary">${(task.outputFormat || '').toUpperCase() || 'N/A'}</span>
                         </td>
                         <td>${statusBadge}</td>
                         <td>${progressBar}</td>
                         <td>
-                            <small>${new Date(task.CreatedAt).toLocaleString()}</small>
-                            ${task.CompletedAt ? `<br><small class="text-success">完成: ${new Date(task.CompletedAt).toLocaleString()}</small>` : ''}
+                            <small>${task.createdAt ? new Date(task.createdAt).toLocaleString() : '未知时间'}</small>
+                            ${task.completedAt ? `<br><small class="text-success">完成: ${new Date(task.completedAt).toLocaleString()}</small>` : ''}
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-info" onclick="showTaskDetail('${task.Id}')">
+                                <button class="btn btn-outline-info" onclick="showTaskDetail('${taskId}')">
                                     <i class="fas fa-info"></i>
                                 </button>
-                                ${task.Status === 'Completed' ? 
-                                    `<a href="/api/conversion/download/${task.Id}" class="btn btn-outline-success">
+                                ${task.status === 'Completed' ?
+                                    `<a href="/api/conversion/download/${taskId}" class="btn btn-outline-success">
                                         <i class="fas fa-download"></i>
                                      </a>` : ''}
-                                ${task.Status === 'Converting' ? 
-                                    `<button class="btn btn-outline-warning" onclick="cancelTask('${task.Id}')">
+                                ${task.status === 'Converting' ?
+                                    `<button class="btn btn-outline-warning" onclick="cancelTask('${taskId}')">
                                         <i class="fas fa-stop"></i>
                                      </button>` : ''}
-                                <button class="btn btn-outline-danger" onclick="deleteTask('${task.Id}')">
+                                <button class="btn btn-outline-danger" onclick="deleteTask('${taskId}')">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -357,7 +377,14 @@
 
         // 显示任务详情
         async function showTaskDetail(taskId) {
+            if (!taskId || taskId === 'undefined') {
+                console.error('无效的任务ID:', taskId);
+                alert('无效的任务ID');
+                return;
+            }
+
             try {
+                console.log('获取任务详情:', taskId);
                 const response = await fetch(`/api/conversion/status/${taskId}`);
                 const data = await response.json();
                 
@@ -370,27 +397,27 @@
                             <div class="col-md-6">
                                 <h6>基本信息</h6>
                                 <table class="table table-sm">
-                                    <tr><td>任务名称:</td><td>${task.TaskName}</td></tr>
-                                    <tr><td>状态:</td><td>${getStatusBadge(task.Status)}</td></tr>
-                                    <tr><td>进度:</td><td>${task.Progress}%</td></tr>
-                                    <tr><td>创建时间:</td><td>${new Date(task.CreatedAt).toLocaleString()}</td></tr>
-                                    ${task.StartedAt ? `<tr><td>开始时间:</td><td>${new Date(task.StartedAt).toLocaleString()}</td></tr>` : ''}
-                                    ${task.CompletedAt ? `<tr><td>完成时间:</td><td>${new Date(task.CompletedAt).toLocaleString()}</td></tr>` : ''}
+                                    <tr><td>任务名称:</td><td>${task.taskName || '未命名任务'}</td></tr>
+                                    <tr><td>状态:</td><td>${getStatusBadge(task.status || 'Unknown')}</td></tr>
+                                    <tr><td>进度:</td><td>${task.progress || 0}%</td></tr>
+                                    <tr><td>创建时间:</td><td>${task.createdAt ? new Date(task.createdAt).toLocaleString() : '未知时间'}</td></tr>
+                                    ${task.startedAt ? `<tr><td>开始时间:</td><td>${new Date(task.startedAt).toLocaleString()}</td></tr>` : ''}
+                                    ${task.completedAt ? `<tr><td>完成时间:</td><td>${new Date(task.completedAt).toLocaleString()}</td></tr>` : ''}
                                 </table>
                             </div>
                             <div class="col-md-6">
                                 <h6>文件信息</h6>
                                 <table class="table table-sm">
-                                    <tr><td>原始文件:</td><td>${task.OriginalFileName}</td></tr>
-                                    <tr><td>输出文件:</td><td>${task.OutputFileName || '-'}</td></tr>
-                                    <tr><td>输入格式:</td><td>${task.InputFormat}</td></tr>
-                                    <tr><td>输出格式:</td><td>${task.OutputFormat}</td></tr>
-                                    <tr><td>视频编解码器:</td><td>${task.VideoCodec || '-'}</td></tr>
-                                    <tr><td>音频编解码器:</td><td>${task.AudioCodec || '-'}</td></tr>
+                                    <tr><td>原始文件:</td><td>${task.originalFileName || '未知文件'}</td></tr>
+                                    <tr><td>输出文件:</td><td>${task.outputFileName || '-'}</td></tr>
+                                    <tr><td>输入格式:</td><td>${task.inputFormat || '-'}</td></tr>
+                                    <tr><td>输出格式:</td><td>${task.outputFormat || '-'}</td></tr>
+                                    <tr><td>视频编解码器:</td><td>${task.videoCodec || '-'}</td></tr>
+                                    <tr><td>音频编解码器:</td><td>${task.audioCodec || '-'}</td></tr>
                                 </table>
                             </div>
                         </div>
-                        ${task.ErrorMessage ? `<div class="alert alert-danger mt-3">${task.ErrorMessage}</div>` : ''}
+                        ${task.errorMessage ? `<div class="alert alert-danger mt-3">${task.errorMessage}</div>` : ''}
                     `;
                     
                     modal.show();

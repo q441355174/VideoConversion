@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using VideoConversion.Services;
+using VideoConversion.Models;
 
 namespace VideoConversion.Hubs
 {
@@ -10,11 +11,16 @@ namespace VideoConversion.Hubs
     {
         private readonly DatabaseService _databaseService;
         private readonly ILogger<ConversionHub> _logger;
+        private readonly ConversionQueueService _queueService;
 
-        public ConversionHub(DatabaseService databaseService, ILogger<ConversionHub> logger)
+        public ConversionHub(
+            DatabaseService databaseService,
+            ILogger<ConversionHub> logger,
+            ConversionQueueService queueService)
         {
             _databaseService = databaseService;
             _logger = logger;
+            _queueService = queueService;
         }
 
         /// <summary>
@@ -41,7 +47,7 @@ namespace VideoConversion.Hubs
         public async Task JoinTaskGroup(string taskId)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"task_{taskId}");
-            _logger.LogDebug("客户端 {ConnectionId} 加入任务组: {TaskId}", Context.ConnectionId, taskId);
+            _logger.LogInformation("📡 客户端 {ConnectionId} 加入任务组: {TaskId}", Context.ConnectionId, taskId);
         }
 
         /// <summary>
@@ -126,14 +132,47 @@ namespace VideoConversion.Hubs
         {
             try
             {
-                // 这里可以添加权限验证
-                // 实际的取消逻辑在VideoConversionService中实现
-                await Clients.All.SendAsync("CancelTaskRequested", taskId);
-                _logger.LogInformation("收到取消任务请求: {TaskId}", taskId);
+                _logger.LogInformation("收到取消任务请求: {TaskId} from {ConnectionId}", taskId, Context.ConnectionId);
+
+                // 验证任务是否存在
+                var task = await _databaseService.GetTaskAsync(taskId);
+                if (task == null)
+                {
+                    await Clients.Caller.SendAsync("TaskNotFound", taskId);
+                    return;
+                }
+
+                // 检查任务状态是否可以取消
+                if (task.Status != ConversionStatus.Pending && task.Status != ConversionStatus.Converting)
+                {
+                    await Clients.Caller.SendAsync("Error", $"任务状态为 {task.Status}，无法取消");
+                    return;
+                }
+
+                // 调用队列服务取消任务
+                await _queueService.CancelTaskAsync(taskId);
+
+                // 通知所有客户端任务已取消
+                await Clients.All.SendAsync("TaskCancelled", new
+                {
+                    TaskId = taskId,
+                    Message = "任务已取消",
+                    Timestamp = DateTime.Now
+                });
+
+                // 发送确认消息给请求者
+                await Clients.Caller.SendAsync("TaskCancelCompleted", new
+                {
+                    TaskId = taskId,
+                    Message = "任务取消成功",
+                    Timestamp = DateTime.Now
+                });
+
+                _logger.LogInformation("✅ 任务取消完成: {TaskId}", taskId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "取消任务请求失败: {TaskId}", taskId);
+                _logger.LogError(ex, "❌ 取消任务请求失败: {TaskId}", taskId);
                 await Clients.Caller.SendAsync("Error", $"取消任务失败: {ex.Message}");
             }
         }

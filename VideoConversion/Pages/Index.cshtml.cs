@@ -19,6 +19,7 @@ namespace VideoConversion.Pages
         public List<ConversionPreset> ConversionPresets { get; set; } = new();
         public string[] SupportedExtensions { get; set; } = Array.Empty<string>();
         public string MaxFileSizeFormatted { get; set; } = string.Empty;
+        public long MaxFileSize { get; set; }
 
         public void OnGet()
         {
@@ -28,8 +29,11 @@ namespace VideoConversion.Pages
             // 获取支持的文件扩展名
             SupportedExtensions = _fileService.GetSupportedExtensions();
 
+            // 获取最大文件大小
+            MaxFileSize = _fileService.GetMaxFileSize();
+
             // 格式化最大文件大小
-            MaxFileSizeFormatted = FileService.FormatFileSize(_fileService.GetMaxFileSize());
+            MaxFileSizeFormatted = FileService.FormatFileSize(MaxFileSize);
         }
     }
 }

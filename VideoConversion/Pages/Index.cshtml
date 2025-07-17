@@ -32,11 +32,26 @@
                         <!-- 文件选择 -->
                         <div class="mb-3">
                             <label for="videoFile" class="form-label">选择视频文件</label>
-                            <input type="file" class="form-control" id="videoFile" name="videoFile"
-                                   accept="@string.Join(",", Model.SupportedExtensions.Select(ext => ext))" required>
-                            <div class="form-text">
+                            <div class="file-drop-zone" id="fileDropZone">
+                                <div class="text-center">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                    <p class="mb-2">拖拽文件到此处或点击选择</p>
+                                    <input type="file" class="form-control" id="videoFile" name="videoFile"
+                                           accept="@string.Join(",", Model.SupportedExtensions.Select(ext => ext))" required>
+                                </div>
+                            </div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle"></i>
                                 支持格式: @string.Join(", ", Model.SupportedExtensions)
-                                <br>最大文件大小: @Model.MaxFileSizeFormatted
+                                <br><i class="fas fa-weight-hanging"></i>
+                                最大文件大小: @Model.MaxFileSizeFormatted
+                            </div>
+                            <div id="selectedFileInfo" class="mt-2" style="display: none;">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-file-video"></i>
+                                    已选择: <span id="selectedFileName"></span>
+                                    (<span id="selectedFileSize"></span>)
+                                </div>
                             </div>
                         </div>
 
@@ -446,47 +461,161 @@
         <!-- 右侧：转换进度和状态 -->
         <div class="col-lg-6">
             <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-tasks"></i>
                         转换进度
                     </h5>
+                    <div>
+                        <small>连接状态: </small>
+                        <span id="connectionStatus" class="badge bg-warning connection-status">Disconnected</span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <!-- 当前任务进度 -->
                     <div id="currentTask" style="display: none;">
-                        <h6>当前任务: <span id="currentTaskName"></span></h6>
-                        <div class="progress mb-2" style="height: 25px;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">当前任务: <span id="currentTaskName"></span></h6>
+                            <small class="text-muted" id="taskId"></small>
+                        </div>
+
+                        <!-- 文件信息 -->
+                        <div class="row mb-3" id="fileInfo" style="display: none;">
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted"><i class="fas fa-file-video"></i> 原始文件</small><br>
+                                <span id="originalFileName" class="small fw-bold"></span>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <small class="text-muted"><i class="fas fa-cog"></i> 输出格式</small><br>
+                                <span id="outputFormat" class="small fw-bold"></span>
+                            </div>
+                        </div>
+
+                        <!-- 转换参数详情 -->
+                        <div class="accordion mb-3" id="taskDetailsAccordion" style="display: none;">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#taskDetailsPanel">
+                                        <i class="fas fa-info-circle"></i>&nbsp;转换参数详情
+                                    </button>
+                                </h2>
+                                <div id="taskDetailsPanel" class="accordion-collapse collapse">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6><i class="fas fa-video"></i> 视频设置</h6>
+                                                <ul class="list-unstyled small">
+                                                    <li><strong>编解码器:</strong> <span id="videoCodecDetail">-</span></li>
+                                                    <li><strong>分辨率:</strong> <span id="resolutionDetail">-</span></li>
+                                                    <li><strong>质量:</strong> <span id="qualityDetail">-</span></li>
+                                                    <li><strong>帧率:</strong> <span id="frameRateDetail">-</span></li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6><i class="fas fa-volume-up"></i> 音频设置</h6>
+                                                <ul class="list-unstyled small">
+                                                    <li><strong>编解码器:</strong> <span id="audioCodecDetail">-</span></li>
+                                                    <li><strong>比特率:</strong> <span id="audioBitrateDetail">-</span></li>
+                                                    <li><strong>声道:</strong> <span id="audioChannelsDetail">-</span></li>
+                                                    <li><strong>采样率:</strong> <span id="sampleRateDetail">-</span></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <h6><i class="fas fa-tools"></i> 高级选项</h6>
+                                                <ul class="list-unstyled small">
+                                                    <li><strong>编码预设:</strong> <span id="encodingPresetDetail">-</span></li>
+                                                    <li><strong>两遍编码:</strong> <span id="twoPassDetail">-</span></li>
+                                                    <li><strong>快速启动:</strong> <span id="fastStartDetail">-</span></li>
+                                                    <li id="customParamsDetail" style="display: none;"><strong>自定义参数:</strong> <code class="small"></code></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 进度条 -->
+                        <div class="progress mb-3" style="height: 30px;">
                             <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
-                                 role="progressbar" style="width: 0%">
-                                0%
+                                 role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                <span class="fw-bold">0%</span>
                             </div>
                         </div>
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <small class="text-muted">速度</small><br>
-                                <span id="conversionSpeed">-</span>
+
+                        <!-- 详细状态信息 -->
+                        <div class="row text-center mb-3">
+                            <div class="col-3">
+                                <small class="text-muted">转换速度</small><br>
+                                <span id="conversionSpeed" class="fw-bold">-</span>
                             </div>
-                            <div class="col-4">
+                            <div class="col-3">
                                 <small class="text-muted">剩余时间</small><br>
-                                <span id="remainingTime">-</span>
+                                <span id="remainingTime" class="fw-bold">-</span>
                             </div>
-                            <div class="col-4">
-                                <small class="text-muted">状态</small><br>
-                                <span id="taskStatus">等待中</span>
+                            <div class="col-3">
+                                <small class="text-muted">已用时间</small><br>
+                                <span id="elapsedTime" class="fw-bold">-</span>
+                            </div>
+                            <div class="col-3">
+                                <small class="text-muted">文件大小</small><br>
+                                <span id="fileSize" class="fw-bold">-</span>
                             </div>
                         </div>
-                        <div class="mt-2">
+
+                        <!-- 当前状态 -->
+                        <div class="alert alert-info mb-3" role="alert">
+                            <i class="fas fa-info-circle"></i>
+                            <span id="taskStatus">等待中...</span>
+                        </div>
+
+                        <!-- 错误详情 -->
+                        <div class="alert alert-danger mb-3" id="errorDetails" style="display: none;" role="alert">
+                            <h6><i class="fas fa-exclamation-triangle"></i> 错误详情</h6>
+                            <div id="errorMessage" class="small"></div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-danger" onclick="copyErrorToClipboard()">
+                                    <i class="fas fa-copy"></i> 复制错误信息
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="showTroubleshooting()">
+                                    <i class="fas fa-question-circle"></i> 故障排除
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 故障排除提示 -->
+                        <div class="alert alert-warning mb-3" id="troubleshootingTips" style="display: none;" role="alert">
+                            <h6><i class="fas fa-tools"></i> 故障排除建议</h6>
+                            <ul class="mb-0 small" id="troubleshootingList">
+                                <!-- 动态生成故障排除建议 -->
+                            </ul>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="d-flex gap-2" id="taskActionButtons">
                             <button type="button" class="btn btn-outline-danger btn-sm" id="cancelTask">
                                 <i class="fas fa-stop"></i> 取消转换
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" id="refreshTask" style="display: none;">
+                                <i class="fas fa-sync"></i> 刷新状态
+                            </button>
+                            <a class="btn btn-outline-success btn-sm" id="downloadTask" style="display: none;">
+                                <i class="fas fa-download"></i> 下载文件
+                            </a>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="restartTask" style="display: none;">
+                                <i class="fas fa-redo"></i> 重新开始
                             </button>
                         </div>
                     </div>
 
                     <!-- 无任务时的提示 -->
                     <div id="noTask" class="text-center text-muted">
-                        <i class="fas fa-info-circle fa-3x mb-3"></i>
-                        <p>请选择文件并开始转换</p>
+                        <i class="fas fa-video fa-3x mb-3 text-secondary"></i>
+                        <h6>暂无转换任务</h6>
+                        <p class="mb-0">请选择视频文件并开始转换</p>
                     </div>
                 </div>
             </div>
@@ -511,22 +640,227 @@
     </div>
 </div>
 
+@section Styles {
+    <style>
+        /* 进度条动画效果 */
+        .progress-bar-animated {
+            animation: progress-bar-stripes 1s linear infinite;
+        }
+
+        /* 连接状态指示器 */
+        .connection-status {
+            position: relative;
+            display: inline-block;
+        }
+
+        .connection-status::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @@keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* 任务卡片悬停效果 */
+        .task-card {
+            transition: all 0.3s ease;
+            border: 1px solid #dee2e6;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: #007bff;
+        }
+
+        /* 进度条渐变效果 */
+        .progress-bar.bg-primary {
+            background: linear-gradient(45deg, #007bff, #0056b3) !important;
+        }
+
+        .progress-bar.bg-success {
+            background: linear-gradient(45deg, #28a745, #1e7e34) !important;
+        }
+
+        .progress-bar.bg-danger {
+            background: linear-gradient(45deg, #dc3545, #bd2130) !important;
+        }
+
+        /* 状态徽章动画 */
+        .badge.bg-primary {
+            animation: pulse-blue 2s infinite;
+        }
+
+        @@keyframes pulse-blue {
+            0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+        }
+
+        /* 文件拖拽区域 */
+        .file-drop-zone {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+        }
+
+        .file-drop-zone.dragover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 状态图标 */
+        .status-icon {
+            font-size: 1.2em;
+            margin-right: 5px;
+        }
+
+        /* 响应式调整 */
+        @@media (max-width: 768px) {
+            .task-card {
+                margin-bottom: 10px;
+            }
+
+            .progress {
+                height: 25px !important;
+            }
+
+            .btn-sm {
+                font-size: 0.8rem;
+                padding: 0.25rem 0.5rem;
+            }
+        }
+    </style>
+}
+
 @section Scripts {
     <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
     <script>
-        // SignalR连接
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/conversionHub")
-            .build();
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // SignalR连接配置
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("/conversionHub")
+                .withAutomaticReconnect([0, 2000, 10000, 30000]) // 自动重连
+                .configureLogging(signalR.LogLevel.Information)
+                .build();
 
         let currentTaskId = null;
+        let connectionState = 'Disconnected';
+        let refreshInterval = null;
+        let lastRefreshTime = 0;
+
+        // 显示警告消息
+        function showAlert(type, message) {
+            // 创建警告元素
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // 插入到页面顶部
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            // 5秒后自动消失
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // 更新连接状态显示
+        function updateConnectionStatus(status) {
+            connectionState = status;
+            const statusElement = document.getElementById('connectionStatus');
+            if (statusElement) {
+                statusElement.textContent = status;
+                statusElement.className = `badge ${status === 'Connected' ? 'bg-success' : 'bg-warning'}`;
+            }
+        }
 
         // 启动SignalR连接
-        connection.start().then(function () {
-            console.log("SignalR连接成功");
-        }).catch(function (err) {
-            console.error("SignalR连接失败:", err);
+        async function startConnection() {
+            try {
+                await connection.start();
+                console.log("✅ SignalR连接成功");
+                updateConnectionStatus('Connected');
+                showAlert('success', 'SignalR连接已建立，可以实时接收转换进度');
+
+                // 连接成功后加载最近任务
+                loadRecentTasks();
+            } catch (err) {
+                console.error("❌ SignalR连接失败:", err);
+                updateConnectionStatus('Failed');
+                showAlert('danger', 'SignalR连接失败，进度更新可能不可用');
+
+                // 5秒后重试连接
+                setTimeout(startConnection, 5000);
+            }
+        }
+
+        // 连接状态事件处理
+        connection.onreconnecting((error) => {
+            console.log("🔄 SignalR重连中...", error);
+            updateConnectionStatus('Reconnecting');
+            showAlert('warning', 'SignalR连接中断，正在重连...');
         });
+
+        connection.onreconnected((connectionId) => {
+            console.log("✅ SignalR重连成功:", connectionId);
+            updateConnectionStatus('Connected');
+            showAlert('success', 'SignalR连接已恢复');
+
+            // 重连后重新加入任务组
+            if (currentTaskId) {
+                connection.invoke("JoinTaskGroup", currentTaskId).catch(err => {
+                    console.error("重新加入任务组失败:", err);
+                });
+            }
+        });
+
+        connection.onclose((error) => {
+            console.log("❌ SignalR连接关闭:", error);
+            updateConnectionStatus('Disconnected');
+            showAlert('danger', 'SignalR连接已断开');
+        });
+
+        // 启动连接
+        startConnection();
 
         // 监听进度更新
         connection.on("ProgressUpdate", function (data) {
@@ -543,11 +877,124 @@
             handleTaskCompleted(data);
         });
 
+        // 监听任务状态响应
+        connection.on("TaskStatus", function (data) {
+            console.log("📊 收到任务状态:", data);
+            if (data.taskId === currentTaskId) {
+                updateProgress({
+                    taskId: data.taskId,
+                    progress: data.progress,
+                    message: data.status,
+                    speed: data.conversionSpeed,
+                    remainingSeconds: data.estimatedTimeRemaining
+                });
+            }
+        });
+
+        // 监听任务未找到
+        connection.on("TaskNotFound", function (taskId) {
+            console.warn("⚠️ 任务未找到:", taskId);
+            showAlert('warning', `任务 ${taskId} 未找到`);
+        });
+
+        // 监听系统通知
+        connection.on("SystemNotification", function (data) {
+            console.log("📢 系统通知:", data);
+            showAlert(data.type || 'info', data.message);
+        });
+
+        // 监听错误
+        connection.on("Error", function (message) {
+            console.error("❌ SignalR错误:", message);
+            showAlert('danger', 'SignalR错误: ' + message);
+        });
+
+        // 监听任务取消完成
+        connection.on("TaskCancelCompleted", function (data) {
+            console.log("🚫 任务取消完成:", data);
+            if (data.taskId === currentTaskId) {
+                showAlert('success', '任务取消成功');
+
+                // 更新UI状态
+                const taskStatus = document.getElementById('taskStatus');
+                if (taskStatus) {
+                    taskStatus.textContent = '任务已取消';
+                    const statusAlert = taskStatus.closest('.alert');
+                    if (statusAlert) {
+                        statusAlert.className = 'alert alert-warning mb-3';
+                    }
+                }
+
+                // 更新按钮为取消状态
+                updateTaskActionButtons('cancelled');
+
+                // 清除当前任务
+                currentTaskId = null;
+                currentTaskStartTime = null;
+
+                // 刷新最近任务列表
+                setTimeout(loadRecentTasks, 1000);
+            }
+        });
+
+        // 监听任务被取消（来自其他客户端）
+        connection.on("TaskCancelled", function (data) {
+            console.log("🚫 任务被取消:", data);
+            updateRecentTaskStatus(data.taskId, 'Cancelled');
+
+            // 如果是当前任务被其他客户端取消
+            if (data.taskId === currentTaskId) {
+                showAlert('warning', '当前任务已被其他客户端取消');
+                currentTaskId = null;
+                currentTaskStartTime = null;
+
+                // 隐藏当前任务显示
+                document.getElementById('currentTask').style.display = 'none';
+                document.getElementById('noTask').style.display = 'block';
+            }
+        });
+
+        // 监听新任务创建（来自其他客户端）
+        connection.on("TaskCreated", function (data) {
+            console.log("📝 新任务创建:", data);
+            // 延迟刷新以确保数据库已更新
+            setTimeout(loadRecentTasks, 1000);
+        });
+
+        // 监听任务状态变化（全局）
+        connection.on("TaskStatusChanged", function (data) {
+            console.log("📊 任务状态变化:", data);
+            updateRecentTaskStatus(data.taskId, data.status);
+
+            // 如果有进度信息，也更新进度
+            if (data.progress !== undefined) {
+                updateRecentTaskProgress(data.taskId, data.progress, data.message);
+            }
+        });
+
         // 表单提交处理
         document.getElementById('conversionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const formData = new FormData(this);
+
+            // 处理复选框值 - 确保布尔值正确传递
+            const checkboxes = ['twoPass', 'fastStart', 'copyTimestamps'];
+            checkboxes.forEach(name => {
+                const checkbox = document.getElementById(name);
+                if (checkbox) {
+                    // 删除原有值，设置为true/false字符串
+                    formData.delete(name);
+                    formData.append(name, checkbox.checked ? 'true' : 'false');
+                }
+            });
+
+            // 调试：打印表单数据
+            console.log('表单数据:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key + ': ' + value);
+            }
+
             const startButton = document.getElementById('startConversion');
 
             // 禁用按钮
@@ -560,20 +1007,54 @@
                     body: formData
                 });
 
+                console.log('响应状态:', response.status);
+                console.log('响应头:', response.headers.get('content-type'));
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('服务器错误:', errorText);
+                    alert('转换启动失败 (状态码: ' + response.status + '): ' + errorText);
+                    return;
+                }
+
                 const result = await response.json();
+                console.log('响应结果:', result);
 
                 if (result.success) {
                     currentTaskId = result.taskId;
-                    showCurrentTask(result.taskName);
+                    console.log("🎯 设置当前任务ID:", currentTaskId);
+
+                    // 获取文件信息
+                    const fileInput = document.getElementById('videoFile');
+                    const outputFormat = document.getElementById('outputFormat').value;
+                    const taskData = {
+                        originalFileName: fileInput.files[0]?.name || '',
+                        outputFormat: outputFormat,
+                        fileSize: fileInput.files[0]?.size || 0
+                    };
+
+                    showCurrentTask(result.taskName, taskData);
 
                     // 加入任务组以接收进度更新
-                    await connection.invoke("JoinTaskGroup", currentTaskId);
+                    if (connection.state === signalR.HubConnectionState.Connected) {
+                        await connection.invoke("JoinTaskGroup", currentTaskId);
+                        console.log("✅ 已加入任务组:", currentTaskId);
+                    } else {
+                        console.warn("⚠️ SignalR连接未建立，无法加入任务组");
+                        showAlert('warning', 'SignalR连接未建立，可能无法实时显示进度');
+                    }
+
+                    // 显示成功消息
+                    showAlert('success', `转换任务已创建: ${result.taskName}`);
+
+                    // 立即刷新最近任务列表
+                    setTimeout(loadRecentTasks, 500);
                 } else {
-                    alert('转换启动失败: ' + result.message);
+                    showAlert('danger', '转换启动失败: ' + (result.message || '未知错误'));
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('请求失败: ' + error.message);
+                console.error('请求异常:', error);
+                showAlert('danger', '请求失败: ' + error.message);
             } finally {
                 // 恢复按钮
                 startButton.disabled = false;
@@ -585,11 +1066,38 @@
         document.getElementById('cancelTask').addEventListener('click', async function() {
             if (currentTaskId && confirm('确定要取消当前转换任务吗？')) {
                 try {
+                    this.disabled = true;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 取消中...';
+
                     await connection.invoke("CancelTask", currentTaskId);
+                    showAlert('info', '取消请求已发送...');
                 } catch (error) {
                     console.error('取消任务失败:', error);
+                    showAlert('danger', '取消任务失败: ' + error.message);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-stop"></i> 取消转换';
                 }
             }
+        });
+
+        // 刷新任务状态
+        document.getElementById('refreshTask').addEventListener('click', function() {
+            refreshCurrentTask();
+        });
+
+        // 重新开始转换
+        document.getElementById('restartTask').addEventListener('click', function() {
+            // 隐藏当前任务显示
+            document.getElementById('currentTask').style.display = 'none';
+            document.getElementById('noTask').style.display = 'block';
+
+            // 清除当前任务ID
+            currentTaskId = null;
+            currentTaskStartTime = null;
+
+            // 显示提示信息
+            showAlert('info', '请重新选择文件并配置转换参数');
         });
 
         // 预设选择变化时更新高级设置
@@ -814,82 +1322,617 @@
 
         // 更新进度显示
         function updateProgress(data) {
-            if (data.TaskId !== currentTaskId) return;
+            console.log("📊 收到进度更新:", data);
+            console.log("🔍 当前任务ID:", currentTaskId);
+            console.log("🔍 进度数据任务ID:", data.taskId);
+
+            if (data.taskId !== currentTaskId) {
+                console.log("⚠️ 任务ID不匹配，忽略进度更新");
+                console.log("⚠️ 当前任务ID:", currentTaskId);
+                console.log("⚠️ 进度数据任务ID:", data.taskId);
+                return;
+            }
 
             const progressBar = document.getElementById('progressBar');
             const taskStatus = document.getElementById('taskStatus');
             const conversionSpeed = document.getElementById('conversionSpeed');
             const remainingTime = document.getElementById('remainingTime');
+            const elapsedTime = document.getElementById('elapsedTime');
 
-            progressBar.style.width = data.Progress + '%';
-            progressBar.textContent = data.Progress + '%';
-            taskStatus.textContent = data.Message;
+            // 更新进度条
+            if (progressBar) {
+                progressBar.style.width = data.progress + '%';
+                progressBar.setAttribute('aria-valuenow', data.progress);
+                progressBar.querySelector('span').textContent = data.progress + '%';
 
-            if (data.Speed) {
-                conversionSpeed.textContent = data.Speed.toFixed(2) + 'x';
+                // 根据进度调整进度条颜色
+                if (data.progress >= 100) {
+                    progressBar.className = 'progress-bar bg-success';
+                } else if (data.progress >= 50) {
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+                } else {
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+                }
             }
 
-            if (data.RemainingSeconds) {
-                remainingTime.textContent = formatTime(data.RemainingSeconds);
+            // 更新状态信息 - 只有当有具体消息时才更新
+            if (taskStatus && data.message) {
+                taskStatus.textContent = data.message;
             }
+
+            // 更新转换速度
+            if (conversionSpeed && data.speed) {
+                conversionSpeed.textContent = data.speed.toFixed(2) + 'x';
+                conversionSpeed.className = data.speed > 1 ? 'fw-bold text-success' : 'fw-bold text-warning';
+            }
+
+            // 更新剩余时间
+            if (remainingTime && data.remainingSeconds) {
+                remainingTime.textContent = formatTime(data.remainingSeconds);
+            }
+
+            // 更新已用时间
+            if (elapsedTime && currentTaskStartTime) {
+                const elapsed = Math.floor((Date.now() - currentTaskStartTime) / 1000);
+                elapsedTime.textContent = formatTime(elapsed);
+            }
+
+            // 更新最近任务列表中的进度
+            updateRecentTaskProgress(data.taskId, data.progress, data.message);
         }
 
         // 更新任务状态
         function updateTaskStatus(data) {
-            if (data.TaskId !== currentTaskId) return;
+            console.log("📋 收到状态更新:", data);
+            console.log("🔍 当前任务ID:", currentTaskId);
+            console.log("🔍 状态数据任务ID:", data.taskId);
+
+            if (data.taskId !== currentTaskId) {
+                console.log("⚠️ 任务ID不匹配，忽略状态更新");
+                console.log("⚠️ 当前任务ID:", currentTaskId);
+                console.log("⚠️ 状态数据任务ID:", data.taskId);
+                return;
+            }
 
             const taskStatus = document.getElementById('taskStatus');
-            taskStatus.textContent = data.Status;
+            const statusAlert = taskStatus?.closest('.alert');
 
-            if (data.ErrorMessage) {
-                taskStatus.textContent += ' - ' + data.ErrorMessage;
-                taskStatus.className = 'text-danger';
+            if (taskStatus) {
+                // 根据状态设置友好的中文显示文本
+                let statusText = '';
+                switch (data.status) {
+                    case 'Converting':
+                        statusText = '转换中...';
+                        break;
+                    case 'Completed':
+                        statusText = '转换完成';
+                        break;
+                    case 'Failed':
+                        statusText = '转换失败';
+                        break;
+                    case 'Cancelled':
+                        statusText = '已取消';
+                        break;
+                    case 'Pending':
+                        statusText = '等待中...';
+                        break;
+                    default:
+                        statusText = data.status || '状态未知';
+                }
+
+                taskStatus.textContent = statusText;
+
+                // 根据状态更新样式
+                if (statusAlert) {
+                    statusAlert.className = 'alert mb-3';
+                    switch (data.status) {
+                        case 'Converting':
+                            statusAlert.classList.add('alert-info');
+                            break;
+                        case 'Completed':
+                            statusAlert.classList.add('alert-success');
+                            break;
+                        case 'Failed':
+                            statusAlert.classList.add('alert-danger');
+                            break;
+                        case 'Cancelled':
+                            statusAlert.classList.add('alert-warning');
+                            break;
+                        default:
+                            statusAlert.classList.add('alert-secondary');
+                    }
+                }
+
+                if (data.errorMessage) {
+                    taskStatus.textContent += ' - ' + data.errorMessage;
+                }
             }
+
+            // 更新最近任务列表中的状态
+            updateRecentTaskStatus(data.taskId, data.status);
         }
 
         // 处理任务完成
         function handleTaskCompleted(data) {
-            if (data.TaskId !== currentTaskId) return;
+            console.log("🎉 任务完成:", data);
 
-            if (data.Success) {
-                const progressBar = document.getElementById('progressBar');
-                progressBar.className = 'progress-bar bg-success';
-                progressBar.style.width = '100%';
-                progressBar.textContent = '完成!';
-
-                document.getElementById('taskStatus').textContent = '转换完成';
-
-                // 显示下载按钮
-                showDownloadButton(data.TaskId);
-            } else {
-                const progressBar = document.getElementById('progressBar');
-                progressBar.className = 'progress-bar bg-danger';
-                document.getElementById('taskStatus').textContent = '转换失败: ' + data.ErrorMessage;
+            if (data.taskId !== currentTaskId) {
+                console.log("⚠️ 任务ID不匹配，忽略完成通知");
+                return;
             }
 
-            // 隐藏取消按钮
-            document.getElementById('cancelTask').style.display = 'none';
+            const progressBar = document.getElementById('progressBar');
+            const taskStatus = document.getElementById('taskStatus');
+            const cancelButton = document.getElementById('cancelTask');
+            const refreshButton = document.getElementById('refreshTask');
 
-            // 更新最近任务列表
-            loadRecentTasks();
+            if (data.success) {
+                // 成功完成
+                if (progressBar) {
+                    progressBar.className = 'progress-bar bg-success';
+                    progressBar.style.width = '100%';
+                    progressBar.setAttribute('aria-valuenow', 100);
+                    progressBar.querySelector('span').textContent = '完成!';
+                }
+
+                if (taskStatus) {
+                    taskStatus.textContent = '转换完成！文件已准备好下载。';
+                    const statusAlert = taskStatus.closest('.alert');
+                    if (statusAlert) {
+                        statusAlert.className = 'alert alert-success mb-3';
+                    }
+                }
+
+
+
+                // 显示成功通知
+                showAlert('success', `任务 "${data.taskName}" 转换完成！`);
+            } else {
+                // 转换失败
+                if (progressBar) {
+                    progressBar.className = 'progress-bar bg-danger';
+                    progressBar.style.width = '100%';
+                    progressBar.querySelector('span').textContent = '失败';
+                }
+
+                if (taskStatus) {
+                    taskStatus.textContent = '转换失败: ' + (data.errorMessage || '未知错误');
+                    const statusAlert = taskStatus.closest('.alert');
+                    if (statusAlert) {
+                        statusAlert.className = 'alert alert-danger mb-3';
+                    }
+                }
+
+                // 显示详细错误信息
+                showErrorDetails(data.ErrorMessage || '未知错误');
+
+                // 显示错误通知
+                showAlert('danger', `任务 "${data.TaskName}" 转换失败: ${data.ErrorMessage || '未知错误'}`);
+            }
+
+            // 更新操作按钮
+            updateTaskActionButtons(data.success ? 'completed' : 'failed', data.taskId);
+
+            // 立即更新最近任务列表中的状态
+            if (data.success) {
+                updateRecentTaskStatus(data.taskId, 'Completed');
+            } else {
+                updateRecentTaskStatus(data.taskId, 'Failed');
+            }
+
+            // 清除当前任务ID
+            currentTaskId = null;
+            currentTaskStartTime = null;
+
+            // 延迟刷新整个任务列表以确保数据库已更新
+            setTimeout(loadRecentTasks, 1000);
         }
 
+        // 更新任务操作按钮
+        function updateTaskActionButtons(state, taskId = null) {
+            const cancelButton = document.getElementById('cancelTask');
+            const refreshButton = document.getElementById('refreshTask');
+            const downloadButton = document.getElementById('downloadTask');
+            const restartButton = document.getElementById('restartTask');
+
+            // 隐藏所有按钮
+            if (cancelButton) cancelButton.style.display = 'none';
+            if (refreshButton) refreshButton.style.display = 'none';
+            if (downloadButton) downloadButton.style.display = 'none';
+            if (restartButton) restartButton.style.display = 'none';
+
+            switch (state) {
+                case 'converting':
+                    // 转换中：显示取消按钮
+                    if (cancelButton) cancelButton.style.display = 'inline-block';
+                    break;
+
+                case 'completed':
+                    // 转换完成：显示下载和重新开始按钮
+                    if (downloadButton && taskId) {
+                        downloadButton.href = `/api/conversion/download/${taskId}`;
+                        downloadButton.style.display = 'inline-block';
+                    }
+                    if (restartButton) restartButton.style.display = 'inline-block';
+                    if (refreshButton) refreshButton.style.display = 'inline-block';
+                    break;
+
+                case 'failed':
+                    // 转换失败：显示重新开始和刷新按钮
+                    if (restartButton) restartButton.style.display = 'inline-block';
+                    if (refreshButton) refreshButton.style.display = 'inline-block';
+                    break;
+
+                case 'cancelled':
+                    // 转换取消：显示重新开始和刷新按钮
+                    if (restartButton) restartButton.style.display = 'inline-block';
+                    if (refreshButton) refreshButton.style.display = 'inline-block';
+                    break;
+
+                default:
+                    // 默认状态：只显示刷新按钮
+                    if (refreshButton) refreshButton.style.display = 'inline-block';
+                    break;
+            }
+        }
+
+        let currentTaskStartTime = null;
+
         // 显示当前任务
-        function showCurrentTask(taskName) {
+        function showCurrentTask(taskName, taskData = null) {
+            console.log("📝 显示当前任务:", taskName, taskData);
+
+            currentTaskStartTime = Date.now();
+
             document.getElementById('noTask').style.display = 'none';
             document.getElementById('currentTask').style.display = 'block';
             document.getElementById('currentTaskName').textContent = taskName;
+
+            // 显示任务ID
+            if (currentTaskId) {
+                document.getElementById('taskId').textContent = `ID: ${currentTaskId.substring(0, 8)}...`;
+            }
+
+            // 显示文件信息
+            if (taskData) {
+                const fileInfo = document.getElementById('fileInfo');
+                const originalFileName = document.getElementById('originalFileName');
+                const outputFormat = document.getElementById('outputFormat');
+                const fileSize = document.getElementById('fileSize');
+
+                if (taskData.originalFileName) {
+                    originalFileName.textContent = taskData.originalFileName;
+                    fileInfo.style.display = 'block';
+                }
+
+                if (taskData.outputFormat) {
+                    outputFormat.textContent = taskData.outputFormat.toUpperCase();
+                }
+
+                if (taskData.fileSize) {
+                    fileSize.textContent = formatFileSize(taskData.fileSize);
+                }
+
+                // 显示转换参数详情
+                showConversionDetails(taskData);
+            }
 
             // 重置进度条
             const progressBar = document.getElementById('progressBar');
             progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
             progressBar.style.width = '0%';
-            progressBar.textContent = '0%';
+            progressBar.setAttribute('aria-valuenow', 0);
+            progressBar.querySelector('span').textContent = '0%';
 
+            // 重置状态信息
             document.getElementById('taskStatus').textContent = '准备中...';
+            const statusAlert = document.getElementById('taskStatus').closest('.alert');
+            if (statusAlert) {
+                statusAlert.className = 'alert alert-info mb-3';
+            }
+
+            // 重置其他信息
             document.getElementById('conversionSpeed').textContent = '-';
             document.getElementById('remainingTime').textContent = '-';
-            document.getElementById('cancelTask').style.display = 'inline-block';
+            document.getElementById('elapsedTime').textContent = '-';
+
+            // 设置按钮为转换中状态
+            updateTaskActionButtons('converting');
+
+            // 隐藏错误详情
+            hideErrorDetails();
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 格式化时间（秒转换为HH:MM:SS）
+        function formatTime(seconds) {
+            if (!seconds || seconds <= 0) return '-';
+
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+
+            if (hours > 0) {
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        // 更新最近任务列表中的进度
+        function updateRecentTaskProgress(taskId, progress, message) {
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskElement) {
+                // 更新进度文本
+                const progressElement = taskElement.querySelector('.task-progress');
+                if (progressElement) {
+                    progressElement.textContent = `${progress}%`;
+                    progressElement.className = `task-progress ms-2 text-${progress >= 100 ? 'success' : 'primary'}`;
+                }
+
+                // 更新进度条
+                const progressBar = taskElement.querySelector('.progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.className = `progress-bar ${progress >= 100 ? 'bg-success' : 'bg-primary'}`;
+                }
+
+                // 更新状态图标
+                const statusIcon = taskElement.querySelector('.status-icon');
+                if (statusIcon && progress < 100) {
+                    statusIcon.className = `fas fa-spinner fa-spin status-icon text-primary`;
+                }
+
+                console.log(`📊 已更新任务 ${taskId} 进度: ${progress}%`);
+            } else {
+                console.log(`⚠️ 未找到任务元素: ${taskId}，刷新任务列表`);
+                // 如果找不到任务元素，刷新整个列表
+                setTimeout(loadRecentTasks, 500);
+            }
+        }
+
+        // 更新最近任务列表中的状态
+        function updateRecentTaskStatus(taskId, status) {
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskElement) {
+                // 更新状态徽章
+                const statusBadge = taskElement.querySelector('.badge.task-status');
+                if (statusBadge) {
+                    statusBadge.textContent = getStatusText(status);
+                    statusBadge.className = `badge ${getStatusClass(status)} task-status`;
+                }
+
+                // 更新状态图标
+                const statusIcon = taskElement.querySelector('.status-icon');
+                if (statusIcon) {
+                    statusIcon.className = `fas fa-${getStatusIcon(status)} status-icon text-${getStatusColor(status)}`;
+                }
+
+                // 根据状态更新操作按钮
+                const btnGroup = taskElement.querySelector('.btn-group-vertical');
+                if (btnGroup) {
+                    let buttonsHtml = '';
+
+                    if (status === 'Completed') {
+                        buttonsHtml = `
+                            <a href="/api/conversion/download/${taskId}"
+                               class="btn btn-sm btn-outline-success"
+                               title="下载转换后的文件">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        `;
+                    } else if (status === 'Converting' || status === 'Pending') {
+                        buttonsHtml = `
+                            <button class="btn btn-sm btn-outline-info"
+                                    onclick="viewTaskDetails('${taskId}')"
+                                    title="查看详情">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        `;
+                    }
+
+                    btnGroup.innerHTML = buttonsHtml;
+                }
+
+                console.log(`📋 已更新任务 ${taskId} 状态: ${status}`);
+            } else {
+                console.log(`⚠️ 未找到任务元素: ${taskId}，刷新任务列表`);
+                // 如果找不到任务元素，刷新整个列表
+                setTimeout(loadRecentTasks, 500);
+            }
+        }
+
+        // 显示转换参数详情
+        function showConversionDetails(taskData) {
+            const detailsAccordion = document.getElementById('taskDetailsAccordion');
+
+            // 从表单获取当前设置
+            const formData = {
+                videoCodec: document.getElementById('videoCodec')?.value || '-',
+                resolution: document.getElementById('resolution')?.value || '保持原始',
+                videoQuality: document.getElementById('videoQuality')?.value || '-',
+                frameRate: document.getElementById('frameRate')?.value || '保持原始',
+                audioCodec: document.getElementById('audioCodec')?.value || '-',
+                audioBitrate: document.getElementById('audioBitrate')?.value || '-',
+                audioChannels: document.getElementById('audioChannels')?.value || '保持原始',
+                sampleRate: document.getElementById('sampleRate')?.value || '保持原始',
+                encodingPreset: document.getElementById('encodingPreset')?.value || 'medium',
+                twoPass: document.getElementById('twoPass')?.checked || false,
+                fastStart: document.getElementById('fastStart')?.checked || false,
+                customParams: document.getElementById('customParams')?.value || ''
+            };
+
+            // 更新详情显示
+            document.getElementById('videoCodecDetail').textContent = getCodecDisplayName(formData.videoCodec);
+            document.getElementById('resolutionDetail').textContent = formData.resolution === 'custom' ?
+                `${document.getElementById('customWidth')?.value || '?'}x${document.getElementById('customHeight')?.value || '?'}` :
+                (formData.resolution || '保持原始');
+
+            // 质量显示
+            const qualityMode = document.querySelector('input[name="qualityMode"]:checked')?.value;
+            if (qualityMode === 'crf') {
+                document.getElementById('qualityDetail').textContent = `CRF ${formData.videoQuality}`;
+            } else {
+                const bitrate = document.getElementById('videoBitrate')?.value;
+                document.getElementById('qualityDetail').textContent = bitrate ? `${bitrate} kbps` : '-';
+            }
+
+            document.getElementById('frameRateDetail').textContent = formData.frameRate || '保持原始';
+            document.getElementById('audioCodecDetail').textContent = getCodecDisplayName(formData.audioCodec);
+
+            // 音频比特率显示
+            const audioBitrate = formData.audioBitrate === 'custom' ?
+                document.getElementById('customAudioBitrateValue')?.value + ' kbps' :
+                formData.audioBitrate;
+            document.getElementById('audioBitrateDetail').textContent = audioBitrate || '-';
+
+            document.getElementById('audioChannelsDetail').textContent = getChannelsDisplayName(formData.audioChannels);
+            document.getElementById('sampleRateDetail').textContent = getSampleRateDisplayName(formData.sampleRate);
+            document.getElementById('encodingPresetDetail').textContent = formData.encodingPreset;
+            document.getElementById('twoPassDetail').textContent = formData.twoPass ? '是' : '否';
+            document.getElementById('fastStartDetail').textContent = formData.fastStart ? '是' : '否';
+
+            // 自定义参数
+            const customParamsDetail = document.getElementById('customParamsDetail');
+            if (formData.customParams) {
+                customParamsDetail.style.display = 'block';
+                customParamsDetail.querySelector('code').textContent = formData.customParams;
+            } else {
+                customParamsDetail.style.display = 'none';
+            }
+
+            detailsAccordion.style.display = 'block';
+        }
+
+        // 获取编解码器显示名称
+        function getCodecDisplayName(codec) {
+            const codecNames = {
+                'libx264': 'H.264 (x264)',
+                'libx265': 'H.265 (x265)',
+                'libvpx-vp9': 'VP9',
+                'libvpx': 'VP8',
+                'libaom-av1': 'AV1',
+                'mpeg4': 'MPEG-4',
+                'aac': 'AAC',
+                'libmp3lame': 'MP3',
+                'libvorbis': 'Vorbis',
+                'libopus': 'Opus',
+                'flac': 'FLAC',
+                'ac3': 'AC-3'
+            };
+            return codecNames[codec] || codec || '-';
+        }
+
+        // 获取声道显示名称
+        function getChannelsDisplayName(channels) {
+            const channelNames = {
+                '1': '单声道 (1.0)',
+                '2': '立体声 (2.0)',
+                '6': '5.1环绕声',
+                '8': '7.1环绕声'
+            };
+            return channelNames[channels] || channels || '保持原始';
+        }
+
+        // 获取采样率显示名称
+        function getSampleRateDisplayName(sampleRate) {
+            if (!sampleRate) return '保持原始';
+            const rate = parseInt(sampleRate);
+            if (rate >= 1000) {
+                return `${rate / 1000} kHz`;
+            }
+            return `${rate} Hz`;
+        }
+
+        // 显示错误详情
+        function showErrorDetails(errorMessage) {
+            const errorDetails = document.getElementById('errorDetails');
+            const errorMessageElement = document.getElementById('errorMessage');
+
+            errorMessageElement.textContent = errorMessage;
+            errorDetails.style.display = 'block';
+
+            // 生成故障排除建议
+            generateTroubleshootingTips(errorMessage);
+        }
+
+        // 隐藏错误详情
+        function hideErrorDetails() {
+            document.getElementById('errorDetails').style.display = 'none';
+            document.getElementById('troubleshootingTips').style.display = 'none';
+        }
+
+        // 复制错误信息到剪贴板
+        async function copyErrorToClipboard() {
+            const errorMessage = document.getElementById('errorMessage').textContent;
+            try {
+                await navigator.clipboard.writeText(errorMessage);
+                showAlert('success', '错误信息已复制到剪贴板');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showAlert('danger', '复制失败，请手动选择文本复制');
+            }
+        }
+
+        // 显示故障排除提示
+        function showTroubleshooting() {
+            const troubleshootingTips = document.getElementById('troubleshootingTips');
+            troubleshootingTips.style.display = troubleshootingTips.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 生成故障排除建议
+        function generateTroubleshootingTips(errorMessage) {
+            const troubleshootingList = document.getElementById('troubleshootingList');
+            const tips = [];
+
+            const lowerError = errorMessage.toLowerCase();
+
+            if (lowerError.includes('ffmpeg')) {
+                tips.push('检查FFmpeg是否正确安装并在系统PATH中');
+                tips.push('确认FFmpeg版本兼容性');
+                tips.push('尝试重新安装FFmpeg');
+            }
+
+            if (lowerError.includes('file') || lowerError.includes('not found')) {
+                tips.push('检查输入文件是否存在且可访问');
+                tips.push('确认文件路径正确');
+                tips.push('检查文件权限设置');
+            }
+
+            if (lowerError.includes('codec') || lowerError.includes('format')) {
+                tips.push('尝试使用不同的编解码器');
+                tips.push('检查输入文件格式是否支持');
+                tips.push('尝试使用默认转换预设');
+            }
+
+            if (lowerError.includes('memory') || lowerError.includes('space')) {
+                tips.push('检查系统内存使用情况');
+                tips.push('确认磁盘空间充足');
+                tips.push('尝试降低视频质量设置');
+            }
+
+            if (lowerError.includes('permission') || lowerError.includes('access')) {
+                tips.push('检查文件和目录权限');
+                tips.push('以管理员权限运行应用程序');
+                tips.push('确认防病毒软件未阻止操作');
+            }
+
+            if (tips.length === 0) {
+                tips.push('检查输入文件是否完整且未损坏');
+                tips.push('尝试使用不同的转换设置');
+                tips.push('查看详细日志获取更多信息');
+                tips.push('联系技术支持获取帮助');
+            }
+
+            troubleshootingList.innerHTML = tips.map(tip => `<li>${tip}</li>`).join('');
         }
 
         // 显示下载按钮
@@ -924,55 +1967,360 @@
         // 加载最近任务
         async function loadRecentTasks() {
             try {
-                const response = await fetch('/api/conversion/recent');
+                lastRefreshTime = Date.now();
+                console.log("🔄 加载最近任务...");
+                const response = await fetch('/api/conversion/recent?count=5');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const tasks = await response.json();
+                console.log("📋 获取到任务:", tasks);
 
                 const container = document.getElementById('recentTasks');
-                if (tasks.length === 0) {
-                    container.innerHTML = '<div class="text-center text-muted"><small>暂无任务记录</small></div>';
+                if (!tasks || tasks.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <div><small>暂无任务记录</small></div>
+                        </div>
+                    `;
                     return;
                 }
 
                 let html = '';
                 tasks.forEach(task => {
-                    const statusClass = getStatusClass(task.Status);
+                    const statusClass = getStatusClass(task.status);
+                    const createdTime = new Date(task.createdAt).toLocaleString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    const isActive = task.status === 1 || task.status === 0; // 1=Converting, 0=Pending
+                    const progressInfo = isActive && task.progress ? `${task.progress}%` : '';
+
                     html += `
-                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
-                            <div>
-                                <small class="fw-bold">${task.TaskName}</small><br>
-                                <small class="text-muted">${new Date(task.CreatedAt).toLocaleString()}</small>
-                            </div>
-                            <div class="text-end">
-                                <span class="badge ${statusClass}">${task.Status}</span>
-                                ${task.Status === 'Completed' ?
-                                    `<br><a href="/api/conversion/download/${task.Id}" class="btn btn-sm btn-outline-primary mt-1">下载</a>` :
-                                    ''}
+                        <div class="card mb-2 task-card" data-task-id="${task.id}">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="fas fa-${getStatusIcon(task.status)} status-icon text-${getStatusColor(task.status)}"></i>
+                                            <div class="fw-bold text-truncate" style="max-width: 150px;" title="${task.taskName}">
+                                                ${task.taskName}
+                                            </div>
+                                        </div>
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-file"></i> ${task.originalFileName || '未知文件'}
+                                        </small>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock"></i> ${createdTime}
+                                            </small>
+                                            ${progressInfo ? `
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar bg-primary" style="width: ${task.progress}%"></div>
+                                                </div>
+                                                <small class="task-progress text-primary">${progressInfo}</small>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge ${statusClass} task-status mb-2">${getStatusText(task.status)}</span>
+                                        <div class="btn-group-vertical" role="group">
+                                            ${task.status === 2 ? `
+                                                <a href="/api/conversion/download/${task.id}"
+                                                   class="btn btn-sm btn-outline-success"
+                                                   title="下载转换后的文件">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            ` : ''}
+                                            ${isActive ? `
+                                                <button class="btn btn-sm btn-outline-info"
+                                                        onclick="viewTaskDetails('${task.id}')"
+                                                        title="查看详情">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `;
                 });
 
                 container.innerHTML = html;
+                console.log("✅ 最近任务加载完成");
             } catch (error) {
-                console.error('加载最近任务失败:', error);
+                console.error('❌ 加载最近任务失败:', error);
+                const container = document.getElementById('recentTasks');
+                container.innerHTML = `
+                    <div class="text-center text-danger py-3">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <div><small>加载失败: ${error.message}</small></div>
+                        <button class="btn btn-sm btn-outline-primary mt-2" onclick="loadRecentTasks()">
+                            <i class="fas fa-retry"></i> 重试
+                        </button>
+                    </div>
+                `;
             }
         }
 
         // 获取状态样式类
         function getStatusClass(status) {
+            // 支持数字和字符串状态
             switch (status) {
+                case 2:
                 case 'Completed': return 'bg-success';
+                case 3:
                 case 'Failed': return 'bg-danger';
+                case 1:
                 case 'Converting': return 'bg-primary';
-                case 'Pending': return 'bg-warning';
+                case 0:
+                case 'Pending': return 'bg-warning text-dark';
+                case 4:
                 case 'Cancelled': return 'bg-secondary';
                 default: return 'bg-secondary';
             }
         }
 
-        // 页面加载时获取最近任务
+        // 获取状态文本
+        function getStatusText(status) {
+            // 支持数字和字符串状态
+            switch (status) {
+                case 2:
+                case 'Completed': return '已完成';
+                case 3:
+                case 'Failed': return '失败';
+                case 1:
+                case 'Converting': return '转换中';
+                case 0:
+                case 'Pending': return '等待中';
+                case 4:
+                case 'Cancelled': return '已取消';
+                default: return '未知';
+            }
+        }
+
+        // 获取状态图标
+        function getStatusIcon(status) {
+            // 支持数字和字符串状态
+            switch (status) {
+                case 2:
+                case 'Completed': return 'check-circle';
+                case 3:
+                case 'Failed': return 'times-circle';
+                case 1:
+                case 'Converting': return 'spinner fa-spin';
+                case 0:
+                case 'Pending': return 'clock';
+                case 4:
+                case 'Cancelled': return 'ban';
+                default: return 'question-circle';
+            }
+        }
+
+        // 获取状态颜色
+        function getStatusColor(status) {
+            // 支持数字和字符串状态
+            switch (status) {
+                case 2:
+                case 'Completed': return 'success';
+                case 3:
+                case 'Failed': return 'danger';
+                case 1:
+                case 'Converting': return 'primary';
+                case 0:
+                case 'Pending': return 'warning';
+                case 4:
+                case 'Cancelled': return 'secondary';
+                default: return 'muted';
+            }
+        }
+
+        // 查看任务详情
+        async function viewTaskDetails(taskId) {
+            try {
+                if (connection.state === signalR.HubConnectionState.Connected) {
+                    await connection.invoke("GetTaskStatus", taskId);
+                } else {
+                    showAlert('warning', 'SignalR连接未建立，无法获取实时状态');
+                }
+            } catch (error) {
+                console.error('获取任务详情失败:', error);
+                showAlert('danger', '获取任务详情失败: ' + error.message);
+            }
+        }
+
+        // 刷新当前任务状态
+        async function refreshCurrentTask() {
+            if (currentTaskId && connection.state === signalR.HubConnectionState.Connected) {
+                try {
+                    await connection.invoke("GetTaskStatus", currentTaskId);
+                    showAlert('info', '正在刷新任务状态...');
+                } catch (error) {
+                    console.error('刷新任务状态失败:', error);
+                    showAlert('danger', '刷新失败: ' + error.message);
+                }
+            }
+        }
+
+        // 文件拖拽功能
+        function initializeFileDragDrop() {
+            const dropZone = document.getElementById('fileDropZone');
+            const fileInput = document.getElementById('videoFile');
+            const selectedFileInfo = document.getElementById('selectedFileInfo');
+            const selectedFileName = document.getElementById('selectedFileName');
+            const selectedFileSize = document.getElementById('selectedFileSize');
+
+            // 防止默认拖拽行为
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // 高亮拖拽区域
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            // 处理文件拖拽
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            // 点击选择文件
+            dropZone.addEventListener('click', (e) => {
+                // 如果点击的是文件输入框本身，不要重复触发
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+
+            // 文件选择变化
+            fileInput.addEventListener('change', handleFileSelect);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight() {
+                dropZone.classList.add('dragover');
+            }
+
+            function unhighlight() {
+                dropZone.classList.remove('dragover');
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    handleFileSelect();
+                }
+            }
+
+            function handleFileSelect() {
+                const file = fileInput.files[0];
+                if (file) {
+                    selectedFileName.textContent = file.name;
+                    selectedFileSize.textContent = formatFileSize(file.size);
+                    selectedFileInfo.style.display = 'block';
+
+                    // 验证文件类型
+                    const allowedExtensions = [@Html.Raw(string.Join(",", Model.SupportedExtensions.Select(ext => $"'{ext}'")))];
+                    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+
+                    if (!allowedExtensions.includes(fileExtension)) {
+                        showAlert('danger', `不支持的文件格式: ${fileExtension}`);
+                        fileInput.value = '';
+                        selectedFileInfo.style.display = 'none';
+                        return;
+                    }
+
+                    // 验证文件大小
+                    const maxSize = @Model.MaxFileSize;
+                    if (file.size > maxSize) {
+                        showAlert('danger', `文件大小超过限制: ${formatFileSize(file.size)} > ${formatFileSize(maxSize)}`);
+                        fileInput.value = '';
+                        selectedFileInfo.style.display = 'none';
+                        return;
+                    }
+
+                    showAlert('success', `文件选择成功: ${file.name}`);
+                } else {
+                    selectedFileInfo.style.display = 'none';
+                }
+            }
+        }
+
+        // 启动定时刷新
+        function startPeriodicRefresh() {
+            // 清除现有的定时器
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+
+            // 每30秒刷新一次任务列表
+            refreshInterval = setInterval(() => {
+                const now = Date.now();
+                // 避免频繁刷新，至少间隔10秒
+                if (now - lastRefreshTime > 1000) {
+                    console.log("🔄 定时刷新任务列表");
+                    loadRecentTasks();
+                }
+            }, 10000);
+        }
+
+        // 停止定时刷新
+        function stopPeriodicRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
+        // 智能刷新（避免重复刷新）
+        function smartRefresh() {
+            const now = Date.now();
+            if (now - lastRefreshTime > 2000) { // 至少间隔2秒
+                loadRecentTasks();
+            }
+        }
+
+        // 页面可见性变化处理
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // 页面隐藏时停止定时刷新
+                stopPeriodicRefresh();
+            } else {
+                // 页面显示时恢复定时刷新并立即刷新一次
+                smartRefresh();
+                startPeriodicRefresh();
+            }
+        });
+
+        // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
             loadRecentTasks();
+            initializeFileDragDrop();
+            startPeriodicRefresh();
         });
+
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', function() {
+            stopPeriodicRefresh();
+        });
+
+        }); // 结束 DOMContentLoaded 事件监听器
     </script>
 }

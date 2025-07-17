@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using VideoConversion.Models;
 using VideoConversion.Services;
+using VideoConversion.Hubs;
+using System.ComponentModel.DataAnnotations;
 
 namespace VideoConversion.Controllers
 {
@@ -13,19 +16,22 @@ namespace VideoConversion.Controllers
         private readonly VideoConversionService _conversionService;
         private readonly LoggingService _loggingService;
         private readonly ILogger<ConversionController> _logger;
+        private readonly IHubContext<ConversionHub> _hubContext;
 
         public ConversionController(
             DatabaseService databaseService,
             FileService fileService,
             VideoConversionService conversionService,
             LoggingService loggingService,
-            ILogger<ConversionController> logger)
+            ILogger<ConversionController> logger,
+            IHubContext<ConversionHub> hubContext)
         {
             _databaseService = databaseService;
             _fileService = fileService;
             _conversionService = conversionService;
             _loggingService = loggingService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         /// <summary>
@@ -42,6 +48,17 @@ namespace VideoConversion.Controllers
                 _logger.LogInformation("请求文件: {FileName}", request.VideoFile?.FileName);
                 _logger.LogInformation("任务名称: {TaskName}", request.TaskName);
                 _logger.LogInformation("预设: {Preset}", request.Preset);
+
+                // 检查模型状态
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("模型验证失败:");
+                    foreach (var error in ModelState)
+                    {
+                        _logger.LogWarning("字段 {Field}: {Errors}", error.Key, string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage)));
+                    }
+                    return BadRequest(ModelState);
+                }
 
                 // 记录文件上传事件
                 if (request.VideoFile != null)
@@ -170,6 +187,25 @@ namespace VideoConversion.Controllers
 
                 _logger.LogInformation("🎉 转换任务创建成功!");
                 _logger.LogInformation("响应数据: {@Response}", response);
+
+                // 通知所有客户端有新任务创建
+                try
+                {
+                    await _hubContext.Clients.All.SendAsync("TaskCreated", new
+                    {
+                        TaskId = task.Id,
+                        TaskName = task.TaskName,
+                        Status = task.Status.ToString(),
+                        CreatedAt = task.CreatedAt,
+                        Timestamp = DateTime.Now
+                    });
+                    _logger.LogDebug("✅ 新任务创建通知已发送");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ 发送新任务创建通知失败");
+                }
+
                 _logger.LogInformation("=== 转换请求处理完成 ===");
 
                 return Ok(response);
@@ -206,18 +242,24 @@ namespace VideoConversion.Controllers
                     success = true,
                     task = new
                     {
-                        task.Id,
-                        task.TaskName,
-                        task.Status,
-                        task.Progress,
-                        task.ErrorMessage,
-                        task.CreatedAt,
-                        task.StartedAt,
-                        task.CompletedAt,
-                        task.EstimatedTimeRemaining,
-                        task.ConversionSpeed,
-                        task.Duration,
-                        task.CurrentTime
+                        id = task.Id,
+                        taskName = task.TaskName,
+                        status = task.Status.ToString(),
+                        progress = task.Progress,
+                        errorMessage = task.ErrorMessage,
+                        createdAt = task.CreatedAt,
+                        startedAt = task.StartedAt,
+                        completedAt = task.CompletedAt,
+                        estimatedTimeRemaining = task.EstimatedTimeRemaining,
+                        conversionSpeed = task.ConversionSpeed,
+                        duration = task.Duration,
+                        currentTime = task.CurrentTime,
+                        originalFileName = task.OriginalFileName,
+                        outputFileName = task.OutputFileName,
+                        inputFormat = task.InputFormat,
+                        outputFormat = task.OutputFormat,
+                        videoCodec = task.VideoCodec,
+                        audioCodec = task.AudioCodec
                     }
                 });
             }
@@ -300,15 +342,8 @@ namespace VideoConversion.Controllers
         {
             try
             {
-                var success = await _conversionService.CancelConversionAsync(taskId);
-                if (success)
-                {
-                    return Ok(new { success = true, message = "任务已取消" });
-                }
-                else
-                {
-                    return BadRequest(new { success = false, message = "无法取消任务" });
-                }
+                await _conversionService.CancelConversionAsync(taskId);
+                return Ok(new { success = true, message = "任务已取消" });
             }
             catch (Exception ex)
             {
@@ -366,59 +401,70 @@ namespace VideoConversion.Controllers
         {
             try
             {
+                _logger.LogInformation("获取任务列表: page={Page}, pageSize={PageSize}, status={Status}, search={Search}",
+                    page, pageSize, status, search);
+
                 var tasks = await _databaseService.GetAllTasksAsync(page, pageSize);
+                _logger.LogInformation("从数据库获取到 {Count} 个任务", tasks?.Count ?? 0);
+
+                // 确保 tasks 不为 null
+                tasks = tasks ?? new List<ConversionTask>();
 
                 // 应用状态筛选
                 if (!string.IsNullOrEmpty(status) && Enum.TryParse<ConversionStatus>(status, out var statusEnum))
                 {
                     tasks = tasks.Where(t => t.Status == statusEnum).ToList();
+                    _logger.LogInformation("状态筛选后剩余 {Count} 个任务", tasks.Count);
                 }
 
                 // 应用搜索筛选
                 if (!string.IsNullOrEmpty(search))
                 {
                     tasks = tasks.Where(t =>
-                        t.TaskName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                        t.OriginalFileName.Contains(search, StringComparison.OrdinalIgnoreCase)
+                        (t.TaskName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                        (t.OriginalFileName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
                     ).ToList();
+                    _logger.LogInformation("搜索筛选后剩余 {Count} 个任务", tasks.Count);
                 }
 
                 // 计算总页数（简化版本，实际应该在数据库层面处理）
                 var totalTasks = tasks.Count;
-                var totalPages = (int)Math.Ceiling((double)totalTasks / pageSize);
+                var totalPages = totalTasks > 0 ? (int)Math.Ceiling((double)totalTasks / pageSize) : 1;
 
                 var result = new
                 {
+                    success = true,
                     tasks = tasks.Select(t => new
                     {
                         t.Id,
-                        t.TaskName,
-                        t.Status,
+                        TaskName = t.TaskName ?? "",
+                        Status = t.Status.ToString(),
                         t.Progress,
                         t.CreatedAt,
                         t.StartedAt,
                         t.CompletedAt,
-                        t.OriginalFileName,
-                        t.OutputFileName,
+                        OriginalFileName = t.OriginalFileName ?? "",
+                        OutputFileName = t.OutputFileName ?? "",
                         t.OriginalFileSize,
                         t.OutputFileSize,
-                        t.InputFormat,
-                        t.OutputFormat,
-                        t.VideoCodec,
-                        t.AudioCodec,
-                        t.ErrorMessage
+                        InputFormat = t.InputFormat ?? "",
+                        OutputFormat = t.OutputFormat ?? "",
+                        VideoCodec = t.VideoCodec ?? "",
+                        AudioCodec = t.AudioCodec ?? "",
+                        ErrorMessage = t.ErrorMessage ?? ""
                     }).ToList(),
                     totalPages,
                     currentPage = page,
                     totalTasks
                 };
 
+                _logger.LogInformation("返回任务列表: {TaskCount} 个任务, {TotalPages} 页", tasks.Count, totalPages);
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "获取任务列表失败");
-                return StatusCode(500, new { success = false, message = "服务器内部错误" });
+                return StatusCode(500, new { success = false, message = "服务器内部错误: " + ex.Message });
             }
         }
 
@@ -512,6 +558,7 @@ namespace VideoConversion.Controllers
     /// </summary>
     public class StartConversionRequest
     {
+        [Required(ErrorMessage = "请选择要转换的视频文件")]
         public IFormFile VideoFile { get; set; } = null!;
         public string? TaskName { get; set; }
         public string Preset { get; set; } = string.Empty;
