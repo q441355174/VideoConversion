@@ -521,6 +521,28 @@
 
         let currentTaskId = null;
 
+        // 显示警告消息
+        function showAlert(type, message) {
+            // 创建警告元素
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // 插入到页面顶部
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            // 5秒后自动消失
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
         // 启动SignalR连接
         connection.start().then(function () {
             console.log("SignalR连接成功");
@@ -548,6 +570,24 @@
             e.preventDefault();
 
             const formData = new FormData(this);
+
+            // 处理复选框值 - 确保布尔值正确传递
+            const checkboxes = ['twoPass', 'fastStart', 'copyTimestamps'];
+            checkboxes.forEach(name => {
+                const checkbox = document.getElementById(name);
+                if (checkbox) {
+                    // 删除原有值，设置为true/false字符串
+                    formData.delete(name);
+                    formData.append(name, checkbox.checked ? 'true' : 'false');
+                }
+            });
+
+            // 调试：打印表单数据
+            console.log('表单数据:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key + ': ' + value);
+            }
+
             const startButton = document.getElementById('startConversion');
 
             // 禁用按钮
@@ -560,7 +600,18 @@
                     body: formData
                 });
 
+                console.log('响应状态:', response.status);
+                console.log('响应头:', response.headers.get('content-type'));
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('服务器错误:', errorText);
+                    alert('转换启动失败 (状态码: ' + response.status + '): ' + errorText);
+                    return;
+                }
+
                 const result = await response.json();
+                console.log('响应结果:', result);
 
                 if (result.success) {
                     currentTaskId = result.taskId;
@@ -568,12 +619,15 @@
 
                     // 加入任务组以接收进度更新
                     await connection.invoke("JoinTaskGroup", currentTaskId);
+
+                    // 显示成功消息
+                    showAlert('success', '转换任务已创建: ' + result.taskName);
                 } else {
-                    alert('转换启动失败: ' + result.message);
+                    showAlert('danger', '转换启动失败: ' + (result.message || '未知错误'));
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('请求失败: ' + error.message);
+                console.error('请求异常:', error);
+                showAlert('danger', '请求失败: ' + error.message);
             } finally {
                 // 恢复按钮
                 startButton.disabled = false;

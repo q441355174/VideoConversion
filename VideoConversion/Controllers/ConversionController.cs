@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VideoConversion.Models;
 using VideoConversion.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace VideoConversion.Controllers
 {
@@ -42,6 +43,17 @@ namespace VideoConversion.Controllers
                 _logger.LogInformation("请求文件: {FileName}", request.VideoFile?.FileName);
                 _logger.LogInformation("任务名称: {TaskName}", request.TaskName);
                 _logger.LogInformation("预设: {Preset}", request.Preset);
+
+                // 检查模型状态
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("模型验证失败:");
+                    foreach (var error in ModelState)
+                    {
+                        _logger.LogWarning("字段 {Field}: {Errors}", error.Key, string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage)));
+                    }
+                    return BadRequest(ModelState);
+                }
 
                 // 记录文件上传事件
                 if (request.VideoFile != null)
@@ -300,15 +312,8 @@ namespace VideoConversion.Controllers
         {
             try
             {
-                var success = await _conversionService.CancelConversionAsync(taskId);
-                if (success)
-                {
-                    return Ok(new { success = true, message = "任务已取消" });
-                }
-                else
-                {
-                    return BadRequest(new { success = false, message = "无法取消任务" });
-                }
+                await _conversionService.CancelConversionAsync(taskId);
+                return Ok(new { success = true, message = "任务已取消" });
             }
             catch (Exception ex)
             {
@@ -512,6 +517,7 @@ namespace VideoConversion.Controllers
     /// </summary>
     public class StartConversionRequest
     {
+        [Required(ErrorMessage = "请选择要转换的视频文件")]
         public IFormFile VideoFile { get; set; } = null!;
         public string? TaskName { get; set; }
         public string Preset { get; set; } = string.Empty;

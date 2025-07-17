@@ -3,20 +3,32 @@
   "WorkspaceRootPath": "E:\\newcode\\VideoConversion\\VideoConversion\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\controllers\\conversioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:controllers\\conversioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\services\\videoconversionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:services\\videoconversionservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\services\\conversionqueueservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:services\\conversionqueueservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\services\\databaseservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:services\\databaseservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\models\\conversiontask.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:models\\conversiontask.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\controllers\\conversioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:controllers\\conversioncontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\hubs\\conversionhub.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:hubs\\conversionhub.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{3D98FF82-CF32-4BFA-9941-963A739D7A01}|VideoConversion.csproj|e:\\newcode\\videoconversion\\videoconversion\\middleware\\exceptionhandlingmiddleware.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -39,7 +51,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -47,33 +59,72 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "VideoConversionService.cs",
-              "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\VideoConversionService.cs",
-              "RelativeDocumentMoniker": "Services\\VideoConversionService.cs",
-              "ToolTip": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\VideoConversionService.cs",
-              "RelativeToolTip": "Services\\VideoConversionService.cs",
-              "ViewState": "AgIAAMIAAAAAAAAAAAAqwN8AAAAbAAAAAAAAAA==",
+              "DocumentIndex": 3,
+              "Title": "ConversionTask.cs",
+              "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Models\\ConversionTask.cs",
+              "RelativeDocumentMoniker": "Models\\ConversionTask.cs",
+              "ToolTip": "E:\\newcode\\VideoConversion\\VideoConversion\\Models\\ConversionTask.cs",
+              "RelativeToolTip": "Models\\ConversionTask.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-16T07:50:22.317Z",
+              "WhenOpened": "2025-07-17T06:46:47.483Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "DatabaseService.cs",
+              "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\DatabaseService.cs",
+              "RelativeDocumentMoniker": "Services\\DatabaseService.cs",
+              "ToolTip": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\DatabaseService.cs",
+              "RelativeToolTip": "Services\\DatabaseService.cs",
+              "ViewState": "AgIAADQBAAAAAAAAAAAnwDwBAAA4AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-17T06:09:19.782Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ConversionQueueService.cs",
+              "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\ConversionQueueService.cs",
+              "RelativeDocumentMoniker": "Services\\ConversionQueueService.cs",
+              "ToolTip": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\ConversionQueueService.cs",
+              "RelativeToolTip": "Services\\ConversionQueueService.cs",
+              "ViewState": "AgIAAD0AAAAAAAAAAAAMwF8AAABUAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-17T06:06:32.256Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "VideoConversionService.cs",
+              "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\VideoConversionService.cs",
+              "RelativeDocumentMoniker": "Services\\VideoConversionService.cs",
+              "ToolTip": "E:\\newcode\\VideoConversion\\VideoConversion\\Services\\VideoConversionService.cs",
+              "RelativeToolTip": "Services\\VideoConversionService.cs",
+              "ViewState": "AgIAALAAAAAAAAAAAAAkwLAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-17T06:06:10.867Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "ConversionController.cs",
               "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Controllers\\ConversionController.cs",
               "RelativeDocumentMoniker": "Controllers\\ConversionController.cs",
               "ToolTip": "E:\\newcode\\VideoConversion\\VideoConversion\\Controllers\\ConversionController.cs",
               "RelativeToolTip": "Controllers\\ConversionController.cs",
-              "ViewState": "AgIAAHEAAAAAAAAAAAAawIEAAABNAAAAAAAAAA==",
+              "ViewState": "AgIAANMAAAAAAAAAAAAewLIAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-07-16T06:36:39.272Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "ExceptionHandlingMiddleware.cs",
               "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Middleware\\ExceptionHandlingMiddleware.cs",
               "RelativeDocumentMoniker": "Middleware\\ExceptionHandlingMiddleware.cs",
@@ -81,23 +132,25 @@
               "RelativeToolTip": "Middleware\\ExceptionHandlingMiddleware.cs",
               "ViewState": "AgIAADIAAAAAAAAAAAAQwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-16T06:24:46.274Z"
+              "WhenOpened": "2025-07-16T06:24:46.274Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "ConversionHub.cs",
               "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Hubs\\ConversionHub.cs",
               "RelativeDocumentMoniker": "Hubs\\ConversionHub.cs",
               "ToolTip": "E:\\newcode\\VideoConversion\\VideoConversion\\Hubs\\ConversionHub.cs",
               "RelativeToolTip": "Hubs\\ConversionHub.cs",
-              "ViewState": "AgIAAG0AAAAAAAAAAAAgwAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAHMAAAAAAAAAAAAgwLkAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-16T06:24:27.729Z"
+              "WhenOpened": "2025-07-16T06:24:27.729Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "Program.cs",
               "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
@@ -105,11 +158,12 @@
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAB8AAAAAAAAAAAAhwGwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-16T05:40:18.353Z"
+              "WhenOpened": "2025-07-16T05:40:18.353Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
               "Title": "MainWindow.axaml.cs",
               "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion-Client\\MainWindow.axaml.cs",
               "RelativeDocumentMoniker": "..\\VideoConversion-Client\\MainWindow.axaml.cs",
@@ -117,21 +171,23 @@
               "RelativeToolTip": "..\\VideoConversion-Client\\MainWindow.axaml.cs",
               "ViewState": "AgIAAAICAAAAAAAAAAAUwAgCAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-16T05:28:07.949Z"
+              "WhenOpened": "2025-07-16T05:28:07.949Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 10,
               "Title": "Microsoft.Common.CurrentVersion.targets",
               "DocumentMoniker": "D:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
               "ToolTip": "D:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
               "ViewState": "AgIAAGITAAAAAAAAAAAWwHcTAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
-              "WhenOpened": "2025-07-16T05:23:44.737Z"
+              "WhenOpened": "2025-07-16T05:23:44.737Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 9,
               "Title": "MainWindow.axaml",
               "DocumentMoniker": "E:\\newcode\\VideoConversion\\VideoConversion-Client\\MainWindow.axaml",
               "RelativeDocumentMoniker": "..\\VideoConversion-Client\\MainWindow.axaml",
@@ -139,7 +195,8 @@
               "RelativeToolTip": "..\\VideoConversion-Client\\MainWindow.axaml",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAA0AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-07-16T05:23:08.58Z"
+              "WhenOpened": "2025-07-16T05:23:08.58Z",
+              "EditorCaption": ""
             }
           ]
         }

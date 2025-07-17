@@ -41,7 +41,7 @@ namespace VideoConversion.Hubs
         public async Task JoinTaskGroup(string taskId)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"task_{taskId}");
-            _logger.LogDebug("客户端 {ConnectionId} 加入任务组: {TaskId}", Context.ConnectionId, taskId);
+            _logger.LogInformation("📡 客户端 {ConnectionId} 加入任务组: {TaskId}", Context.ConnectionId, taskId);
         }
 
         /// <summary>

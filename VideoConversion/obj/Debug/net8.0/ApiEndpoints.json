@@ -303,6 +303,82 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "VideoConversion.Controllers.DebugController",
+    "Method": "TestUpload",
+    "RelativePath": "api/Debug/test",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "VideoFile",
+        "Type": "Microsoft.AspNetCore.Http.IFormFile",
+        "IsRequired": false
+      },
+      {
+        "Name": "TaskName",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "Preset",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "OutputFormat",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "VideoCodec",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioCodec",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "QualityMode",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "EncodingPreset",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioQualityMode",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioBitrate",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "AudioVolume",
+        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
+        "IsRequired": false
+      },
+      {
+        "Name": "FastStart",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      },
+      {
+        "Name": "CopyTimestamps",
+        "Type": "System.Boolean",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "VideoConversion.Controllers.HealthController",
     "Method": "GetHealth",
     "RelativePath": "api/Health",

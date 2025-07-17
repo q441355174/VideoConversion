@@ -1,5 +1,6 @@
 using System.Diagnostics;
-using Xabe.FFmpeg;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using VideoConversion.Models;
 using Microsoft.AspNetCore.SignalR;
 using VideoConversion.Hubs;
@@ -13,31 +14,27 @@ namespace VideoConversion.Services
     {
         private readonly DatabaseService _databaseService;
         private readonly IHubContext<ConversionHub> _hubContext;
-        private readonly ILogger<VideoConversionService> _logger;
         private readonly LoggingService _loggingService;
-        private readonly IConfiguration _configuration;
+        private readonly ILogger<VideoConversionService> _logger;
         private readonly SemaphoreSlim _conversionSemaphore;
 
         public VideoConversionService(
             DatabaseService databaseService,
             IHubContext<ConversionHub> hubContext,
-            ILogger<VideoConversionService> logger,
             LoggingService loggingService,
-            IConfiguration configuration)
+            ILogger<VideoConversionService> logger)
         {
             _databaseService = databaseService;
             _hubContext = hubContext;
-            _logger = logger;
             _loggingService = loggingService;
-            _configuration = configuration;
+            _logger = logger;
+            _conversionSemaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
 
-            // 限制并发转换数量
-            var maxConcurrent = _configuration.GetValue<int>("VideoConversion:MaxConcurrentConversions", 2);
-            _conversionSemaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
-
-            // 设置FFmpeg路径（如果需要）
             InitializeFFmpeg();
         }
+
+        private string _ffmpegPath = "";
+        private string _ffprobePath = "";
 
         /// <summary>
         /// 初始化FFmpeg
@@ -46,8 +43,48 @@ namespace VideoConversion.Services
         {
             try
             {
-                // FFmpeg.SetExecutablesPath("path/to/ffmpeg"); // 如果需要指定FFmpeg路径
-                _logger.LogInformation("FFmpeg初始化完成");
+                // 获取当前工作目录（项目根目录）
+                var currentDirectory = Environment.CurrentDirectory;
+                var ffmpegDir = Path.Combine(currentDirectory, "ffmpeg");
+
+                _logger.LogDebug("当前工作目录: {CurrentDirectory}", currentDirectory);
+                _logger.LogDebug("检查FFmpeg路径: {FFmpegPath}", ffmpegDir);
+
+                // 如果ffmpeg目录存在，设置FFmpeg路径
+                if (Directory.Exists(ffmpegDir))
+                {
+                    _ffmpegPath = Path.Combine(ffmpegDir, "ffmpeg.exe");
+                    _ffprobePath = Path.Combine(ffmpegDir, "ffprobe.exe");
+
+                    _logger.LogDebug("检查FFmpeg文件: {FFmpegExe}", _ffmpegPath);
+                    _logger.LogDebug("检查FFprobe文件: {FFprobeExe}", _ffprobePath);
+
+                    if (File.Exists(_ffmpegPath) && File.Exists(_ffprobePath))
+                    {
+                        _logger.LogInformation("✅ FFmpeg配置完成: {FFmpegPath}", ffmpegDir);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("❌ FFmpeg二进制文件不存在:");
+                        _logger.LogWarning("  - ffmpeg.exe存在: {FFmpegExists}", File.Exists(_ffmpegPath));
+                        _logger.LogWarning("  - ffprobe.exe存在: {FFprobeExists}", File.Exists(_ffprobePath));
+
+                        // 尝试使用系统PATH中的FFmpeg
+                        _ffmpegPath = "ffmpeg";
+                        _ffprobePath = "ffprobe";
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("❌ FFmpeg目录不存在: {FFmpegPath}", ffmpegDir);
+                    _logger.LogWarning("尝试使用系统PATH中的FFmpeg");
+
+                    // 尝试使用系统PATH中的FFmpeg
+                    _ffmpegPath = "ffmpeg";
+                    _ffprobePath = "ffprobe";
+                }
+
+                _logger.LogDebug("FFmpeg初始化完成");
             }
             catch (Exception ex)
             {
@@ -61,19 +98,19 @@ namespace VideoConversion.Services
         public async Task StartConversionAsync(string taskId)
         {
             await _conversionSemaphore.WaitAsync();
-            
             try
             {
                 var task = await _databaseService.GetTaskAsync(taskId);
                 if (task == null)
                 {
-                    _logger.LogError("任务不存在: {TaskId}", taskId);
+                    _logger.LogWarning("任务不存在: {TaskId}", taskId);
                     return;
                 }
 
-                if (task.Status != ConversionStatus.Pending)
+                // 现在任务状态应该是Converting（由TryStartTaskAsync设置）
+                if (task.Status != ConversionStatus.Converting)
                 {
-                    _logger.LogWarning("任务状态不正确: {TaskId}, Status: {Status}", taskId, task.Status);
+                    _logger.LogWarning("任务状态不正确: {TaskId}, Status: {Status}，期望状态: Converting", taskId, task.Status);
                     return;
                 }
 
@@ -90,14 +127,13 @@ namespace VideoConversion.Services
         /// </summary>
         private async Task ConvertVideoAsync(ConversionTask task)
         {
-            var startTime = DateTime.Now;
+            var taskStartTime = DateTime.Now;
             try
             {
                 _logger.LogInformation("开始转换视频: {TaskId}", task.Id);
                 _loggingService.LogConversionStarted(task.Id, task.TaskName, task.OriginalFileName, task.OutputFormat);
 
-                // 更新状态为转换中
-                await _databaseService.UpdateTaskStatusAsync(task.Id, ConversionStatus.Converting);
+                // 状态已在TryStartTaskAsync中更新为Converting，这里只需要通知进度
                 await NotifyProgressAsync(task.Id, 0, "开始转换...");
 
                 // 检查输入文件是否存在
@@ -114,54 +150,49 @@ namespace VideoConversion.Services
                 }
 
                 // 获取媒体信息
-                var mediaInfo = await FFmpeg.GetMediaInfo(task.OriginalFilePath);
-                task.Duration = mediaInfo.Duration.TotalSeconds;
+                _logger.LogInformation("开始分析媒体文件: {FilePath}", task.OriginalFilePath);
+                await NotifyProgressAsync(task.Id, 5, "正在分析视频文件...");
+
+                var videoDuration = await GetVideoDurationAsync(task.OriginalFilePath);
+                task.Duration = videoDuration;
+
+                _logger.LogInformation("媒体文件分析完成 - 时长: {Duration}秒", task.Duration);
+
                 await _databaseService.UpdateTaskAsync(task);
+                await NotifyProgressAsync(task.Id, 10, "文件分析完成，开始转换...");
 
-                // 创建转换
-                var conversion = CreateConversion(task, mediaInfo);
-                
-                // 设置进度回调
-                conversion.OnProgress += async (sender, args) =>
+                _logger.LogInformation("开始执行FFmpeg转换...");
+                _logger.LogInformation("输入文件: {InputFile}", task.OriginalFilePath);
+                _logger.LogInformation("输出文件: {OutputFile}", task.OutputFilePath);
+
+                await NotifyProgressAsync(task.Id, 15, "开始视频转换...");
+
+                // 执行转换 - 使用Process直接调用FFmpeg
+                var conversionStartTime = DateTime.Now;
+                _logger.LogInformation("🎬 开始FFmpeg转换，设置进度回调...");
+
+                var success = await RunFFmpegWithProgressAsync(task, conversionStartTime);
+
+                _logger.LogInformation("FFmpeg转换完成，结果: {Success}", success);
+
+                if (success)
                 {
-                    var progress = (int)((args.Duration.TotalSeconds / task.Duration.Value) * 100);
-                    progress = Math.Min(progress, 100);
-                    
-                    var speed = args.Duration.TotalSeconds > 0 ? args.Duration.TotalSeconds / args.TotalLength.TotalSeconds : 0;
-                    var remainingSeconds = speed > 0 ? (int)((task.Duration.Value - args.Duration.TotalSeconds) / speed) : 0;
-
-                    await _databaseService.UpdateTaskProgressAsync(
-                        task.Id, 
-                        progress, 
-                        args.Duration.TotalSeconds, 
-                        speed, 
-                        remainingSeconds);
-
-                    await NotifyProgressAsync(task.Id, progress, $"转换中... {progress}%", speed, remainingSeconds);
-                };
-
-                // 执行转换
-                var result = await conversion.Start();
-                
-                // 检查输出文件
-                if (File.Exists(task.OutputFilePath))
-                {
+                    // 获取输出文件大小
                     var outputFileInfo = new FileInfo(task.OutputFilePath);
                     task.OutputFileSize = outputFileInfo.Length;
-                    task.Status = ConversionStatus.Completed;
-                    task.Progress = 100;
 
-                    await _databaseService.UpdateTaskAsync(task);
+                    // 更新任务状态
                     await _databaseService.UpdateTaskStatusAsync(task.Id, ConversionStatus.Completed);
-                    await NotifyProgressAsync(task.Id, 100, "转换完成！");
+                    await _databaseService.UpdateTaskAsync(task);
+                    await NotifyProgressAsync(task.Id, 100, "转换完成");
 
-                    var duration = DateTime.Now - startTime;
-                    _logger.LogInformation("视频转换完成: {TaskId}", task.Id);
+                    var duration = DateTime.Now - taskStartTime;
+                    _logger.LogInformation("视频转换完成: {TaskId}, 耗时: {Duration}", task.Id, duration);
                     _loggingService.LogConversionCompleted(task.Id, task.TaskName, duration, task.OutputFileSize);
                 }
                 else
                 {
-                    throw new Exception("转换完成但输出文件不存在");
+                    throw new Exception("FFmpeg转换失败");
                 }
             }
             catch (Exception ex)
@@ -169,250 +200,18 @@ namespace VideoConversion.Services
                 _logger.LogError(ex, "视频转换失败: {TaskId}", task.Id);
                 _loggingService.LogConversionFailed(task.Id, task.TaskName, ex);
 
-                await _databaseService.UpdateTaskStatusAsync(task.Id, ConversionStatus.Failed, ex.Message);
-                await NotifyProgressAsync(task.Id, task.Progress, $"转换失败: {ex.Message}");
-            }
-        }
+                string errorMessage = ex.Message;
 
-        /// <summary>
-        /// 创建转换配置
-        /// </summary>
-        private IConversion CreateConversion(ConversionTask task, IMediaInfo mediaInfo)
-        {
-            var conversion = FFmpeg.Conversions.New();
-
-            // 添加输入流
-            foreach (var stream in mediaInfo.Streams)
-            {
-                conversion.AddStream(stream);
-            }
-
-            // 设置输出路径
-            conversion.SetOutput(task.OutputFilePath);
-
-            // 构建详细的FFmpeg参数
-            var parameters = BuildFFmpegParameters(task);
-
-            // 添加参数到转换
-            if (parameters.Any())
-            {
-                conversion.AddParameter(string.Join(" ", parameters));
-            }
-
-            return conversion;
-        }
-
-        /// <summary>
-        /// 构建FFmpeg参数
-        /// </summary>
-        private List<string> BuildFFmpegParameters(ConversionTask task)
-        {
-            var parameters = new List<string>();
-            var isAudioOnly = IsAudioOnlyFormat(task.OutputFormat);
-
-            // 时间范围设置
-            if (task.StartTime.HasValue && task.StartTime.Value > 0)
-            {
-                parameters.Add($"-ss {task.StartTime.Value}");
-            }
-
-            if (task.DurationLimit.HasValue && task.DurationLimit.Value > 0)
-            {
-                parameters.Add($"-t {task.DurationLimit.Value}");
-            }
-
-            // 视频设置（非纯音频格式）
-            if (!isAudioOnly)
-            {
-                BuildVideoParameters(parameters, task);
-            }
-            else
-            {
-                parameters.Add("-vn"); // 禁用视频
-            }
-
-            // 音频设置
-            BuildAudioParameters(parameters, task);
-
-            // 高级选项
-            BuildAdvancedParameters(parameters, task);
-
-            // 自定义参数（最后添加，可以覆盖前面的设置）
-            if (!string.IsNullOrEmpty(task.CustomParams))
-            {
-                parameters.Add(task.CustomParams);
-            }
-
-            return parameters;
-        }
-
-        /// <summary>
-        /// 构建视频参数
-        /// </summary>
-        private void BuildVideoParameters(List<string> parameters, ConversionTask task)
-        {
-            // 视频编解码器
-            if (!string.IsNullOrEmpty(task.VideoCodec))
-            {
-                parameters.Add($"-c:v {task.VideoCodec}");
-            }
-
-            // 编码预设
-            if (!string.IsNullOrEmpty(task.EncodingPreset))
-            {
-                parameters.Add($"-preset {task.EncodingPreset}");
-            }
-
-            // H.264配置文件
-            if (!string.IsNullOrEmpty(task.Profile))
-            {
-                parameters.Add($"-profile:v {task.Profile}");
-            }
-
-            // 质量控制
-            if (task.QualityMode == "crf" && !string.IsNullOrEmpty(task.VideoQuality))
-            {
-                if (int.TryParse(task.VideoQuality, out var crf))
+                // 检查是否是FFmpeg相关错误
+                if (ex.Message.Contains("FFmpeg") || ex.Message.Contains("ffmpeg"))
                 {
-                    parameters.Add($"-crf {crf}");
+                    errorMessage = "FFmpeg未找到或配置错误。请按照项目中的'FFmpeg配置指南.txt'配置FFmpeg后重试。";
+                    _logger.LogError("FFmpeg配置问题，请检查ffmpeg目录或系统PATH");
                 }
-            }
-            else if (task.QualityMode == "bitrate" && task.VideoQuality?.EndsWith("k") == true)
-            {
-                parameters.Add($"-b:v {task.VideoQuality}");
-            }
 
-            // 分辨率
-            if (!string.IsNullOrEmpty(task.Resolution))
-            {
-                var parts = task.Resolution.Split('x');
-                if (parts.Length == 2 && int.TryParse(parts[0], out var width) && int.TryParse(parts[1], out var height))
-                {
-                    parameters.Add($"-s {width}x{height}");
-                }
+                await _databaseService.UpdateTaskStatusAsync(task.Id, ConversionStatus.Failed, errorMessage);
+                await NotifyProgressAsync(task.Id, task.Progress, $"转换失败: {errorMessage}");
             }
-
-            // 帧率
-            if (!string.IsNullOrEmpty(task.FrameRate) && double.TryParse(task.FrameRate, out var fps))
-            {
-                parameters.Add($"-r {fps}");
-            }
-
-            // 像素格式
-            if (!string.IsNullOrEmpty(task.PixelFormat))
-            {
-                parameters.Add($"-pix_fmt {task.PixelFormat}");
-            }
-
-            // 色彩空间
-            if (!string.IsNullOrEmpty(task.ColorSpace))
-            {
-                parameters.Add($"-colorspace {task.ColorSpace}");
-            }
-
-            // 去隔行扫描
-            if (task.Deinterlace)
-            {
-                parameters.Add("-vf yadif");
-            }
-
-            // 降噪
-            if (!string.IsNullOrEmpty(task.Denoise))
-            {
-                var existingVf = parameters.FirstOrDefault(p => p.StartsWith("-vf"));
-                if (existingVf != null)
-                {
-                    var index = parameters.IndexOf(existingVf);
-                    parameters[index] = $"{existingVf},{task.Denoise}";
-                }
-                else
-                {
-                    parameters.Add($"-vf {task.Denoise}");
-                }
-            }
-
-            // 两遍编码
-            if (task.TwoPass)
-            {
-                parameters.Add("-pass 1");
-            }
-        }
-
-        /// <summary>
-        /// 构建音频参数
-        /// </summary>
-        private void BuildAudioParameters(List<string> parameters, ConversionTask task)
-        {
-            // 音频编解码器
-            if (!string.IsNullOrEmpty(task.AudioCodec))
-            {
-                parameters.Add($"-c:a {task.AudioCodec}");
-            }
-
-            // 音频质量
-            if (task.AudioQualityMode == "bitrate" && !string.IsNullOrEmpty(task.AudioQuality))
-            {
-                if (task.AudioQuality.EndsWith("k"))
-                {
-                    parameters.Add($"-b:a {task.AudioQuality}");
-                }
-            }
-            else if (task.AudioQualityMode == "quality" && !string.IsNullOrEmpty(task.AudioQuality))
-            {
-                if (int.TryParse(task.AudioQuality, out var quality))
-                {
-                    parameters.Add($"-q:a {quality}");
-                }
-            }
-
-            // 声道数
-            if (!string.IsNullOrEmpty(task.AudioChannels) && int.TryParse(task.AudioChannels, out var channels))
-            {
-                parameters.Add($"-ac {channels}");
-            }
-
-            // 采样率
-            if (!string.IsNullOrEmpty(task.SampleRate) && int.TryParse(task.SampleRate, out var sampleRate))
-            {
-                parameters.Add($"-ar {sampleRate}");
-            }
-
-            // 音量调整
-            if (!string.IsNullOrEmpty(task.AudioVolume) && int.TryParse(task.AudioVolume, out var volume) && volume != 100)
-            {
-                var volumeFilter = $"volume={volume / 100.0:F2}";
-                var existingAf = parameters.FirstOrDefault(p => p.StartsWith("-af"));
-                if (existingAf != null)
-                {
-                    var index = parameters.IndexOf(existingAf);
-                    parameters[index] = $"{existingAf},{volumeFilter}";
-                }
-                else
-                {
-                    parameters.Add($"-af {volumeFilter}");
-                }
-            }
-        }
-
-        /// <summary>
-        /// 构建高级参数
-        /// </summary>
-        private void BuildAdvancedParameters(List<string> parameters, ConversionTask task)
-        {
-            // 快速启动（优化网络播放）
-            if (task.FastStart && (task.OutputFormat == "mp4" || task.OutputFormat == "mov"))
-            {
-                parameters.Add("-movflags +faststart");
-            }
-
-            // 保持时间戳
-            if (task.CopyTimestamps)
-            {
-                parameters.Add("-copyts");
-            }
-
-            // 其他通用设置
-            parameters.Add("-avoid_negative_ts make_zero");
         }
 
         /// <summary>
@@ -420,77 +219,321 @@ namespace VideoConversion.Services
         /// </summary>
         private bool IsAudioOnlyFormat(string format)
         {
-            var audioFormats = new[] { "mp3", "aac", "flac", "ogg", "wav", "m4a" };
+            var audioFormats = new[] { "mp3", "aac", "flac", "wav", "ogg", "m4a" };
             return audioFormats.Contains(format.ToLower());
-        }
-
-        /// <summary>
-        /// 通知进度更新
-        /// </summary>
-        private async Task NotifyProgressAsync(string taskId, int progress, string message, double? speed = null, int? remainingSeconds = null)
-        {
-            try
-            {
-                await _hubContext.Clients.All.SendAsync("ProgressUpdate", new
-                {
-                    TaskId = taskId,
-                    Progress = progress,
-                    Message = message,
-                    Speed = speed,
-                    RemainingSeconds = remainingSeconds,
-                    Timestamp = DateTime.Now
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "发送进度通知失败: {TaskId}", taskId);
-            }
         }
 
         /// <summary>
         /// 取消转换任务
         /// </summary>
-        public async Task<bool> CancelConversionAsync(string taskId)
+        public async Task CancelConversionAsync(string taskId)
         {
             try
             {
-                var task = await _databaseService.GetTaskAsync(taskId);
-                if (task == null || task.Status != ConversionStatus.Converting)
-                {
-                    return false;
-                }
-
-                await _databaseService.UpdateTaskStatusAsync(taskId, ConversionStatus.Cancelled);
-                await NotifyProgressAsync(taskId, task.Progress, "转换已取消");
-                
-                _logger.LogInformation("取消转换任务: {TaskId}", taskId);
-                return true;
+                await _databaseService.UpdateTaskStatusAsync(taskId, ConversionStatus.Cancelled, "用户取消");
+                await NotifyProgressAsync(taskId, 0, "任务已取消");
+                _logger.LogInformation("任务已取消: {TaskId}", taskId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "取消转换任务失败: {TaskId}", taskId);
+                _logger.LogError(ex, "取消任务失败: {TaskId}", taskId);
+            }
+        }
+
+        /// <summary>
+        /// 获取视频时长
+        /// </summary>
+        private async Task<double> GetVideoDurationAsync(string filePath)
+        {
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = _ffprobePath,
+                    Arguments = $"-v quiet -show_entries format=duration -of csv=p=0 \"{filePath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = new Process { StartInfo = startInfo };
+                process.Start();
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode == 0 && double.TryParse(output.Trim(), out var duration))
+                {
+                    return duration;
+                }
+
+                _logger.LogWarning("无法获取视频时长: {FilePath}", filePath);
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取视频时长失败: {FilePath}", filePath);
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// 运行FFmpeg并解析进度
+        /// </summary>
+        private async Task<bool> RunFFmpegWithProgressAsync(ConversionTask task, DateTime startTime)
+        {
+            try
+            {
+                var arguments = BuildFFmpegArguments(task);
+                _logger.LogInformation("FFmpeg命令: {FFmpegPath} {Arguments}", _ffmpegPath, arguments);
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = _ffmpegPath,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = new Process { StartInfo = startInfo };
+
+                var tcs = new TaskCompletionSource<bool>();
+                var progressRegex = new Regex(@"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})");
+
+                process.ErrorDataReceived += async (sender, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        _logger.LogDebug("FFmpeg输出: {Output}", e.Data);
+                        await ParseFFmpegProgress(e.Data, task, startTime, progressRegex);
+                    }
+                };
+
+                process.Exited += (sender, e) =>
+                {
+                    tcs.SetResult(process.ExitCode == 0);
+                };
+
+                process.EnableRaisingEvents = true;
+                process.Start();
+                process.BeginErrorReadLine();
+
+                return await tcs.Task;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "FFmpeg执行失败: {TaskId}", task.Id);
                 return false;
             }
         }
 
         /// <summary>
-        /// 获取媒体信息
+        /// 解析FFmpeg进度输出
         /// </summary>
-        public async Task<IMediaInfo?> GetMediaInfoAsync(string filePath)
+        private async Task ParseFFmpegProgress(string output, ConversionTask task, DateTime startTime, Regex progressRegex)
         {
             try
             {
-                if (!File.Exists(filePath))
+                // 尝试解析time=格式的进度
+                var timeMatch = progressRegex.Match(output);
+                if (timeMatch.Success && task.Duration.HasValue && task.Duration.Value > 0)
                 {
-                    return null;
+                    var hours = int.Parse(timeMatch.Groups[1].Value);
+                    var minutes = int.Parse(timeMatch.Groups[2].Value);
+                    var seconds = int.Parse(timeMatch.Groups[3].Value);
+                    var centiseconds = int.Parse(timeMatch.Groups[4].Value);
+
+                    var currentSeconds = hours * 3600 + minutes * 60 + seconds + centiseconds / 100.0;
+                    await UpdateProgress(task, startTime, currentSeconds);
+                    return;
                 }
 
-                return await FFmpeg.GetMediaInfo(filePath);
+                // 尝试解析out_time_ms=格式的进度（微秒）
+                var outTimeMatch = Regex.Match(output, @"out_time_ms=(\d+)");
+                if (outTimeMatch.Success && task.Duration.HasValue && task.Duration.Value > 0)
+                {
+                    var microseconds = long.Parse(outTimeMatch.Groups[1].Value);
+                    var currentSeconds = microseconds / 1000000.0;
+                    await UpdateProgress(task, startTime, currentSeconds);
+                    return;
+                }
+
+                // 尝试解析out_time=格式的进度
+                var outTimeFormatMatch = Regex.Match(output, @"out_time=(\d{2}):(\d{2}):(\d{2})\.(\d{6})");
+                if (outTimeFormatMatch.Success && task.Duration.HasValue && task.Duration.Value > 0)
+                {
+                    var hours = int.Parse(outTimeFormatMatch.Groups[1].Value);
+                    var minutes = int.Parse(outTimeFormatMatch.Groups[2].Value);
+                    var seconds = int.Parse(outTimeFormatMatch.Groups[3].Value);
+                    var microseconds = int.Parse(outTimeFormatMatch.Groups[4].Value);
+
+                    var currentSeconds = hours * 3600 + minutes * 60 + seconds + microseconds / 1000000.0;
+                    await UpdateProgress(task, startTime, currentSeconds);
+                    return;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取媒体信息失败: {FilePath}", filePath);
-                return null;
+                _logger.LogError(ex, "解析FFmpeg进度失败: {TaskId} - {Output}", task.Id, output);
+            }
+        }
+
+        /// <summary>
+        /// 更新任务进度
+        /// </summary>
+        private async Task UpdateProgress(ConversionTask task, DateTime startTime, double currentSeconds)
+        {
+            try
+            {
+                if (!task.Duration.HasValue || task.Duration.Value <= 0) return;
+
+                var progressPercent = Math.Min((int)((currentSeconds / task.Duration.Value) * 100), 99);
+                var elapsed = DateTime.Now - startTime;
+                var speed = elapsed.TotalSeconds > 0 ? currentSeconds / elapsed.TotalSeconds : 0;
+                var remainingSeconds = speed > 0 ? (int)((task.Duration.Value - currentSeconds) / speed) : 0;
+
+                _logger.LogDebug("📊 FFmpeg进度: {Progress}% ({Current:F1}/{Total:F1}秒)",
+                    progressPercent, currentSeconds, task.Duration.Value);
+
+                // 异步通知进度
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await NotifyProgressAsync(task.Id, progressPercent,
+                            $"转换中... {progressPercent}%", speed, remainingSeconds);
+
+                        await _databaseService.UpdateTaskProgressAsync(task.Id, progressPercent,
+                            currentSeconds, speed, remainingSeconds);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "更新进度失败: {TaskId}", task.Id);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "更新进度失败: {TaskId}", task.Id);
+            }
+        }
+
+        /// <summary>
+        /// 构建FFmpeg命令参数
+        /// </summary>
+        private string BuildFFmpegArguments(ConversionTask task)
+        {
+            var args = new List<string>
+            {
+                "-y", // 覆盖输出文件
+                "-progress", "pipe:2", // 输出进度到stderr
+                $"-i \"{task.OriginalFilePath}\"" // 输入文件
+            };
+
+            // 根据任务配置添加编码参数
+            if (!string.IsNullOrEmpty(task.VideoCodec))
+            {
+                args.Add($"-c:v {task.VideoCodec}");
+            }
+
+            if (!string.IsNullOrEmpty(task.AudioCodec))
+            {
+                args.Add($"-c:a {task.AudioCodec}");
+            }
+
+            // 视频质量/比特率
+            if (!string.IsNullOrEmpty(task.VideoQuality))
+            {
+                if (task.QualityMode == "CRF" && int.TryParse(task.VideoQuality, out var crf))
+                {
+                    args.Add($"-crf {crf}");
+                }
+                else if (task.QualityMode == "Bitrate")
+                {
+                    if (int.TryParse(task.VideoQuality.Replace("k", ""), out var bitrate))
+                    {
+                        args.Add($"-b:v {bitrate}k");
+                    }
+                }
+            }
+
+            // 音频质量/比特率
+            if (!string.IsNullOrEmpty(task.AudioQuality))
+            {
+                if (int.TryParse(task.AudioQuality.Replace("k", ""), out var bitrate))
+                {
+                    args.Add($"-b:a {bitrate}k");
+                }
+            }
+
+            // 分辨率
+            if (!string.IsNullOrEmpty(task.Resolution) && task.Resolution != "原始")
+            {
+                var parts = task.Resolution.Split('x');
+                if (parts.Length == 2 && int.TryParse(parts[0], out var width) && int.TryParse(parts[1], out var height))
+                {
+                    args.Add($"-s {width}x{height}");
+                }
+            }
+
+            // 帧率
+            if (!string.IsNullOrEmpty(task.FrameRate) && task.FrameRate != "原始")
+            {
+                if (double.TryParse(task.FrameRate, out var fps))
+                {
+                    args.Add($"-r {fps}");
+                }
+            }
+
+            // 音频声道数
+            if (!string.IsNullOrEmpty(task.AudioChannels) && int.TryParse(task.AudioChannels, out var channels))
+            {
+                args.Add($"-ac {channels}");
+            }
+
+            // 采样率
+            if (!string.IsNullOrEmpty(task.SampleRate) && int.TryParse(task.SampleRate, out var sampleRate))
+            {
+                args.Add($"-ar {sampleRate}");
+            }
+
+            // 自定义参数
+            if (!string.IsNullOrEmpty(task.CustomParams))
+            {
+                args.Add(task.CustomParams);
+            }
+
+            args.Add($"\"{task.OutputFilePath}\""); // 输出文件
+
+            return string.Join(" ", args);
+        }
+
+        /// <summary>
+        /// 通知进度更新
+        /// </summary>
+        private async Task NotifyProgressAsync(string taskId, int progress, string message, double speed = 0, int remainingSeconds = 0)
+        {
+            try
+            {
+                _logger.LogDebug("📡 发送进度更新: {TaskId} - {Progress}% - {Message}", taskId, progress, message);
+
+                await _hubContext.Clients.Group($"task_{taskId}").SendAsync("ProgressUpdate", new
+                {
+                    TaskId = taskId,
+                    Progress = progress,
+                    Message = message,
+                    Speed = speed,
+                    RemainingSeconds = remainingSeconds
+                });
+
+                _logger.LogDebug("✅ 进度更新发送成功: {TaskId} - {Progress}%", taskId, progress);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ 发送进度更新失败: {TaskId} - {Progress}%", taskId, progress);
             }
         }
     }

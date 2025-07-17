@@ -50,6 +50,10 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "FFmpeg.AutoGen": {
+              "target": "Package",
+              "version": "[7.1.1, )"
+            },
             "Microsoft.AspNetCore.SignalR": {
               "target": "Package",
               "version": "[1.2.0, )"
@@ -73,10 +77,6 @@
             "SqlSugarCore": {
               "target": "Package",
               "version": "[5.1.4.198, )"
-            },
-            "Xabe.FFmpeg": {
-              "target": "Package",
-              "version": "[6.0.1, )"
             },
             "xunit.assert": {
               "target": "Package",

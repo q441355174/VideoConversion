@@ -1,12 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "iHSdA9wYPjE=",
+  "dgSpecHash": "d/TfPZIpiVg=",
   "success": true,
   "projectFilePath": "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\administer\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\castle.core\\5.1.1\\castle.core.5.1.1.nupkg.sha512",
+    "C:\\Users\\administer\\.nuget\\packages\\ffmpeg.autogen\\7.1.1\\ffmpeg.autogen.7.1.1.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\microsoft.aspnetcore.authentication.abstractions\\2.3.0\\microsoft.aspnetcore.authentication.abstractions.2.3.0.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\microsoft.aspnetcore.authorization\\2.3.0\\microsoft.aspnetcore.authorization.2.3.0.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\microsoft.aspnetcore.authorization.policy\\2.3.0\\microsoft.aspnetcore.authorization.policy.2.3.0.nupkg.sha512",
@@ -121,7 +122,6 @@
     "C:\\Users\\administer\\.nuget\\packages\\system.threading.channels\\8.0.0\\system.threading.channels.8.0.0.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\system.threading.tasks\\4.3.0\\system.threading.tasks.4.3.0.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\system.threading.tasks.extensions\\4.5.4\\system.threading.tasks.extensions.4.5.4.nupkg.sha512",
-    "C:\\Users\\administer\\.nuget\\packages\\xabe.ffmpeg\\6.0.1\\xabe.ffmpeg.6.0.1.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\xunit.abstractions\\2.0.3\\xunit.abstractions.2.0.3.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\xunit.assert\\2.9.3\\xunit.assert.2.9.3.nupkg.sha512",
     "C:\\Users\\administer\\.nuget\\packages\\xunit.extensibility.core\\2.9.3\\xunit.extensibility.core.2.9.3.nupkg.sha512"

@@ -13,6 +13,7 @@ namespace VideoConversion.Services
         private readonly ILogger<ConversionQueueService> _logger;
         private readonly IConfiguration _configuration;
         private readonly int _checkIntervalSeconds;
+        private readonly HashSet<string> _runningTasks = new(); // 跟踪正在执行的任务
 
         public ConversionQueueService(
             IServiceProvider serviceProvider,
@@ -62,18 +63,75 @@ namespace VideoConversion.Services
 
             try
             {
-                // 获取待处理的任务
+                // 获取待处理的任务（只处理Pending状态且不在运行列表中的任务）
                 var pendingTasks = await databaseService.GetActiveTasksAsync();
-                var pendingTasksOnly = pendingTasks.Where(t => t.Status == ConversionStatus.Pending).ToList();
+
+                // 只在有任务时记录日志
+                if (pendingTasks.Any())
+                {
+                    _logger.LogDebug("队列检查 - 活动任务总数: {Count}", pendingTasks.Count);
+                }
+
+                // 检查是否有失败的任务仍在活动列表中（这不应该发生）
+                var failedTasks = pendingTasks.Where(t => t.Status == ConversionStatus.Failed).ToList();
+                if (failedTasks.Any())
+                {
+                    _logger.LogError("发现 {Count} 个失败任务仍在活动列表中，这是数据库查询错误:", failedTasks.Count);
+                    foreach (var task in failedTasks)
+                    {
+                        _logger.LogError("失败任务: {TaskId} ({TaskName}) - 状态: {Status}",
+                            task.Id, task.TaskName, task.Status);
+                    }
+                }
+
+                var pendingTasksOnly = pendingTasks
+                    .Where(t => t.Status == ConversionStatus.Pending)
+                    .Where(t => !_runningTasks.Contains(t.Id))
+                    .ToList();
+
+                // 额外检查：确保没有已完成的任务被误认为待处理
+                var completedTasks = pendingTasks.Where(t => t.Status == ConversionStatus.Completed).ToList();
+                if (completedTasks.Any())
+                {
+                    _logger.LogWarning("发现 {Count} 个已完成但仍在活动列表中的任务:", completedTasks.Count);
+                    foreach (var task in completedTasks)
+                    {
+                        _logger.LogWarning("已完成任务: {TaskId} ({TaskName}) - 状态: {Status}",
+                            task.Id, task.TaskName, task.Status);
+                    }
+                }
 
                 if (pendingTasksOnly.Any())
                 {
-                    _logger.LogDebug("发现 {Count} 个待处理任务", pendingTasksOnly.Count);
+                    _logger.LogInformation("处理 {Count} 个待处理任务", pendingTasksOnly.Count);
 
                     foreach (var task in pendingTasksOnly)
                     {
+                        // 检查任务是否已经在执行中
+                        lock (_runningTasks)
+                        {
+                            if (_runningTasks.Contains(task.Id))
+                            {
+                                _logger.LogDebug("任务 {TaskId} 已在执行中，跳过", task.Id);
+                                continue;
+                            }
+                        }
+
                         try
                         {
+                            // 使用原子操作尝试启动任务
+                            var canStart = await databaseService.TryStartTaskAsync(task.Id);
+                            if (!canStart)
+                            {
+                                continue;
+                            }
+
+                            // 只有成功获得任务锁后才添加到运行列表
+                            lock (_runningTasks)
+                            {
+                                _runningTasks.Add(task.Id);
+                            }
+
                             // 启动转换任务（异步执行，不等待完成）
                             _ = Task.Run(async () =>
                             {
@@ -85,6 +143,14 @@ namespace VideoConversion.Services
                                 {
                                     _logger.LogError(ex, "转换任务执行失败: {TaskId}", task.Id);
                                 }
+                                finally
+                                {
+                                    // 任务完成后从运行列表中移除
+                                    lock (_runningTasks)
+                                    {
+                                        _runningTasks.Remove(task.Id);
+                                    }
+                                }
                             });
 
                             _logger.LogInformation("启动转换任务: {TaskId} - {TaskName}", task.Id, task.TaskName);
@@ -92,6 +158,11 @@ namespace VideoConversion.Services
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "启动转换任务失败: {TaskId}", task.Id);
+                            // 启动失败时也要从运行列表中移除
+                            lock (_runningTasks)
+                            {
+                                _runningTasks.Remove(task.Id);
+                            }
                         }
                     }
                 }
