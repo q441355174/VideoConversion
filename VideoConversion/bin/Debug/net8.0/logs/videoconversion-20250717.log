@@ -1,0 +1,100 @@
+[2025-07-17 21:25:29.712 INF] Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager: User profile is available. Using 'C:\Users\luo\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+[2025-07-17 21:25:29.826 INF] VideoConversion.Services.ConversionQueueService: 转换队列服务启动
+[2025-07-17 21:25:29.992 INF] VideoConversion.Services.DatabaseService: 数据库初始化完成
+[2025-07-17 21:25:29.995 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:25:29.997 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:25:30.014 INF] VideoConversion.Services.FileCleanupService: 文件清理服务启动，清理间隔: 60 分钟
+[2025-07-17 21:25:30.019 INF] VideoConversion.Services.FileService: 创建上传目录: uploads
+[2025-07-17 21:25:30.020 INF] VideoConversion.Services.FileService: 创建输出目录: outputs
+[2025-07-17 21:25:30.021 INF] VideoConversion.Services.FileCleanupService: 开始清理旧文件和任务记录
+[2025-07-17 21:25:30.044 INF] VideoConversion.Services.DatabaseService: 清理了 0 个旧任务
+[2025-07-17 21:25:30.048 INF] VideoConversion.Services.FileService: 清理了 0 个旧文件
+[2025-07-17 21:25:30.058 WRN] Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware: The WebRootPath was not found: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\wwwroot. Static files may be unavailable.
+[2025-07-17 21:25:30.083 INF] Microsoft.Hosting.Lifetime: Now listening on: http://localhost:5000
+[2025-07-17 21:25:30.084 INF] Microsoft.Hosting.Lifetime: Application started. Press Ctrl+C to shut down.
+[2025-07-17 21:25:30.085 INF] Microsoft.Hosting.Lifetime: Hosting environment: Production
+[2025-07-17 21:25:30.086 INF] Microsoft.Hosting.Lifetime: Content root path: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0
+[2025-07-17 21:25:40.017 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:25:40.018 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:25:50.021 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:25:50.022 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:26:00.022 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:26:00.023 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:42:14.814 INF] Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager: User profile is available. Using 'C:\Users\luo\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+[2025-07-17 21:42:14.932 INF] VideoConversion.Services.ConversionQueueService: 转换队列服务启动
+[2025-07-17 21:42:15.232 INF] VideoConversion.Services.DatabaseService: 已创建 5 个示例任务
+[2025-07-17 21:42:15.234 INF] VideoConversion.Services.DatabaseService: 数据库初始化完成
+[2025-07-17 21:42:15.236 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:42:15.237 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:42:15.262 INF] VideoConversion.Services.ConversionQueueService: 处理 1 个待处理任务
+[2025-07-17 21:42:15.273 INF] VideoConversion.Services.ConversionQueueService: 启动转换任务: fbe975f2-ccc4-44f0-8261-8fea2daa3f87 - 等待转换 - MKV转WebM
+[2025-07-17 21:42:15.276 INF] VideoConversion.Services.FileCleanupService: 文件清理服务启动，清理间隔: 60 分钟
+[2025-07-17 21:42:15.279 INF] VideoConversion.Services.FileCleanupService: 开始清理旧文件和任务记录
+[2025-07-17 21:42:15.292 INF] VideoConversion.Services.DatabaseService: 清理了 0 个旧任务
+[2025-07-17 21:42:15.295 INF] VideoConversion.Services.FileService: 清理了 0 个旧文件
+[2025-07-17 21:42:15.304 INF] VideoConversion.Services.VideoConversionService: 开始转换视频: fbe975f2-ccc4-44f0-8261-8fea2daa3f87
+[2025-07-17 21:42:15.305 INF] VideoConversion.Services.LoggingService: 转换任务开始 - TaskId: fbe975f2-ccc4-44f0-8261-8fea2daa3f87, TaskName: 等待转换 - MKV转WebM, InputFile: anime_episode.mkv, OutputFormat: webm
+[2025-07-17 21:42:15.306 WRN] Microsoft.AspNetCore.StaticFiles.StaticFileMiddleware: The WebRootPath was not found: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\wwwroot. Static files may be unavailable.
+[2025-07-17 21:42:15.307 ERR] VideoConversion.Services.VideoConversionService: 视频转换失败: fbe975f2-ccc4-44f0-8261-8fea2daa3f87
+System.IO.FileNotFoundException: 输入文件不存在: uploads/anime_episode.mkv
+   at VideoConversion.Services.VideoConversionService.ConvertVideoAsync(ConversionTask task) in E:\Code\VideoConversion\VideoConversion\VideoConversion\Services\VideoConversionService.cs:line 142
+[2025-07-17 21:42:15.309 ERR] VideoConversion.Services.LoggingService: 转换任务失败 - TaskId: fbe975f2-ccc4-44f0-8261-8fea2daa3f87, TaskName: 等待转换 - MKV转WebM
+System.IO.FileNotFoundException: 输入文件不存在: uploads/anime_episode.mkv
+   at VideoConversion.Services.VideoConversionService.ConvertVideoAsync(ConversionTask task) in E:\Code\VideoConversion\VideoConversion\VideoConversion\Services\VideoConversionService.cs:line 142
+[2025-07-17 21:42:15.319 INF] VideoConversion.Services.DatabaseService: 任务状态更新: fbe975f2-ccc4-44f0-8261-8fea2daa3f87 -> "Failed"
+[2025-07-17 21:42:15.322 INF] Microsoft.Hosting.Lifetime: Now listening on: http://localhost:5000
+[2025-07-17 21:42:15.323 INF] Microsoft.Hosting.Lifetime: Application started. Press Ctrl+C to shut down.
+[2025-07-17 21:42:15.324 INF] Microsoft.Hosting.Lifetime: Hosting environment: Production
+[2025-07-17 21:42:15.325 INF] Microsoft.Hosting.Lifetime: Content root path: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0
+[2025-07-17 21:42:25.279 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:42:25.281 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:42:35.291 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:42:35.292 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:42:40.502 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/ - null null
+[2025-07-17 21:42:40.509 WRN] Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware: Failed to determine the https port for redirect.
+[2025-07-17 21:42:40.524 INF] Microsoft.AspNetCore.Routing.EndpointMiddleware: Executing endpoint '/Index'
+[2025-07-17 21:42:40.543 INF] Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Route matched with {page = "/Index", action = "", controller = ""}. Executing page /Index
+[2025-07-17 21:42:40.554 INF] Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Executing handler method VideoConversion.Pages.IndexModel.OnGet - ModelState is "Valid"
+[2025-07-17 21:42:40.557 INF] Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Executed handler method OnGet, returned result .
+[2025-07-17 21:42:40.562 INF] Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Executing an implicit handler method - ModelState is "Valid"
+[2025-07-17 21:42:40.564 INF] Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Executed an implicit handler method, returned result Microsoft.AspNetCore.Mvc.RazorPages.PageResult.
+[2025-07-17 21:42:40.699 INF] Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure.PageActionInvoker: Executed page /Index in 151.2485ms
+[2025-07-17 21:42:40.701 INF] Microsoft.AspNetCore.Routing.EndpointMiddleware: Executed endpoint '/Index'
+[2025-07-17 21:42:40.706 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/ - 200 null text/html; charset=utf-8 204.9572ms
+[2025-07-17 21:42:40.744 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/lib/bootstrap/dist/css/bootstrap.min.css - null null
+[2025-07-17 21:42:40.745 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/css/site.css - null null
+[2025-07-17 21:42:40.748 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/VideoConversion.styles.css - null null
+[2025-07-17 21:42:40.748 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/lib/jquery/dist/jquery.min.js - null null
+[2025-07-17 21:42:40.748 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/lib/bootstrap/dist/js/bootstrap.bundle.min.js - null null
+[2025-07-17 21:42:40.748 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/js/site.js - null null
+[2025-07-17 21:42:40.750 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/lib/bootstrap/dist/css/bootstrap.min.css - 404 0 null 6.9143ms
+[2025-07-17 21:42:40.751 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/css/site.css - 404 0 null 5.8981ms
+[2025-07-17 21:42:40.753 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/VideoConversion.styles.css - 404 0 null 5.0631ms
+[2025-07-17 21:42:40.755 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/lib/jquery/dist/jquery.min.js - 404 0 null 7.6493ms
+[2025-07-17 21:42:40.758 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/lib/bootstrap/dist/js/bootstrap.bundle.min.js - 404 0 null 9.8766ms
+[2025-07-17 21:42:40.763 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/js/site.js - 404 0 null 14.694ms
+[2025-07-17 21:42:40.766 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/lib/bootstrap/dist/css/bootstrap.min.css, Response status code: 404
+[2025-07-17 21:42:40.768 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/css/site.css, Response status code: 404
+[2025-07-17 21:42:40.772 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/VideoConversion.styles.css, Response status code: 404
+[2025-07-17 21:42:40.774 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/lib/jquery/dist/jquery.min.js, Response status code: 404
+[2025-07-17 21:42:40.777 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/lib/bootstrap/dist/js/bootstrap.bundle.min.js, Response status code: 404
+[2025-07-17 21:42:40.780 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/js/site.js, Response status code: 404
+[2025-07-17 21:42:40.782 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/lib/signalr/dist/browser/signalr.min.js - null null
+[2025-07-17 21:42:40.795 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/lib/signalr/dist/browser/signalr.min.js - 404 0 null 12.5397ms
+[2025-07-17 21:42:40.798 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/lib/signalr/dist/browser/signalr.min.js, Response status code: 404
+[2025-07-17 21:42:41.760 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request starting HTTP/1.1 GET http://localhost:5000/favicon.ico - null null
+[2025-07-17 21:42:41.762 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request finished HTTP/1.1 GET http://localhost:5000/favicon.ico - 404 0 null 2.3639ms
+[2025-07-17 21:42:41.766 INF] Microsoft.AspNetCore.Hosting.Diagnostics: Request reached the end of the middleware pipeline without being handled by application code. Request path: GET http://localhost:5000/favicon.ico, Response status code: 404
+[2025-07-17 21:42:45.297 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:42:45.298 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:42:55.300 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:42:55.302 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:43:05.308 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:43:05.309 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:43:15.313 WRN] VideoConversion.Services.VideoConversionService: ❌ FFmpeg目录不存在: E:\Code\VideoConversion\VideoConversion\VideoConversion\bin\Debug\net8.0\ffmpeg
+[2025-07-17 21:43:15.314 WRN] VideoConversion.Services.VideoConversionService: 尝试使用系统PATH中的FFmpeg
+[2025-07-17 21:43:20.250 INF] Microsoft.Hosting.Lifetime: Application is shutting down...
+[2025-07-17 21:43:20.261 INF] VideoConversion.Services.FileCleanupService: 正在停止文件清理服务...
+[2025-07-17 21:43:20.263 INF] VideoConversion.Services.FileCleanupService: 文件清理服务停止
+[2025-07-17 21:43:20.264 INF] VideoConversion.Services.ConversionQueueService: 正在停止转换队列服务...
+[2025-07-17 21:43:20.265 INF] VideoConversion.Services.ConversionQueueService: 转换队列服务停止
