@@ -35,7 +35,7 @@ namespace VideoConversion.Models
                     AudioQuality = "128k",
                     Resolution = "1920x1080",
                     FrameRate = "30",
-                    IsDefault = true
+                    IsDefault = false // 不再是默认预设
                 },
                 new ConversionPreset
                 {
@@ -119,6 +119,104 @@ namespace VideoConversion.Models
                     VideoQuality = "28",
                     AudioQuality = "96k",
                     Resolution = "854x480"
+                },
+
+                // GPU加速预设 - NVIDIA NVENC
+                new ConversionPreset
+                {
+                    Name = "GPU Fast 1080p (NVENC)",
+                    Description = "NVIDIA GPU加速，快速1080p转换",
+                    OutputFormat = "mp4",
+                    VideoCodec = "h264_nvenc",
+                    AudioCodec = "aac",
+                    VideoQuality = "23",
+                    AudioQuality = "128k",
+                    Resolution = "1920x1080",
+                    FrameRate = "30",
+                    IsDefault = true // 设为默认预设
+                },
+                new ConversionPreset
+                {
+                    Name = "GPU High Quality 1080p (NVENC)",
+                    Description = "NVIDIA GPU加速，高质量1080p",
+                    OutputFormat = "mp4",
+                    VideoCodec = "h264_nvenc",
+                    AudioCodec = "aac",
+                    VideoQuality = "18",
+                    AudioQuality = "192k",
+                    Resolution = "1920x1080"
+                },
+                new ConversionPreset
+                {
+                    Name = "GPU 4K Ultra (NVENC)",
+                    Description = "NVIDIA GPU加速，4K超高清",
+                    OutputFormat = "mp4",
+                    VideoCodec = "h264_nvenc",
+                    AudioCodec = "aac",
+                    VideoQuality = "20",
+                    AudioQuality = "256k",
+                    Resolution = "3840x2160"
+                },
+                new ConversionPreset
+                {
+                    Name = "GPU HEVC 1080p (NVENC)",
+                    Description = "NVIDIA GPU加速，H.265编码",
+                    OutputFormat = "mp4",
+                    VideoCodec = "hevc_nvenc",
+                    AudioCodec = "aac",
+                    VideoQuality = "23",
+                    AudioQuality = "128k",
+                    Resolution = "1920x1080"
+                },
+
+                // GPU加速预设 - Intel QSV
+                new ConversionPreset
+                {
+                    Name = "GPU Fast 1080p (Intel QSV)",
+                    Description = "Intel GPU加速，快速1080p转换",
+                    OutputFormat = "mp4",
+                    VideoCodec = "h264_qsv",
+                    AudioCodec = "aac",
+                    VideoQuality = "23",
+                    AudioQuality = "128k",
+                    Resolution = "1920x1080",
+                    FrameRate = "30"
+                },
+                new ConversionPreset
+                {
+                    Name = "GPU HEVC 1080p (Intel QSV)",
+                    Description = "Intel GPU加速，H.265编码",
+                    OutputFormat = "mp4",
+                    VideoCodec = "hevc_qsv",
+                    AudioCodec = "aac",
+                    VideoQuality = "23",
+                    AudioQuality = "128k",
+                    Resolution = "1920x1080"
+                },
+
+                // GPU加速预设 - AMD VCE
+                new ConversionPreset
+                {
+                    Name = "GPU Fast 1080p (AMD VCE)",
+                    Description = "AMD GPU加速，快速1080p转换",
+                    OutputFormat = "mp4",
+                    VideoCodec = "h264_amf",
+                    AudioCodec = "aac",
+                    VideoQuality = "23",
+                    AudioQuality = "128k",
+                    Resolution = "1920x1080",
+                    FrameRate = "30"
+                },
+                new ConversionPreset
+                {
+                    Name = "GPU HEVC 1080p (AMD VCE)",
+                    Description = "AMD GPU加速，H.265编码",
+                    OutputFormat = "mp4",
+                    VideoCodec = "hevc_amf",
+                    AudioCodec = "aac",
+                    VideoQuality = "23",
+                    AudioQuality = "128k",
+                    Resolution = "1920x1080"
                 },
 
                 // 其他格式

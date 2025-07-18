@@ -53,6 +53,47 @@
                                     (<span id="selectedFileSize"></span>)
                                 </div>
                             </div>
+
+                            <!-- 上传进度条 -->
+                            <div id="uploadProgressContainer" class="mt-3" style="display: none;">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-upload text-primary"></i>
+                                            文件上传进度
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span id="uploadFileName">正在上传...</span>
+                                                <span id="uploadPercentage">0%</span>
+                                            </div>
+                                        </div>
+                                        <div class="progress mb-2" style="height: 20px;">
+                                            <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                                                 role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <div class="row text-muted small">
+                                            <div class="col-6">
+                                                <i class="fas fa-tachometer-alt"></i>
+                                                速度: <span id="uploadSpeed">0 MB/s</span>
+                                            </div>
+                                            <div class="col-6 text-end">
+                                                <i class="fas fa-clock"></i>
+                                                剩余: <span id="uploadTimeRemaining">计算中...</span>
+                                            </div>
+                                        </div>
+                                        <div class="row text-muted small mt-1">
+                                            <div class="col-12">
+                                                <i class="fas fa-info-circle"></i>
+                                                <span id="uploadedSize">0 MB</span> / <span id="totalSize">0 MB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- 任务名称 -->
@@ -506,7 +547,7 @@
                                             <div class="col-md-6">
                                                 <h6><i class="fas fa-video"></i> 视频设置</h6>
                                                 <ul class="list-unstyled small">
-                                                    <li><strong>编解码器:</strong> <span id="videoCodecDetail">-</span></li>
+                                                    <li><strong>编解码器:</strong> <span id="videoCodecDetail">-</span> <span id="gpuAccelBadge" class="badge bg-success ms-1" style="display: none;">🚀 GPU加速</span></li>
                                                     <li><strong>分辨率:</strong> <span id="resolutionDetail">-</span></li>
                                                     <li><strong>质量:</strong> <span id="qualityDetail">-</span></li>
                                                     <li><strong>帧率:</strong> <span id="frameRateDetail">-</span></li>
@@ -636,6 +677,29 @@
                     </div>
                 </div>
             </div>
+
+            <!-- GPU硬件加速信息 -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-gradient text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(45deg, #6f42c1, #e83e8c);">
+                    <h6 class="mb-0">
+                        <i class="fas fa-microchip"></i>
+                        GPU硬件加速
+                    </h6>
+                    <button id="refreshGpuInfo" class="btn btn-sm btn-outline-light" title="刷新GPU信息">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="gpuInfo">
+                        <div class="text-center text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">检测中...</span>
+                            </div>
+                            <small class="ms-2">正在检测GPU硬件加速能力...</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -693,8 +757,59 @@
             background: linear-gradient(45deg, #28a745, #1e7e34) !important;
         }
 
+        .progress-bar.bg-info {
+            background: linear-gradient(45deg, #17a2b8, #138496) !important;
+        }
+
         .progress-bar.bg-danger {
             background: linear-gradient(45deg, #dc3545, #bd2130) !important;
+        }
+
+        /* 上传进度条特殊样式 */
+        #uploadProgressBar {
+            transition: width 0.3s ease-out !important;
+            background: linear-gradient(45deg, #007bff, #0056b3) !important;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+        }
+
+        #uploadProgressBar.bg-success {
+            background: linear-gradient(45deg, #28a745, #1e7e34) !important;
+            box-shadow: 0 2px 4px rgba(40,167,69,0.3);
+        }
+
+        #uploadProgressBar.bg-info {
+            background: linear-gradient(45deg, #17a2b8, #138496) !important;
+            box-shadow: 0 2px 4px rgba(23,162,184,0.3);
+        }
+
+        /* 上传进度容器动画 */
+        #uploadProgressContainer {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 高速上传时的特殊效果 */
+        .high-speed-upload .progress-bar {
+            animation: pulse 1s ease-in-out infinite alternate;
+        }
+
+        @@keyframes pulse {
+            from {
+                box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+            }
+            to {
+                box-shadow: 0 2px 8px rgba(0,123,255,0.6);
+            }
         }
 
         /* 状态徽章动画 */
@@ -759,6 +874,35 @@
                 font-size: 0.8rem;
                 padding: 0.25rem 0.5rem;
             }
+        }
+
+        /* 预设更新提示样式 */
+        .preset-updated {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+            transition: all 0.3s ease;
+        }
+
+        .preset-updated:focus {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+        }
+
+        /* GPU加速标识动画 */
+        .gpu-accel-badge {
+            animation: pulse 2s infinite;
+        }
+
+        @@keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        /* 智能预设选择提示 */
+        .smart-preset-notification {
+            border-left: 4px solid #28a745;
+            background: linear-gradient(90deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
         }
     </style>
 }
@@ -867,6 +1011,33 @@
             updateProgress(data);
         });
 
+        // 监听上传进度更新
+        connection.on("UploadProgress", function (data) {
+            updateUploadProgress(data);
+        });
+
+        // 监听上传开始
+        connection.on("UploadStarted", function (data) {
+            console.log("📤 上传开始:", data);
+            const uploadContainer = document.getElementById('uploadProgressContainer');
+            uploadContainer.style.display = 'block';
+            document.getElementById('uploadFileName').textContent = data.FileName;
+            document.getElementById('totalSize').textContent = formatFileSize(data.TotalSize);
+        });
+
+        // 监听上传完成
+        connection.on("UploadCompleted", function (data) {
+            console.log("✅ 上传完成:", data);
+            showAlert('success', `文件上传完成: ${data.FilePath}`);
+        });
+
+        // 监听上传失败
+        connection.on("UploadFailed", function (data) {
+            console.log("❌ 上传失败:", data);
+            showAlert('danger', `上传失败: ${data.ErrorMessage}`);
+            hideUploadProgress();
+        });
+
         // 监听状态更新
         connection.on("StatusUpdate", function (data) {
             updateTaskStatus(data);
@@ -972,32 +1143,111 @@
             }
         });
 
-        // 表单提交处理
+        // 表单提交处理 - 支持大文件上传和进度跟踪
         document.getElementById('conversionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const formData = new FormData(this);
+            const fileInput = document.getElementById('videoFile');
+            const file = fileInput.files[0];
 
-            // 处理复选框值 - 确保布尔值正确传递
+            if (!file) {
+                showAlert('danger', '请选择一个文件');
+                return;
+            }
+
+            // 检查文件大小，如果超过100MB使用大文件上传API
+            const isLargeFile = file.size > 100 * 1024 * 1024; // 100MB
+
+            if (isLargeFile) {
+                await handleLargeFileUpload(file, this);
+            } else {
+                await handleNormalFileUpload(this);
+            }
+        });
+
+        // 处理大文件上传
+        async function handleLargeFileUpload(file, form) {
+            const startButton = document.getElementById('startConversion');
+            const uploadContainer = document.getElementById('uploadProgressContainer');
+
+            // 显示上传进度容器
+            uploadContainer.style.display = 'block';
+
+            // 更新UI
+            startButton.disabled = true;
+            startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+
+            // 更新进度显示
+            document.getElementById('uploadFileName').textContent = file.name;
+            document.getElementById('totalSize').textContent = formatFileSize(file.size);
+
+            try {
+                const formData = new FormData();
+                formData.append('videoFile', file);
+
+                // 添加其他表单数据
+                const formElements = new FormData(form);
+                for (let [key, value] of formElements.entries()) {
+                    if (key !== 'videoFile') {
+                        formData.append(key, value);
+                    }
+                }
+
+                const response = await fetch('/api/upload/large-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`上传失败 (${response.status}): ${errorText}`);
+                }
+
+                const result = await response.json();
+                console.log('大文件上传结果:', result);
+
+                if (result.success) {
+                    // 上传和转换任务创建都成功了！
+                    await handleConversionSuccess(result);
+                    hideUploadProgress();
+                } else {
+                    throw new Error(result.message || '上传失败');
+                }
+            } catch (error) {
+                console.error('大文件上传失败:', error);
+                showAlert('danger', '上传失败: ' + error.message);
+                hideUploadProgress();
+            } finally {
+                // 恢复按钮
+                startButton.disabled = false;
+                startButton.innerHTML = '<i class="fas fa-play"></i> 开始转换';
+            }
+        }
+
+        // 处理普通文件上传（原有逻辑）
+        async function handleNormalFileUpload(form) {
+            const formData = new FormData(form);
+
+            // 处理复选框值
             const checkboxes = ['twoPass', 'fastStart', 'copyTimestamps'];
             checkboxes.forEach(name => {
                 const checkbox = document.getElementById(name);
                 if (checkbox) {
-                    // 删除原有值，设置为true/false字符串
                     formData.delete(name);
                     formData.append(name, checkbox.checked ? 'true' : 'false');
                 }
             });
 
-            // 调试：打印表单数据
-            console.log('表单数据:');
-            for (let [key, value] of formData.entries()) {
-                console.log(key + ': ' + value);
+            // 处理deinterlace字段 - 转换为布尔值
+            const deinterlaceSelect = document.getElementById('deinterlace');
+            if (deinterlaceSelect) {
+                formData.delete('deinterlace');
+                // 如果选择了去隔行扫描方法（不是空值），则为true
+                const deinterlaceValue = deinterlaceSelect.value && deinterlaceSelect.value !== '';
+                formData.append('deinterlace', deinterlaceValue ? 'true' : 'false');
             }
 
             const startButton = document.getElementById('startConversion');
-
-            // 禁用按钮
             startButton.disabled = true;
             startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
 
@@ -1007,76 +1257,139 @@
                     body: formData
                 });
 
-                console.log('响应状态:', response.status);
-                console.log('响应头:', response.headers.get('content-type'));
-
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('服务器错误:', errorText);
-                    alert('转换启动失败 (状态码: ' + response.status + '): ' + errorText);
-                    return;
+                    throw new Error(`转换启动失败 (${response.status}): ${errorText}`);
                 }
 
                 const result = await response.json();
-                console.log('响应结果:', result);
+                console.log('转换启动结果:', result);
 
                 if (result.success) {
-                    currentTaskId = result.taskId;
-                    console.log("🎯 设置当前任务ID:", currentTaskId);
-
-                    // 获取文件信息
-                    const fileInput = document.getElementById('videoFile');
-                    const outputFormat = document.getElementById('outputFormat').value;
-                    const taskData = {
-                        originalFileName: fileInput.files[0]?.name || '',
-                        outputFormat: outputFormat,
-                        fileSize: fileInput.files[0]?.size || 0
-                    };
-
-                    showCurrentTask(result.taskName, taskData);
-
-                    // 加入任务组以接收进度更新
-                    if (connection.state === signalR.HubConnectionState.Connected) {
-                        await connection.invoke("JoinTaskGroup", currentTaskId);
-                        console.log("✅ 已加入任务组:", currentTaskId);
-                    } else {
-                        console.warn("⚠️ SignalR连接未建立，无法加入任务组");
-                        showAlert('warning', 'SignalR连接未建立，可能无法实时显示进度');
-                    }
-
-                    // 显示成功消息
-                    showAlert('success', `转换任务已创建: ${result.taskName}`);
-
-                    // 立即刷新最近任务列表
-                    setTimeout(loadRecentTasks, 500);
+                    await handleConversionSuccess(result);
                 } else {
-                    showAlert('danger', '转换启动失败: ' + (result.message || '未知错误'));
+                    throw new Error(result.message || '转换启动失败');
                 }
             } catch (error) {
-                console.error('请求异常:', error);
-                showAlert('danger', '请求失败: ' + error.message);
+                console.error('转换启动失败:', error);
+                showAlert('danger', '转换启动失败: ' + error.message);
             } finally {
-                // 恢复按钮
                 startButton.disabled = false;
                 startButton.innerHTML = '<i class="fas fa-play"></i> 开始转换';
             }
-        });
+        }
 
-        // 取消任务
+
+
+        // 处理转换成功
+        async function handleConversionSuccess(result) {
+            currentTaskId = result.taskId;
+            console.log("🎯 设置当前任务ID:", currentTaskId);
+
+            // 获取文件信息
+            const fileInput = document.getElementById('videoFile');
+            const outputFormat = document.getElementById('outputFormat').value;
+            const taskData = {
+                originalFileName: fileInput.files[0]?.name || result.fileName || '',
+                outputFormat: outputFormat,
+                fileSize: fileInput.files[0]?.size || result.fileSize || 0
+            };
+
+            showCurrentTask(result.taskName, taskData);
+
+            // 加入任务组以接收进度更新
+            if (connection.state === signalR.HubConnectionState.Connected) {
+                await connection.invoke("JoinTaskGroup", currentTaskId);
+                console.log("✅ 已加入任务组:", currentTaskId);
+            } else {
+                console.warn("⚠️ SignalR连接未建立，无法加入任务组");
+                showAlert('warning', 'SignalR连接未建立，可能无法实时显示进度');
+            }
+
+            // 显示成功消息
+            showAlert('success', `转换任务已创建: ${result.taskName}`);
+
+            // 立即刷新最近任务列表
+            setTimeout(loadRecentTasks, 500);
+        }
+
+        // 隐藏上传进度
+        function hideUploadProgress() {
+            const uploadContainer = document.getElementById('uploadProgressContainer');
+            uploadContainer.style.display = 'none';
+
+            // 重置进度条
+            const progressBar = document.getElementById('uploadProgressBar');
+            progressBar.style.width = '0%';
+            progressBar.setAttribute('aria-valuenow', '0');
+
+            document.getElementById('uploadPercentage').textContent = '0%';
+            document.getElementById('uploadSpeed').textContent = '0 MB/s';
+            document.getElementById('uploadTimeRemaining').textContent = '计算中...';
+            document.getElementById('uploadedSize').textContent = '0 MB';
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // 格式化时间
+        function formatTime(seconds) {
+            if (seconds < 60) return Math.round(seconds) + '秒';
+            if (seconds < 3600) return Math.round(seconds / 60) + '分钟';
+            return Math.round(seconds / 3600) + '小时';
+        }
+
+        // 取消任务 - 改进版本
         document.getElementById('cancelTask').addEventListener('click', async function() {
-            if (currentTaskId && confirm('确定要取消当前转换任务吗？')) {
-                try {
-                    this.disabled = true;
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 取消中...';
+            if (currentTaskId && confirm('确定要取消当前转换任务吗？\n\n⚠️ 这将立即终止FFmpeg进程并取消转换。')) {
+                const button = this;
+                const originalText = button.innerHTML;
 
-                    await connection.invoke("CancelTask", currentTaskId);
-                    showAlert('info', '取消请求已发送...');
+                try {
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在取消...';
+
+                    console.log('🛑 发送取消请求:', currentTaskId);
+
+                    // 调用REST API取消任务
+                    const response = await fetch(`/api/conversion/cancel/${currentTaskId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert('success', '✅ 任务取消成功！FFmpeg进程已终止。');
+                        console.log('✅ 任务取消成功:', currentTaskId);
+
+                        // 立即更新UI状态
+                        updateTaskStatus('cancelled', '任务已取消');
+                        updateTaskActionButtons('cancelled');
+
+                        // 清除当前任务
+                        currentTaskId = null;
+                        hideCurrentTask();
+
+                        // 刷新任务列表
+                        setTimeout(loadRecentTasks, 1000);
+                    } else {
+                        throw new Error(result.message || '取消失败');
+                    }
                 } catch (error) {
-                    console.error('取消任务失败:', error);
-                    showAlert('danger', '取消任务失败: ' + error.message);
+                    console.error('❌ 取消任务失败:', error);
+                    showAlert('danger', '❌ 取消任务失败: ' + error.message);
                 } finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="fas fa-stop"></i> 取消转换';
+                    button.disabled = false;
+                    button.innerHTML = originalText;
                 }
             }
         });
@@ -1103,7 +1416,118 @@
         // 预设选择变化时更新高级设置
         document.getElementById('preset').addEventListener('change', function() {
             updateAdvancedSettings(this.value);
+            updateGpuAccelBadge(getVideoCodecFromPreset(this.value));
         });
+
+        // 智能GPU预设选择
+        async function initializeSmartPresetSelection() {
+            try {
+                console.log('🔍 开始智能GPU预设选择...');
+
+                // 检查GPU能力
+                const gpuResponse = await fetch('/api/gpu/capabilities');
+                const gpuData = await gpuResponse.json();
+
+                if (gpuData.success && gpuData.data) {
+                    const capabilities = gpuData.data;
+                    console.log('GPU能力检测结果:', capabilities);
+
+                    // 如果支持NVENC，优先选择GPU预设
+                    if (capabilities.nvidia && capabilities.nvidia.supported) {
+                        selectBestGpuPreset('nvenc');
+                        console.log('✅ 自动选择NVIDIA GPU预设');
+                    }
+                    // 如果支持QSV，选择Intel GPU预设
+                    else if (capabilities.intel && capabilities.intel.supported) {
+                        selectBestGpuPreset('qsv');
+                        console.log('✅ 自动选择Intel GPU预设');
+                    }
+                    // 如果支持AMF，选择AMD GPU预设
+                    else if (capabilities.amd && capabilities.amd.supported) {
+                        selectBestGpuPreset('amf');
+                        console.log('✅ 自动选择AMD GPU预设');
+                    }
+                    else {
+                        console.log('ℹ️ 未检测到GPU支持，使用默认CPU预设');
+                    }
+                } else {
+                    console.log('⚠️ GPU检测失败，使用默认预设');
+                }
+            } catch (error) {
+                console.error('❌ 智能预设选择失败:', error);
+            }
+        }
+
+        // 选择最佳GPU预设
+        function selectBestGpuPreset(gpuType) {
+            const presetSelect = document.getElementById('preset');
+            const options = presetSelect.options;
+
+            // 预设优先级映射
+            const presetPriority = {
+                'nvenc': [
+                    'GPU Fast 1080p (NVENC)',
+                    'GPU High Quality 1080p (NVENC)',
+                    'GPU 4K Ultra (NVENC)'
+                ],
+                'qsv': [
+                    'GPU Fast 1080p (QSV)',
+                    'GPU High Quality 1080p (QSV)'
+                ],
+                'amf': [
+                    'GPU Fast 1080p (AMF)',
+                    'GPU High Quality 1080p (AMF)'
+                ]
+            };
+
+            const preferredPresets = presetPriority[gpuType] || [];
+
+            // 按优先级查找并选择预设
+            for (const presetName of preferredPresets) {
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === presetName) {
+                        presetSelect.selectedIndex = i;
+                        updateAdvancedSettings(presetName);
+                        updateGpuAccelBadge(getVideoCodecFromPreset(presetName));
+
+                        // 显示GPU加速提示
+                        showGpuAccelNotification(presetName);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 显示GPU加速通知
+        function showGpuAccelNotification(presetName) {
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-success alert-dismissible fade show mt-2';
+            notification.innerHTML = `
+                <i class="fas fa-rocket"></i>
+                <strong>GPU加速已启用！</strong>
+                已自动选择 "${presetName}" 预设，转换速度将显著提升。
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            const presetContainer = document.getElementById('preset').parentElement;
+            presetContainer.appendChild(notification);
+
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // 从预设名称获取视频编码器
+        function getVideoCodecFromPreset(presetName) {
+            // 这里可以根据预设名称推断编码器
+            if (presetName.includes('NVENC')) return 'h264_nvenc';
+            if (presetName.includes('QSV')) return 'h264_qsv';
+            if (presetName.includes('AMF')) return 'h264_amf';
+            return 'libx264'; // 默认CPU编码器
+        }
 
         // 分辨率选择处理
         document.getElementById('resolution').addEventListener('change', function() {
@@ -1190,8 +1614,14 @@
                 case 'mp4':
                 case 'mp4_h265':
                     videoCodec.innerHTML = `
-                        <option value="libx264">H.264 (x264)</option>
-                        <option value="libx265">H.265 (x265)</option>
+                        <option value="libx264">H.264 (x264) - CPU</option>
+                        <option value="h264_nvenc">H.264 (NVENC) - NVIDIA GPU</option>
+                        <option value="h264_qsv">H.264 (QSV) - Intel GPU</option>
+                        <option value="h264_amf">H.264 (AMF) - AMD GPU</option>
+                        <option value="libx265">H.265 (x265) - CPU</option>
+                        <option value="hevc_nvenc">H.265 (NVENC) - NVIDIA GPU</option>
+                        <option value="hevc_qsv">H.265 (QSV) - Intel GPU</option>
+                        <option value="hevc_amf">H.265 (AMF) - AMD GPU</option>
                         <option value="mpeg4">MPEG-4</option>
                     `;
                     audioCodec.innerHTML = `
@@ -1225,10 +1655,19 @@
                     break;
                 case 'mkv':
                     videoCodec.innerHTML = `
-                        <option value="libx264">H.264 (x264)</option>
-                        <option value="libx265">H.265 (x265)</option>
+                        <option value="libx264">H.264 (x264) - CPU</option>
+                        <option value="h264_nvenc">H.264 (NVENC) - NVIDIA GPU</option>
+                        <option value="h264_qsv">H.264 (QSV) - Intel GPU</option>
+                        <option value="h264_amf">H.264 (AMF) - AMD GPU</option>
+                        <option value="libx265">H.265 (x265) - CPU</option>
+                        <option value="hevc_nvenc">H.265 (NVENC) - NVIDIA GPU</option>
+                        <option value="hevc_qsv">H.265 (QSV) - Intel GPU</option>
+                        <option value="hevc_amf">H.265 (AMF) - AMD GPU</option>
                         <option value="libvpx-vp9">VP9</option>
                         <option value="libaom-av1">AV1</option>
+                        <option value="av1_nvenc">AV1 (NVENC) - NVIDIA GPU</option>
+                        <option value="av1_qsv">AV1 (QSV) - Intel GPU</option>
+                        <option value="av1_amf">AV1 (AMF) - AMD GPU</option>
                     `;
                     audioCodec.innerHTML = `
                         <option value="aac">AAC</option>
@@ -1379,6 +1818,125 @@
 
             // 更新最近任务列表中的进度
             updateRecentTaskProgress(data.taskId, data.progress, data.message);
+        }
+
+        // 上传进度更新防抖控制
+        let uploadProgressUpdateTimeout = null;
+        let lastUploadProgressData = null;
+
+        // 更新上传进度显示 - 优化版本
+        function updateUploadProgress(data) {
+            console.log("📤 收到上传进度更新:", data);
+
+            // 保存最新数据
+            lastUploadProgressData = data;
+
+            // 清除之前的更新计时器
+            if (uploadProgressUpdateTimeout) {
+                clearTimeout(uploadProgressUpdateTimeout);
+            }
+
+            // 立即更新关键信息（进度百分比）
+            updateProgressBarImmediate(data);
+
+            // 延迟更新其他信息（防抖）
+            uploadProgressUpdateTimeout = setTimeout(() => {
+                updateProgressDetails(lastUploadProgressData);
+            }, 50); // 50ms防抖
+        }
+
+        // 立即更新进度条
+        function updateProgressBarImmediate(data) {
+            const uploadContainer = document.getElementById('uploadProgressContainer');
+            if (uploadContainer.style.display === 'none') {
+                uploadContainer.style.display = 'block';
+            }
+
+            const progressBar = document.getElementById('uploadProgressBar');
+            const percentage = document.getElementById('uploadPercentage');
+
+            if (progressBar) {
+                // 使用CSS过渡实现平滑动画
+                progressBar.style.transition = 'width 0.3s ease-out';
+                progressBar.style.width = data.ProgressPercent + '%';
+                progressBar.setAttribute('aria-valuenow', data.ProgressPercent);
+
+                // 根据进度调整颜色
+                if (data.ProgressPercent >= 100) {
+                    progressBar.className = 'progress-bar bg-success';
+                } else if (data.ProgressPercent >= 80) {
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+                } else {
+                    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+                }
+            }
+
+            if (percentage) {
+                percentage.textContent = data.ProgressPercent + '%';
+            }
+        }
+
+        // 更新详细信息
+        function updateProgressDetails(data) {
+            if (!data) return;
+
+            const speed = document.getElementById('uploadSpeed');
+            const timeRemaining = document.getElementById('uploadTimeRemaining');
+            const uploadedSize = document.getElementById('uploadedSize');
+            const fileName = document.getElementById('uploadFileName');
+            const uploadContainer = document.getElementById('uploadProgressContainer');
+
+            // 检测高速上传（超过100MB/s）
+            const isHighSpeed = data.Speed && data.Speed > 100 * 1024 * 1024;
+            if (isHighSpeed) {
+                uploadContainer.classList.add('high-speed-upload');
+            } else {
+                uploadContainer.classList.remove('high-speed-upload');
+            }
+
+            // 使用后端格式化的数据（如果可用）
+            if (speed) {
+                if (data.SpeedFormatted) {
+                    speed.textContent = data.SpeedFormatted;
+                    // 高速上传时添加特殊标识
+                    if (isHighSpeed) {
+                        speed.innerHTML = `🚀 ${data.SpeedFormatted}`;
+                        speed.className = 'text-success fw-bold';
+                    } else {
+                        speed.className = '';
+                    }
+                } else if (data.Speed) {
+                    const speedText = formatFileSize(data.Speed) + '/s';
+                    speed.textContent = speedText;
+                    if (isHighSpeed) {
+                        speed.innerHTML = `🚀 ${speedText}`;
+                        speed.className = 'text-success fw-bold';
+                    } else {
+                        speed.className = '';
+                    }
+                } else {
+                    speed.textContent = '计算中...';
+                    speed.className = '';
+                }
+            }
+
+            if (timeRemaining) {
+                if (data.TimeRemainingFormatted) {
+                    timeRemaining.textContent = data.TimeRemainingFormatted;
+                } else if (data.EstimatedTimeRemaining && data.EstimatedTimeRemaining > 0) {
+                    timeRemaining.textContent = formatTime(data.EstimatedTimeRemaining);
+                } else {
+                    timeRemaining.textContent = '计算中...';
+                }
+            }
+
+            if (uploadedSize) {
+                uploadedSize.textContent = formatFileSize(data.UploadedSize);
+            }
+
+            if (fileName && data.FileName) {
+                fileName.textContent = data.FileName;
+            }
         }
 
         // 更新任务状态
@@ -1958,10 +2516,146 @@
             }
         }
 
-        // 更新高级设置
+        // 更新高级设置 - 支持预设参数修改
         function updateAdvancedSettings(presetName) {
-            // 这里可以根据预设更新高级设置的默认值
-            // 实际实现中可以通过AJAX获取预设详情
+            console.log('🔧 更新高级设置:', presetName);
+
+            // 预设配置映射
+            const presetConfigs = {
+                // CPU预设
+                'Fast 1080p30': {
+                    videoCodec: 'libx264',
+                    audioCodec: 'aac',
+                    videoQuality: '23',
+                    audioQuality: '128k',
+                    resolution: '1920x1080',
+                    frameRate: '30',
+                    outputFormat: 'mp4'
+                },
+                'High Quality 1080p': {
+                    videoCodec: 'libx264',
+                    audioCodec: 'aac',
+                    videoQuality: '18',
+                    audioQuality: '192k',
+                    resolution: '1920x1080',
+                    frameRate: '',
+                    outputFormat: 'mp4'
+                },
+                'Web Optimized': {
+                    videoCodec: 'libx264',
+                    audioCodec: 'aac',
+                    videoQuality: '25',
+                    audioQuality: '128k',
+                    resolution: '1280x720',
+                    frameRate: '',
+                    outputFormat: 'mp4'
+                },
+
+                // GPU预设 - NVIDIA NVENC
+                'GPU Fast 1080p (NVENC)': {
+                    videoCodec: 'h264_nvenc',
+                    audioCodec: 'aac',
+                    videoQuality: '23',
+                    audioQuality: '128k',
+                    resolution: '1920x1080',
+                    frameRate: '30',
+                    outputFormat: 'mp4'
+                },
+                'GPU High Quality 1080p (NVENC)': {
+                    videoCodec: 'h264_nvenc',
+                    audioCodec: 'aac',
+                    videoQuality: '18',
+                    audioQuality: '192k',
+                    resolution: '1920x1080',
+                    frameRate: '',
+                    outputFormat: 'mp4'
+                },
+                'GPU 4K Ultra (NVENC)': {
+                    videoCodec: 'hevc_nvenc',
+                    audioCodec: 'aac',
+                    videoQuality: '20',
+                    audioQuality: '256k',
+                    resolution: '3840x2160',
+                    frameRate: '',
+                    outputFormat: 'mp4'
+                },
+
+                // GPU预设 - Intel QSV
+                'GPU Fast 1080p (QSV)': {
+                    videoCodec: 'h264_qsv',
+                    audioCodec: 'aac',
+                    videoQuality: '23',
+                    audioQuality: '128k',
+                    resolution: '1920x1080',
+                    frameRate: '30',
+                    outputFormat: 'mp4'
+                },
+
+                // GPU预设 - AMD AMF
+                'GPU Fast 1080p (AMF)': {
+                    videoCodec: 'h264_amf',
+                    audioCodec: 'aac',
+                    videoQuality: '23',
+                    audioQuality: '128k',
+                    resolution: '1920x1080',
+                    frameRate: '30',
+                    outputFormat: 'mp4'
+                }
+            };
+
+            const config = presetConfigs[presetName];
+            if (!config) {
+                console.log('⚠️ 未找到预设配置:', presetName);
+                return;
+            }
+
+            // 更新表单字段（但保持可编辑状态）
+            updateFormField('videoCodec', config.videoCodec);
+            updateFormField('audioCodec', config.audioCodec);
+            updateFormField('videoQuality', config.videoQuality);
+            updateFormField('audioQuality', config.audioQuality);
+            updateFormField('resolution', config.resolution);
+            updateFormField('frameRate', config.frameRate);
+            updateFormField('outputFormat', config.outputFormat);
+
+            // 显示预设应用提示
+            showPresetAppliedNotification(presetName, config);
+
+            console.log('✅ 预设配置已应用:', config);
+        }
+
+        // 更新表单字段（保持可编辑）
+        function updateFormField(fieldId, value) {
+            const field = document.getElementById(fieldId);
+            if (field && value !== undefined && value !== '') {
+                field.value = value;
+
+                // 添加视觉提示表示字段已被预设更新
+                field.classList.add('preset-updated');
+
+                // 2秒后移除提示样式
+                setTimeout(() => {
+                    field.classList.remove('preset-updated');
+                }, 2000);
+
+                // 触发change事件以更新其他相关UI
+                field.dispatchEvent(new Event('change'));
+            }
+        }
+
+        // 显示预设应用通知
+        function showPresetAppliedNotification(presetName, config) {
+            const isGpuPreset = config.videoCodec.includes('nvenc') ||
+                               config.videoCodec.includes('qsv') ||
+                               config.videoCodec.includes('amf');
+
+            const icon = isGpuPreset ? 'fas fa-rocket' : 'fas fa-cog';
+            const type = isGpuPreset ? 'success' : 'info';
+            const message = isGpuPreset ?
+                `GPU加速预设 "${presetName}" 已应用` :
+                `预设 "${presetName}" 已应用`;
+
+            showAlert(type, `<i class="${icon}"></i> ${message}，参数可以继续调整。`);
         }
 
         // 加载最近任务
@@ -2314,12 +3008,184 @@
             loadRecentTasks();
             initializeFileDragDrop();
             startPeriodicRefresh();
+            loadGpuInfo(); // 加载GPU信息
+
+            // 延迟初始化智能GPU预设选择，等待GPU检测完成
+            setTimeout(() => {
+                initializeSmartPresetSelection();
+            }, 2000);
         });
 
         // 页面卸载时清理
         window.addEventListener('beforeunload', function() {
             stopPeriodicRefresh();
         });
+
+        // 加载GPU硬件加速信息
+        async function loadGpuInfo() {
+            try {
+                const response = await fetch('/api/gpu/capabilities');
+                const result = await response.json();
+
+                if (result.success) {
+                    displayGpuInfo(result.data);
+                } else {
+                    displayGpuError('获取GPU信息失败');
+                }
+            } catch (error) {
+                console.error('加载GPU信息失败:', error);
+                displayGpuError('无法连接到GPU检测服务');
+            }
+        }
+
+        // 显示GPU信息
+        function displayGpuInfo(gpuData) {
+            const gpuInfoContainer = document.getElementById('gpuInfo');
+
+            if (!gpuData.hasAnyGpuSupport) {
+                gpuInfoContainer.innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i>
+                        <h6>未检测到GPU硬件加速支持</h6>
+                        <p class="small mb-0">系统将使用CPU进行视频转码</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <div class="alert alert-success d-flex align-items-center" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <div>
+                                <strong>GPU加速可用!</strong><br>
+                                <small>支持: ${gpuData.supportedTypes}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+            `;
+
+            // NVIDIA NVENC
+            if (gpuData.nvidia.supported) {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-success">
+                            <div class="card-body p-2">
+                                <h6 class="card-title text-success mb-1">
+                                    <i class="fab fa-nvidia"></i> NVIDIA NVENC
+                                </h6>
+                                <small class="text-muted">编码器: ${gpuData.nvidia.encoders.join(', ')}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Intel QSV
+            if (gpuData.intel.supported) {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-primary">
+                            <div class="card-body p-2">
+                                <h6 class="card-title text-primary mb-1">
+                                    <i class="fab fa-intel"></i> Intel QSV
+                                </h6>
+                                <small class="text-muted">编码器: ${gpuData.intel.encoders.join(', ')}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // AMD VCE/AMF
+            if (gpuData.amd.supported) {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-danger">
+                            <div class="card-body p-2">
+                                <h6 class="card-title text-danger mb-1">
+                                    <i class="fab fa-amd"></i> AMD VCE/AMF
+                                </h6>
+                                <small class="text-muted">编码器: ${gpuData.amd.encoders.join(', ')}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+
+            // GPU设备信息
+            if (gpuData.gpuDevices && gpuData.gpuDevices.length > 0) {
+                html += `
+                    <div class="mt-2">
+                        <h6 class="small text-muted mb-1">检测到的GPU设备:</h6>
+                        <ul class="list-unstyled small">
+                `;
+                gpuData.gpuDevices.forEach(device => {
+                    html += `<li><i class="fas fa-microchip text-muted me-1"></i>${device}</li>`;
+                });
+                html += '</ul></div>';
+            }
+
+            gpuInfoContainer.innerHTML = html;
+        }
+
+        // 显示GPU错误信息
+        function displayGpuError(message) {
+            const gpuInfoContainer = document.getElementById('gpuInfo');
+            gpuInfoContainer.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-exclamation-circle fa-2x mb-2 text-danger"></i>
+                    <h6>GPU检测失败</h6>
+                    <p class="small mb-0">${message}</p>
+                </div>
+            `;
+        }
+
+        // 刷新GPU信息
+        document.getElementById('refreshGpuInfo').addEventListener('click', async function() {
+            const button = this;
+            const icon = button.querySelector('i');
+
+            // 显示加载状态
+            icon.className = 'fas fa-spinner fa-spin';
+            button.disabled = true;
+
+            try {
+                // 调用刷新API
+                await fetch('/api/gpu/refresh', { method: 'POST' });
+                // 重新加载GPU信息
+                await loadGpuInfo();
+            } catch (error) {
+                console.error('刷新GPU信息失败:', error);
+                displayGpuError('刷新失败，请稍后重试');
+            } finally {
+                // 恢复按钮状态
+                icon.className = 'fas fa-sync-alt';
+                button.disabled = false;
+            }
+        });
+
+        // 检查编码器是否为GPU加速
+        function isGpuEncoder(codec) {
+            if (!codec) return false;
+            const gpuEncoders = ['nvenc', 'qsv', 'amf', 'vaapi'];
+            return gpuEncoders.some(gpu => codec.toLowerCase().includes(gpu));
+        }
+
+        // 更新GPU加速标识
+        function updateGpuAccelBadge(codec) {
+            const badge = document.getElementById('gpuAccelBadge');
+            if (isGpuEncoder(codec)) {
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
 
         }); // 结束 DOMContentLoaded 事件监听器
     </script>

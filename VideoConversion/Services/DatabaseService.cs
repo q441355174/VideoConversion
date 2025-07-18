@@ -261,7 +261,7 @@ namespace VideoConversion.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ 数据库插入失败: {TaskId}", task.Id);
+                _logger.LogError(ex, "数据库插入失败: {TaskId}", task.Id);
                 _logger.LogError("错误详情: {ErrorMessage}", ex.Message);
                 _logger.LogError("SQL错误: {SqlError}", ex.InnerException?.Message);
                 throw;
@@ -383,11 +383,11 @@ namespace VideoConversion.Services
 
                 _logger.LogInformation("任务状态更新: {TaskId} -> {Status}", taskId, status);
 
-                // 🔧 发送状态更新通知给客户端
+                // 发送状态更新通知给客户端
                 if (_hubContext != null && result > 0)
                 {
                     await _hubContext.SendTaskStatusAsync(taskId, status.ToString(), errorMessage);
-                    _logger.LogDebug("📡 已发送任务状态更新: {TaskId} -> {Status}", taskId, status);
+                    // 状态更新通知已发送
                 }
 
                 // 强制验证更新结果 - 使用原生SQL确保一致性
@@ -406,11 +406,11 @@ namespace VideoConversion.Services
                     var retryResult = await _db.Ado.ExecuteCommandAsync(sql, parameters);
                     _logger.LogDebug("重试更新结果: 影响行数 {RetryResult}", retryResult);
 
-                    // 🔧 重试成功后也发送状态更新
+                    // 重试成功后也发送状态更新
                     if (_hubContext != null && retryResult > 0)
                     {
                         await _hubContext.SendTaskStatusAsync(taskId, status.ToString(), errorMessage);
-                        _logger.LogDebug("📡 重试后已发送任务状态更新: {TaskId} -> {Status}", taskId, status);
+                        // 重试后状态更新通知已发送
                     }
 
                     return retryResult > 0;
@@ -420,7 +420,7 @@ namespace VideoConversion.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ 更新任务状态失败: {TaskId} -> {Status}", taskId, status);
+                _logger.LogError(ex, "更新任务状态失败: {TaskId} -> {Status}", taskId, status);
                 throw;
             }
         }
@@ -496,7 +496,7 @@ namespace VideoConversion.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ 获取活动任务失败");
+                _logger.LogError(ex, "获取活动任务失败");
                 throw;
             }
         }
@@ -531,11 +531,11 @@ namespace VideoConversion.Services
                 {
                     _logger.LogDebug("任务启动成功: {TaskId}", taskId);
 
-                    // 🔧 发送状态更新通知给客户端
+                    // 发送状态更新通知给客户端
                     if (_hubContext != null)
                     {
                         await _hubContext.SendTaskStatusAsync(taskId, "Converting");
-                        _logger.LogDebug("📡 已发送任务状态更新: {TaskId} -> Converting", taskId);
+                        // 状态更新通知已发送
                     }
                 }
                 else
@@ -547,7 +547,7 @@ namespace VideoConversion.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ 尝试启动任务失败: {TaskId}", taskId);
+                _logger.LogError(ex, "尝试启动任务失败: {TaskId}", taskId);
                 return false;
             }
         }

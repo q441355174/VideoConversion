@@ -121,6 +121,100 @@ namespace VideoConversion.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "保存文件失败: {FileName}", file?.FileName);
+                return (false, string.Empty, $"保存文件失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 保存上传的文件并跟踪进度 - 支持大文件
+        /// </summary>
+        public async Task<(bool Success, string FilePath, string ErrorMessage)> SaveUploadedFileWithProgressAsync(
+            IFormFile file,
+            string uploadId,
+            Func<string, long, Task> progressCallback,
+            string? customFileName = null)
+        {
+            try
+            {
+                var validation = ValidateFile(file);
+                if (!validation.IsValid)
+                {
+                    return (false, string.Empty, validation.ErrorMessage);
+                }
+
+                // 生成唯一文件名
+                var fileName = customFileName ?? GenerateUniqueFileName(file.FileName);
+                var filePath = Path.Combine(_uploadPath, fileName);
+
+                // 确保文件名唯一
+                var counter = 1;
+                var originalFilePath = filePath;
+                while (File.Exists(filePath))
+                {
+                    var nameWithoutExt = Path.GetFileNameWithoutExtension(originalFilePath);
+                    var extension = Path.GetExtension(originalFilePath);
+                    fileName = $"{nameWithoutExt}_{counter}{extension}";
+                    filePath = Path.Combine(_uploadPath, fileName);
+                    counter++;
+                }
+
+                // 使用缓冲区保存文件并跟踪进度
+                var chunkSize = _configuration.GetValue<int>("VideoConversion:ChunkSize", 1024 * 1024); // 1MB chunks
+                var buffer = new byte[chunkSize];
+                long totalBytesRead = 0;
+
+                // 进度更新节流控制
+                var progressUpdateInterval = _configuration.GetValue<int>("VideoConversion:ProgressUpdateIntervalMs", 100); // 100ms间隔
+                var lastProgressUpdate = DateTime.MinValue;
+                var progressUpdateThreshold = _configuration.GetValue<long>("VideoConversion:ProgressUpdateThreshold", 5 * 1024 * 1024); // 5MB阈值
+                long lastReportedBytes = 0;
+
+                using (var inputStream = file.OpenReadStream())
+                using (var outputStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, chunkSize))
+                {
+                    int bytesRead;
+                    while ((bytesRead = await inputStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                    {
+                        await outputStream.WriteAsync(buffer, 0, bytesRead);
+                        totalBytesRead += bytesRead;
+
+                        // 智能进度更新：基于时间间隔和数据量阈值
+                        var now = DateTime.Now;
+                        var timeSinceLastUpdate = (now - lastProgressUpdate).TotalMilliseconds;
+                        var bytesSinceLastUpdate = totalBytesRead - lastReportedBytes;
+
+                        bool shouldUpdate = timeSinceLastUpdate >= progressUpdateInterval ||
+                                          bytesSinceLastUpdate >= progressUpdateThreshold ||
+                                          totalBytesRead == file.Length; // 总是报告完成状态
+
+                        if (shouldUpdate)
+                        {
+                            // 报告进度
+                            await progressCallback(uploadId, totalBytesRead);
+                            lastProgressUpdate = now;
+                            lastReportedBytes = totalBytesRead;
+                        }
+
+                        // 强制刷新到磁盘（降低频率）
+                        if (totalBytesRead % (chunkSize * 10) == 0) // 每10MB刷新一次
+                        {
+                            await outputStream.FlushAsync();
+                        }
+                    }
+
+                    // 确保最终进度被报告
+                    if (lastReportedBytes < totalBytesRead)
+                    {
+                        await progressCallback(uploadId, totalBytesRead);
+                    }
+                }
+
+                _logger.LogInformation("大文件保存成功: {FilePath} ({TotalBytes} bytes)", filePath, totalBytesRead);
+                return (true, filePath, string.Empty);
+            }
+            catch (Exception ex)
+            {
                 _logger.LogError(ex, "保存文件失败: {FileName}", file.FileName);
                 return (false, string.Empty, $"保存文件失败: {ex.Message}");
             }

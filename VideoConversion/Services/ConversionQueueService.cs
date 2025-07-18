@@ -198,7 +198,7 @@ namespace VideoConversion.Services
         {
             try
             {
-                _logger.LogInformation("🚫 收到取消任务请求: {TaskId}", taskId);
+                _logger.LogInformation("收到取消任务请求: {TaskId}", taskId);
 
                 // 添加到取消列表
                 _cancelledTasks.Add(taskId);
@@ -211,11 +211,11 @@ namespace VideoConversion.Services
                 var videoConversionService = scope.ServiceProvider.GetRequiredService<VideoConversionService>();
                 await videoConversionService.CancelConversionAsync(taskId);
 
-                _logger.LogInformation("✅ 任务取消完成: {TaskId}", taskId);
+                _logger.LogInformation("任务取消完成: {TaskId}", taskId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ 取消任务失败: {TaskId}", taskId);
+                _logger.LogError(ex, "取消任务失败: {TaskId}", taskId);
             }
         }
 

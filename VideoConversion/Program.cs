@@ -43,7 +43,9 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<DatabaseService>();
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<LoggingService>();
+builder.Services.AddSingleton<GpuDetectionService>();
 builder.Services.AddScoped<VideoConversionService>();
+builder.Services.AddScoped<ConversionTaskService>();
 
 // 注册后台服务（同时注册为单例以便从Hub访问）
 builder.Services.AddSingleton<ConversionQueueService>();
@@ -53,25 +55,34 @@ builder.Services.AddHostedService<FileCleanupService>();
 // 配置文件上传大小限制
 builder.Services.Configure<IISServerOptions>(options =>
 {
-    options.MaxRequestBodySize = builder.Configuration.GetValue<long>("VideoConversion:MaxFileSize", 2147483648);
+    options.MaxRequestBodySize = builder.Configuration.GetValue<long>("VideoConversion:MaxFileSize", 32212254720);
 });
 
-// 配置Kestrel服务器选项
+// 配置Kestrel服务器选项 - 支持大文件上传
 builder.Services.Configure<KestrelServerOptions>(options =>
 {
-    options.Limits.MaxRequestBodySize = builder.Configuration.GetValue<long>("VideoConversion:MaxFileSize", 2147483648);
-    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
-    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+    var maxFileSize = builder.Configuration.GetValue<long>("VideoConversion:MaxFileSize", 32212254720);
+    var timeoutMinutes = builder.Configuration.GetValue<int>("VideoConversion:UploadTimeoutMinutes", 60);
+
+    options.Limits.MaxRequestBodySize = maxFileSize;
+    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(timeoutMinutes);
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(timeoutMinutes);
+    options.Limits.MaxRequestLineSize = 8192;
+    options.Limits.MaxRequestHeadersTotalSize = 32768;
 });
 
-// 配置表单选项
+// 配置表单选项 - 优化大文件处理
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = builder.Configuration.GetValue<long>("VideoConversion:MaxFileSize", 2147483648);
+    var maxFileSize = builder.Configuration.GetValue<long>("VideoConversion:MaxFileSize", 32212254720);
+
+    options.MultipartBodyLengthLimit = maxFileSize;
     options.ValueLengthLimit = int.MaxValue;
     options.ValueCountLimit = int.MaxValue;
     options.KeyLengthLimit = int.MaxValue;
-    options.MemoryBufferThreshold = int.MaxValue;
+    options.MemoryBufferThreshold = 1024 * 1024; // 1MB缓冲，避免大文件全部加载到内存
+    options.MultipartHeadersLengthLimit = 16384;
+    options.MultipartBoundaryLengthLimit = 128;
 });
 
 var app = builder.Build();

@@ -40,6 +40,78 @@ namespace VideoConversion.Controllers
         [HttpPost("start")]
         public async Task<IActionResult> StartConversion([FromForm] StartConversionRequest request)
         {
+            return await ProcessConversionRequest(request, request.VideoFile);
+        }
+
+        /// <summary>
+        /// 从已上传文件开始转换任务
+        /// </summary>
+        [HttpPost("start-from-upload")]
+        public async Task<IActionResult> StartConversionFromUpload([FromForm] StartConversionFromUploadRequest request)
+        {
+            try
+            {
+                // 验证上传文件路径
+                if (string.IsNullOrEmpty(request.UploadedFilePath) || !System.IO.File.Exists(request.UploadedFilePath))
+                {
+                    return BadRequest(new { success = false, message = "上传文件不存在" });
+                }
+
+                // 创建虚拟IFormFile对象
+                var fileInfo = new FileInfo(request.UploadedFilePath);
+                var formFile = new UploadedFormFile(request.UploadedFilePath, request.OriginalFileName ?? fileInfo.Name, fileInfo.Length);
+
+                // 转换请求对象
+                var conversionRequest = new StartConversionRequest
+                {
+                    VideoFile = formFile,
+                    TaskName = request.TaskName,
+                    Preset = request.Preset,
+                    OutputFormat = request.OutputFormat,
+                    VideoCodec = request.VideoCodec,
+                    AudioCodec = request.AudioCodec,
+                    VideoQuality = request.VideoQuality,
+                    AudioQuality = request.AudioQuality,
+                    Resolution = request.Resolution,
+                    FrameRate = request.FrameRate,
+                    QualityMode = request.QualityMode,
+                    AudioQualityMode = request.AudioQualityMode,
+                    TwoPass = request.TwoPass,
+                    FastStart = request.FastStart,
+                    CopyTimestamps = request.CopyTimestamps,
+                    CustomParameters = request.CustomParameters,
+                    HardwareAcceleration = request.HardwareAcceleration,
+                    VideoFilters = request.VideoFilters,
+                    AudioFilters = request.AudioFilters,
+                    StartTime = request.StartTime?.ToString(),
+                    EndTime = request.EndTime,
+                    Priority = request.Priority,
+                    Tags = request.Tags,
+                    Notes = request.Notes,
+                    Profile = request.Profile,
+                    AudioChannels = request.AudioChannels,
+                    SampleRate = request.SampleRate,
+                    AudioVolume = request.AudioVolume,
+                    Deinterlace = request.Deinterlace,
+                    Denoise = request.Denoise,
+                    ColorSpace = request.ColorSpace,
+                    PixelFormat = request.PixelFormat
+                };
+
+                return await ProcessConversionRequest(conversionRequest, formFile, true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "从上传文件创建转换任务失败");
+                return StatusCode(500, new { success = false, message = "创建转换任务失败: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// 处理转换请求的通用方法
+        /// </summary>
+        private async Task<IActionResult> ProcessConversionRequest(StartConversionRequest request, IFormFile file, bool isFromUpload = false)
+        {
             try
             {
                 var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
@@ -83,18 +155,18 @@ namespace VideoConversion.Controllers
                     return BadRequest(new { success = false, message = validation.ErrorMessage });
                 }
 
-                _logger.LogInformation("✅ 文件验证通过，开始保存文件: {FileName}", request.VideoFile.FileName);
+                _logger.LogInformation("文件验证通过，开始保存文件: {FileName}", request.VideoFile.FileName);
 
                 // 保存上传的文件
                 _logger.LogInformation("开始保存文件到服务器...");
                 var saveResult = await _fileService.SaveUploadedFileAsync(request.VideoFile);
                 if (!saveResult.Success)
                 {
-                    _logger.LogError("❌ 文件保存失败: {Error}", saveResult.ErrorMessage);
+                    _logger.LogError("文件保存失败: {Error}", saveResult.ErrorMessage);
                     return BadRequest(new { success = false, message = saveResult.ErrorMessage });
                 }
 
-                _logger.LogInformation("✅ 文件保存成功: {FilePath}", saveResult.FilePath);
+                _logger.LogInformation("文件保存成功: {FilePath}", saveResult.FilePath);
 
                 // 获取转换预设作为基础
                 _logger.LogInformation("获取转换预设: {PresetName}", request.Preset);
@@ -144,7 +216,7 @@ namespace VideoConversion.Controllers
                     AudioVolume = request.AudioVolume?.ToString() ?? string.Empty,
                     StartTime = !string.IsNullOrEmpty(request.StartTime) && double.TryParse(request.StartTime, out var startTime) ? startTime : null,
                     DurationLimit = !string.IsNullOrEmpty(request.Duration) && double.TryParse(request.Duration, out var duration) ? duration : null,
-                    Deinterlace = !string.IsNullOrEmpty(request.Deinterlace),
+                    Deinterlace = request.Deinterlace,
                     Denoise = request.Denoise ?? string.Empty,
                     ColorSpace = request.ColorSpace ?? string.Empty,
                     PixelFormat = request.PixelFormat ?? string.Empty,
@@ -157,7 +229,7 @@ namespace VideoConversion.Controllers
                     CreatedAt = DateTime.Now
                 };
 
-                _logger.LogInformation("✅ 任务对象创建完成");
+                _logger.LogInformation("任务对象创建完成");
                 _logger.LogInformation("任务ID: {TaskId}", task.Id);
                 _logger.LogInformation("任务名称: {TaskName}", task.TaskName);
                 _logger.LogInformation("输入格式: {InputFormat}", task.InputFormat);
@@ -172,7 +244,7 @@ namespace VideoConversion.Controllers
                 var dbDuration = DateTime.Now - dbStartTime;
 
                 _loggingService.LogDatabaseOperation("INSERT", "ConversionTasks", 1, dbDuration);
-                _logger.LogInformation("✅ 任务保存到数据库成功: {TaskId} - {TaskName} (耗时: {Duration}ms)",
+                _logger.LogInformation("任务保存到数据库成功: {TaskId} - {TaskName} (耗时: {Duration}ms)",
                     task.Id, task.TaskName, dbDuration.TotalMilliseconds);
 
                 // 记录转换任务开始
@@ -185,7 +257,7 @@ namespace VideoConversion.Controllers
                     message = "转换任务已创建，正在队列中等待处理"
                 };
 
-                _logger.LogInformation("🎉 转换任务创建成功!");
+                _logger.LogInformation("转换任务创建成功!");
                 _logger.LogInformation("响应数据: {@Response}", response);
 
                 // 通知所有客户端有新任务创建
@@ -199,11 +271,11 @@ namespace VideoConversion.Controllers
                         CreatedAt = task.CreatedAt,
                         Timestamp = DateTime.Now
                     });
-                    _logger.LogDebug("✅ 新任务创建通知已发送");
+                    // 新任务创建通知已发送
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "❌ 发送新任务创建通知失败");
+                    _logger.LogError(ex, "发送新任务创建通知失败");
                 }
 
                 _logger.LogInformation("=== 转换请求处理完成 ===");
@@ -212,7 +284,7 @@ namespace VideoConversion.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ 创建转换任务失败");
+                _logger.LogError(ex, "创建转换任务失败");
                 _logger.LogError("错误详情: {ErrorMessage}", ex.Message);
                 _logger.LogError("堆栈跟踪: {StackTrace}", ex.StackTrace);
 
@@ -342,6 +414,7 @@ namespace VideoConversion.Controllers
         {
             try
             {
+                _logger.LogInformation("收到取消任务请求: {TaskId}", taskId);
                 await _conversionService.CancelConversionAsync(taskId);
                 return Ok(new { success = true, message = "任务已取消" });
             }
@@ -349,6 +422,88 @@ namespace VideoConversion.Controllers
             {
                 _logger.LogError(ex, "取消任务失败: {TaskId}", taskId);
                 return StatusCode(500, new { success = false, message = "服务器内部错误" });
+            }
+        }
+
+        /// <summary>
+        /// 获取正在运行的进程信息
+        /// </summary>
+        [HttpGet("processes")]
+        public IActionResult GetRunningProcesses()
+        {
+            try
+            {
+                var statistics = _conversionService.GetProcessStatistics();
+                return Ok(new { success = true, data = statistics });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取进程信息失败");
+                return StatusCode(500, new { success = false, message = "获取进程信息失败: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// 检查任务是否正在运行
+        /// </summary>
+        [HttpGet("is-running/{taskId}")]
+        public IActionResult IsTaskRunning(string taskId)
+        {
+            try
+            {
+                var isRunning = _conversionService.IsTaskRunning(taskId);
+                return Ok(new { success = true, isRunning = isRunning, taskId = taskId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "检查任务运行状态失败: {TaskId}", taskId);
+                return StatusCode(500, new { success = false, message = "检查任务状态失败: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// 获取任务详细信息（包括编码器设置）
+        /// </summary>
+        [HttpGet("task-details/{taskId}")]
+        public async Task<IActionResult> GetTaskDetails(string taskId)
+        {
+            try
+            {
+                var task = await _databaseService.GetTaskAsync(taskId);
+                if (task == null)
+                {
+                    return NotFound(new { success = false, message = "任务不存在" });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        task.Id,
+                        task.TaskName,
+                        task.Status,
+                        task.Progress,
+                        task.VideoCodec,
+                        task.AudioCodec,
+                        task.OutputFormat,
+                        task.QualityMode,
+                        task.VideoQuality,
+                        task.AudioQuality,
+                        task.Resolution,
+                        task.FrameRate,
+                        task.OriginalFilePath,
+                        task.OutputFilePath,
+                        task.CreatedAt,
+                        task.CompletedAt,
+                        task.ErrorMessage
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取任务详细信息失败: {TaskId}", taskId);
+                return StatusCode(500, new { success = false, message = "获取任务详细信息失败: " + ex.Message });
             }
         }
 
@@ -583,22 +738,126 @@ namespace VideoConversion.Controllers
         public string? AudioCodec { get; set; }
         public string? AudioChannels { get; set; }
         public string? AudioQualityMode { get; set; } = "bitrate";
+        public string? AudioQuality { get; set; }
         public string? AudioBitrate { get; set; }
         public int? CustomAudioBitrateValue { get; set; }
         public int? AudioQualityValue { get; set; }
         public string? SampleRate { get; set; }
-        public int? AudioVolume { get; set; } = 100;
+        public string? AudioVolume { get; set; }
 
         // 高级选项
         public string? StartTime { get; set; }
+        public double? EndTime { get; set; }
         public string? Duration { get; set; }
-        public string? Deinterlace { get; set; }
+        public bool Deinterlace { get; set; } = false;
         public string? Denoise { get; set; }
         public string? ColorSpace { get; set; }
         public string? PixelFormat { get; set; }
         public string? CustomParams { get; set; }
+        public string? CustomParameters { get; set; }
+        public string? HardwareAcceleration { get; set; }
+        public string? VideoFilters { get; set; }
+        public string? AudioFilters { get; set; }
+
+        // 任务设置
+        public int Priority { get; set; } = 0;
+        public string? Tags { get; set; }
+        public string? Notes { get; set; }
+
         public bool TwoPass { get; set; } = false;
         public bool FastStart { get; set; } = true;
         public bool CopyTimestamps { get; set; } = true;
+    }
+
+    /// <summary>
+    /// 从上传文件开始转换请求模型
+    /// </summary>
+    public class StartConversionFromUploadRequest
+    {
+        [Required(ErrorMessage = "上传文件路径不能为空")]
+        public string UploadedFilePath { get; set; } = string.Empty;
+        public string? OriginalFileName { get; set; }
+        public string? TaskName { get; set; }
+        public string Preset { get; set; } = string.Empty;
+
+        // 基本设置
+        public string? OutputFormat { get; set; }
+        public string? VideoCodec { get; set; }
+        public string? AudioCodec { get; set; }
+        public string? VideoQuality { get; set; }
+        public string? AudioQuality { get; set; }
+        public string? Resolution { get; set; }
+        public string? FrameRate { get; set; }
+
+        // 高级设置
+        public string? QualityMode { get; set; }
+        public string? AudioQualityMode { get; set; }
+        public string? CustomParameters { get; set; }
+        public string? HardwareAcceleration { get; set; }
+        public string? VideoFilters { get; set; }
+        public string? AudioFilters { get; set; }
+
+        // 时间范围
+        public double? StartTime { get; set; }
+        public double? EndTime { get; set; }
+
+        // 任务设置
+        public int Priority { get; set; } = 0;
+        public string? Tags { get; set; }
+        public string? Notes { get; set; }
+
+        // 编码设置
+        public string? Profile { get; set; }
+        public string? AudioChannels { get; set; }
+        public string? SampleRate { get; set; }
+        public string? AudioVolume { get; set; }
+        public string? Denoise { get; set; }
+        public string? ColorSpace { get; set; }
+        public string? PixelFormat { get; set; }
+        public bool TwoPass { get; set; } = false;
+        public bool FastStart { get; set; } = true;
+        public bool CopyTimestamps { get; set; } = true;
+        public bool Deinterlace { get; set; } = false;
+    }
+
+    /// <summary>
+    /// 已上传文件的IFormFile实现
+    /// </summary>
+    public class UploadedFormFile : IFormFile
+    {
+        private readonly string _filePath;
+        private readonly string _fileName;
+        private readonly long _length;
+
+        public UploadedFormFile(string filePath, string fileName, long length)
+        {
+            _filePath = filePath;
+            _fileName = fileName;
+            _length = length;
+        }
+
+        public string ContentType => "application/octet-stream";
+        public string ContentDisposition => $"form-data; name=\"file\"; filename=\"{_fileName}\"";
+        public IHeaderDictionary Headers => new HeaderDictionary();
+        public long Length => _length;
+        public string Name => "file";
+        public string FileName => _fileName;
+
+        public void CopyTo(Stream target)
+        {
+            using var source = File.OpenRead(_filePath);
+            source.CopyTo(target);
+        }
+
+        public async Task CopyToAsync(Stream target, CancellationToken cancellationToken = default)
+        {
+            using var source = File.OpenRead(_filePath);
+            await source.CopyToAsync(target, cancellationToken);
+        }
+
+        public Stream OpenReadStream()
+        {
+            return File.OpenRead(_filePath);
+        }
     }
 }

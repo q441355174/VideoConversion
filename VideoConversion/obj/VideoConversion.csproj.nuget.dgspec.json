@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "E:\\Code\\VideoConversion\\VideoConversion\\VideoConversion\\VideoConversion.csproj": {}
+    "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj": {}
   },
   "projects": {
-    "E:\\Code\\VideoConversion\\VideoConversion\\VideoConversion\\VideoConversion.csproj": {
+    "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\Code\\VideoConversion\\VideoConversion\\VideoConversion\\VideoConversion.csproj",
+        "projectUniqueName": "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj",
         "projectName": "VideoConversion",
-        "projectPath": "E:\\Code\\VideoConversion\\VideoConversion\\VideoConversion\\VideoConversion.csproj",
-        "packagesPath": "C:\\Users\\luo\\.nuget\\packages\\",
-        "outputPath": "E:\\Code\\VideoConversion\\VideoConversion\\VideoConversion\\obj\\",
+        "projectPath": "E:\\newcode\\VideoConversion\\VideoConversion\\VideoConversion.csproj",
+        "packagesPath": "C:\\Users\\administer\\.nuget\\packages\\",
+        "outputPath": "E:\\newcode\\VideoConversion\\VideoConversion\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+          "D:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\luo\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\administer\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -106,7 +106,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.300/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
