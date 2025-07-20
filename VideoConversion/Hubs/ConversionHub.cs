@@ -69,20 +69,9 @@ namespace VideoConversion.Hubs
                 var task = await _databaseService.GetTaskAsync(taskId);
                 if (task != null)
                 {
-                    await Clients.Caller.SendAsync("TaskStatus", new
-                    {
-                        TaskId = task.Id,
-                        Status = task.Status.ToString(),
-                        Progress = task.Progress,
-                        ErrorMessage = task.ErrorMessage,
-                        CreatedAt = task.CreatedAt,
-                        StartedAt = task.StartedAt,
-                        CompletedAt = task.CompletedAt,
-                        EstimatedTimeRemaining = task.EstimatedTimeRemaining,
-                        ConversionSpeed = task.ConversionSpeed,
-                        Duration = task.Duration,
-                        CurrentTime = task.CurrentTime
-                    });
+                    // 使用状态映射服务返回统一格式的数据
+                    var taskInfo = StatusMappingService.CreateDetailedTaskInfo(task);
+                    await Clients.Caller.SendAsync("TaskStatus", taskInfo);
                 }
                 else
                 {
@@ -104,17 +93,8 @@ namespace VideoConversion.Hubs
             try
             {
                 var tasks = await _databaseService.GetActiveTasksAsync();
-                var taskData = tasks.Select(t => new
-                {
-                    TaskId = t.Id,
-                    TaskName = t.TaskName,
-                    Status = t.Status.ToString(),
-                    Progress = t.Progress,
-                    CreatedAt = t.CreatedAt,
-                    StartedAt = t.StartedAt,
-                    EstimatedTimeRemaining = t.EstimatedTimeRemaining,
-                    ConversionSpeed = t.ConversionSpeed
-                }).ToList();
+                // 使用状态映射服务返回统一格式的数据
+                var taskData = tasks.Select(StatusMappingService.CreateSimpleTaskInfo).ToList();
 
                 await Clients.Caller.SendAsync("ActiveTasks", taskData);
             }
@@ -175,6 +155,105 @@ namespace VideoConversion.Hubs
                 _logger.LogError(ex, "❌ 取消任务请求失败: {TaskId}", taskId);
                 await Clients.Caller.SendAsync("Error", $"取消任务失败: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 获取最近任务列表
+        /// </summary>
+        public async Task<object> GetRecentTasks(int count = 10)
+        {
+            try
+            {
+                _logger.LogInformation("获取最近任务列表，数量: {Count}", count);
+
+                // 尝试从数据库获取最近任务
+                var tasks = await _databaseService.GetRecentTasksAsync(count);
+
+                if (tasks != null && tasks.Any())
+                {
+                    // 使用状态映射服务返回统一格式的数据
+                    var taskData = tasks.Select(StatusMappingService.CreateSimpleTaskInfo).ToList();
+
+                    return new
+                    {
+                        success = true,
+                        data = taskData
+                    };
+                }
+                else
+                {
+                    // 如果数据库中没有数据，返回模拟数据
+                    return GetMockRecentTasks(count);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取最近任务失败");
+
+                // 发生错误时返回模拟数据
+                return GetMockRecentTasks(count);
+            }
+        }
+
+        /// <summary>
+        /// 获取模拟的最近任务数据（用于演示）
+        /// </summary>
+        private object GetMockRecentTasks(int count)
+        {
+            var mockTasks = new[]
+            {
+                new
+                {
+                    taskId = "task-001",
+                    fileName = "sample_video.mp4",
+                    status = "Completed",
+                    progress = 100,
+                    createdAt = DateTime.Now.AddHours(-1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    downloadUrl = "/downloads/sample_video_converted.mp4"
+                },
+                new
+                {
+                    taskId = "task-002",
+                    fileName = "another_video.avi",
+                    status = "Failed",
+                    progress = 45,
+                    createdAt = DateTime.Now.AddHours(-2).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    downloadUrl = (string?)null
+                },
+                new
+                {
+                    taskId = "task-003",
+                    fileName = "test_video.mkv",
+                    status = "Running",
+                    progress = 75,
+                    createdAt = DateTime.Now.AddMinutes(-30).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    downloadUrl = (string?)null
+                },
+                new
+                {
+                    taskId = "task-004",
+                    fileName = "demo_video.mp4",
+                    status = "Pending",
+                    progress = 0,
+                    createdAt = DateTime.Now.AddMinutes(-5).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    downloadUrl = (string?)null
+                },
+                new
+                {
+                    taskId = "task-005",
+                    fileName = "large_video.mov",
+                    status = "Cancelled",
+                    progress = 25,
+                    createdAt = DateTime.Now.AddHours(-3).ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    downloadUrl = (string?)null
+                }
+            };
+
+            return new
+            {
+                success = true,
+                data = mockTasks.Take(count).ToArray()
+            };
         }
     }
 

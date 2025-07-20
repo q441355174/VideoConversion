@@ -192,30 +192,30 @@ namespace VideoConversion.Services
         }
 
         /// <summary>
-        /// 取消任务
+        /// 取消任务 - 优化后：纯队列管理，委托给 VideoConversionService 处理实际取消逻辑
         /// </summary>
         public async Task CancelTaskAsync(string taskId)
         {
             try
             {
-                _logger.LogInformation("收到取消任务请求: {TaskId}", taskId);
+                _logger.LogInformation("队列服务收到取消任务请求: {TaskId}", taskId);
 
-                // 添加到取消列表
+                // 队列管理：添加到取消列表，从运行列表中移除
                 _cancelledTasks.Add(taskId);
-
-                // 如果任务正在运行，从运行列表中移除
                 _runningTasks.Remove(taskId);
 
-                // 使用作用域服务更新数据库状态
+                // 委托给 VideoConversionService 处理实际的取消逻辑
                 using var scope = _serviceProvider.CreateScope();
                 var videoConversionService = scope.ServiceProvider.GetRequiredService<VideoConversionService>();
                 await videoConversionService.CancelConversionAsync(taskId);
 
-                _logger.LogInformation("任务取消完成: {TaskId}", taskId);
+                _logger.LogInformation("队列任务取消完成: {TaskId}", taskId);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "取消任务失败: {TaskId}", taskId);
+                _logger.LogError(ex, "队列取消任务失败: {TaskId}", taskId);
+                // 取消失败时，从取消列表中移除，以便重试
+                _cancelledTasks.Remove(taskId);
             }
         }
 

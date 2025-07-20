@@ -20,3 +20,21 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* 任务列表样式 */
+.task-item {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.task-item:hover {
+    background-color: var(--bs-light);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.task-item.selected {
+    background-color: var(--bs-primary-bg-subtle);
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb), 0.25);
+}

@@ -61,21 +61,21 @@ namespace VideoConversion.Middleware
         {
             return exception switch
             {
-                ArgumentException argEx => new ErrorResponse
-                {
-                    StatusCode = (int)HttpStatusCode.BadRequest,
-                    ApiResponse = ApiResponse.CreateError(
-                        argEx.Message,
-                        "INVALID_ARGUMENT"
-                    )
-                },
-
                 ArgumentNullException nullEx => new ErrorResponse
                 {
                     StatusCode = (int)HttpStatusCode.BadRequest,
                     ApiResponse = ApiResponse.CreateError(
                         $"必需参数不能为空: {nullEx.ParamName}",
                         "NULL_ARGUMENT"
+                    )
+                },
+
+                ArgumentException argEx => new ErrorResponse
+                {
+                    StatusCode = (int)HttpStatusCode.BadRequest,
+                    ApiResponse = ApiResponse.CreateError(
+                        argEx.Message,
+                        "INVALID_ARGUMENT"
                     )
                 },
 
@@ -164,8 +164,8 @@ namespace VideoConversion.Middleware
                 {
                     StatusCode = (int)HttpStatusCode.InternalServerError,
                     ApiResponse = ApiResponse.CreateError(
-                        _environment.IsDevelopment() 
-                            ? $"服务器内部错误: {exception.Message}" 
+                        _environment.IsDevelopment()
+                            ? $"服务器内部错误: {exception.Message}"
                             : "服务器内部错误",
                         "INTERNAL_ERROR"
                     )

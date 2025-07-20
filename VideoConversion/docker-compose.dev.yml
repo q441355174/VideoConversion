@@ -1,0 +1,93 @@
+version: '3.8'
+
+# 开发环境 Docker Compose 配置
+# 使用方法: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  videoconversion:
+    # 开发环境特定配置
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_RUNNING_IN_CONTAINER=true
+      # 开发环境日志配置
+      - Logging__LogLevel__Default=Debug
+      - Logging__LogLevel__Microsoft.AspNetCore=Information
+      - Logging__LogLevel__VideoConversion=Debug
+      # 开发环境特定设置
+      - VideoConversion__MaxConcurrentConversions=1
+      - VideoConversion__CleanupIntervalMinutes=30
+    
+    # 开发环境端口映射
+    ports:
+      - "5065:8080"  # HTTP
+      - "7065:8081"  # HTTPS (如果需要)
+    
+    # 开发环境卷挂载（支持热重载）
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./temp_uploads:/app/temp_uploads
+      # 开发时可以挂载源代码（如果需要调试）
+      # - ./:/app/src:ro
+    
+    # 开发环境资源限制（较宽松）
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+    
+    # 开发环境健康检查（更频繁）
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # 开发环境数据库（如果需要）
+  # database:
+  #   image: postgres:15-alpine
+  #   container_name: videoconversion-db-dev
+  #   environment:
+  #     POSTGRES_DB: videoconversion_dev
+  #     POSTGRES_USER: dev_user
+  #     POSTGRES_PASSWORD: dev_password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_dev_data:/var/lib/postgresql/data
+  #   networks:
+  #     - videoconversion-network
+
+  # 开发环境 Redis（如果需要缓存）
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: videoconversion-redis-dev
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_dev_data:/data
+  #   networks:
+  #     - videoconversion-network
+
+  # 开发环境 Nginx（简化配置）
+  nginx:
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+
+# 开发环境特定的卷
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local

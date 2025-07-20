@@ -1,40 +1,57 @@
 using Microsoft.AspNetCore.Mvc;
 using VideoConversion.Services;
 using VideoConversion.Models;
+using VideoConversion.Controllers.Base;
 using System.Diagnostics;
 
 namespace VideoConversion.Controllers
 {
-    [ApiController]
+    /// <summary>
+    /// 健康检查和系统状态控制器 - 已优化使用 BaseApiController
+    /// </summary>
     [Route("api/[controller]")]
-    public class HealthController : ControllerBase
+    public class HealthController : BaseApiController
     {
         private readonly DatabaseService _databaseService;
         private readonly LoggingService _loggingService;
-        private readonly ILogger<HealthController> _logger;
 
         public HealthController(
             DatabaseService databaseService,
             LoggingService loggingService,
-            ILogger<HealthController> logger)
+            ILogger<HealthController> logger) : base(logger)
         {
             _databaseService = databaseService;
             _loggingService = loggingService;
-            _logger = logger;
         }
 
         /// <summary>
-        /// 基本健康检查
+        /// 基本健康检查 - 已优化使用 BaseApiController
         /// </summary>
         [HttpGet]
-        public IActionResult GetHealth()
+        public async Task<IActionResult> GetHealth()
         {
-            return Ok(new
-            {
-                status = "healthy",
-                timestamp = DateTime.Now,
-                version = GetType().Assembly.GetName().Version?.ToString() ?? "unknown"
-            });
+            return await SafeExecuteAsync<object>(
+                async () =>
+                {
+                    await Task.CompletedTask; // 占位符，因为原方法是同步的
+
+                    return new
+                    {
+                        status = "healthy",
+                        timestamp = DateTime.Now,
+                        version = GetType().Assembly.GetName().Version?.ToString() ?? "unknown",
+                        // 添加更多健康检查信息
+                        uptime = DateTime.Now - Process.GetCurrentProcess().StartTime,
+                        environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown",
+                        machineName = Environment.MachineName,
+                        processId = Environment.ProcessId,
+                        workingSet = Environment.WorkingSet,
+                        gcMemory = GC.GetTotalMemory(false)
+                    };
+                },
+                "基本健康检查",
+                "系统健康状态正常"
+            );
         }
 
         /// <summary>
@@ -114,7 +131,7 @@ namespace VideoConversion.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取系统状态失败");
+                Logger.LogError(ex, "获取系统状态失败");
                 return StatusCode(500, new
                 {
                     status = "error",
@@ -168,7 +185,7 @@ namespace VideoConversion.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取今日统计失败");
+                Logger.LogError(ex, "获取今日统计失败");
                 return StatusCode(500, new { message = "获取统计数据失败" });
             }
         }
@@ -267,7 +284,7 @@ namespace VideoConversion.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "系统诊断失败");
+                Logger.LogError(ex, "系统诊断失败");
                 return StatusCode(500, new { message = "诊断失败" });
             }
         }

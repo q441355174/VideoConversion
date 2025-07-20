@@ -227,20 +227,56 @@ namespace VideoConversion.Controllers.Base
         protected bool IsValidPagination(int page, int pageSize, out string errorMessage)
         {
             errorMessage = "";
-            
+
             if (page < 1)
             {
                 errorMessage = "页码必须大于0";
                 return false;
             }
-            
+
             if (pageSize < 1 || pageSize > 100)
             {
                 errorMessage = "每页大小必须在1-100之间";
                 return false;
             }
-            
+
             return true;
+        }
+
+        /// <summary>
+        /// 安全执行异步操作，返回分页结果
+        /// </summary>
+        protected async Task<IActionResult> SafeExecutePagedAsync<T>(
+            Func<Task<PagedApiResponse<T>>> operation,
+            string operationName)
+        {
+            try
+            {
+                Logger.LogInformation("开始执行分页操作: {OperationName}", operationName);
+
+                var result = await operation();
+
+                Logger.LogInformation("分页操作执行成功: {OperationName}", operationName);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                Logger.LogWarning(ex, "分页参数验证失败: {OperationName}", operationName);
+                return ValidationError(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "分页操作执行失败: {OperationName}", operationName);
+                return ServerError($"执行{operationName}时发生错误");
+            }
+        }
+
+        /// <summary>
+        /// 获取客户端IP地址
+        /// </summary>
+        protected string GetClientIpAddress()
+        {
+            return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
         }
     }
 }

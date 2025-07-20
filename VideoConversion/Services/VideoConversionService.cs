@@ -17,6 +17,8 @@ namespace VideoConversion.Services
         private readonly IHubContext<ConversionHub> _hubContext;
         private readonly LoggingService _loggingService;
         private readonly ILogger<VideoConversionService> _logger;
+        private readonly FFmpegConfigurationService _ffmpegConfig;
+        private readonly NotificationService _notificationService;
         private readonly SemaphoreSlim _conversionSemaphore;
 
         // 进程跟踪：任务ID -> FFmpeg进程
@@ -29,74 +31,23 @@ namespace VideoConversion.Services
             DatabaseService databaseService,
             IHubContext<ConversionHub> hubContext,
             LoggingService loggingService,
-            ILogger<VideoConversionService> logger)
+            ILogger<VideoConversionService> logger,
+            FFmpegConfigurationService ffmpegConfig,
+            NotificationService notificationService)
         {
             _databaseService = databaseService;
             _hubContext = hubContext;
             _loggingService = loggingService;
             _logger = logger;
+            _ffmpegConfig = ffmpegConfig;
+            _notificationService = notificationService;
             _conversionSemaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
 
-            InitializeFFmpeg();
+            _logger.LogInformation("VideoConversionService 初始化完成，FFmpeg配置状态: {IsInitialized}",
+                _ffmpegConfig.IsInitialized);
         }
 
-        private string _ffmpegPath = "";
-        private string _ffprobePath = "";
 
-        /// <summary>
-        /// 初始化FFmpeg
-        /// </summary>
-        private void InitializeFFmpeg()
-        {
-            try
-            {
-                // 获取当前工作目录（项目根目录）
-                var currentDirectory = Environment.CurrentDirectory;
-                var ffmpegDir = Path.Combine(currentDirectory, "ffmpeg");
-
-                _logger.LogDebug("当前工作目录: {CurrentDirectory}", currentDirectory);
-                _logger.LogDebug("检查FFmpeg路径: {FFmpegPath}", ffmpegDir);
-
-                // 如果ffmpeg目录存在，设置FFmpeg路径
-                if (Directory.Exists(ffmpegDir))
-                {
-                    _ffmpegPath = Path.Combine(ffmpegDir, "ffmpeg.exe");
-                    _ffprobePath = Path.Combine(ffmpegDir, "ffprobe.exe");
-
-                    _logger.LogDebug("检查FFmpeg文件: {FFmpegExe}", _ffmpegPath);
-                    _logger.LogDebug("检查FFprobe文件: {FFprobeExe}", _ffprobePath);
-
-                    if (File.Exists(_ffmpegPath) && File.Exists(_ffprobePath))
-                    {
-                        _logger.LogInformation("FFmpeg配置完成: {FFmpegPath}", ffmpegDir);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("FFmpeg二进制文件不存在: ffmpeg={FFmpegExists}, ffprobe={FFprobeExists}",
-                            File.Exists(_ffmpegPath), File.Exists(_ffprobePath));
-
-                        // 尝试使用系统PATH中的FFmpeg
-                        _ffmpegPath = "ffmpeg";
-                        _ffprobePath = "ffprobe";
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning("❌ FFmpeg目录不存在: {FFmpegPath}", ffmpegDir);
-                    _logger.LogWarning("尝试使用系统PATH中的FFmpeg");
-
-                    // 尝试使用系统PATH中的FFmpeg
-                    _ffmpegPath = "ffmpeg";
-                    _ffprobePath = "ffprobe";
-                }
-
-                _logger.LogDebug("FFmpeg初始化完成");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "FFmpeg初始化失败");
-            }
-        }
 
         /// <summary>
         /// 开始转换任务
@@ -359,7 +310,7 @@ namespace VideoConversion.Services
             {
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = _ffprobePath,
+                    FileName = _ffmpegConfig.FFprobePath,
                     Arguments = $"-v quiet -show_entries format=duration -of csv=p=0 \"{filePath}\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -401,11 +352,11 @@ namespace VideoConversion.Services
             {
                 var arguments = BuildFFmpegArguments(task);
                 _logger.LogInformation("🎬 启动FFmpeg进程: {TaskId}", task.Id);
-                _logger.LogInformation("🎯 FFmpeg命令: {FFmpegPath} {Arguments}", _ffmpegPath, arguments);
+                _logger.LogInformation("🎯 FFmpeg命令: {FFmpegPath} {Arguments}", _ffmpegConfig.FFmpegPath, arguments);
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = _ffmpegPath,
+                    FileName = _ffmpegConfig.FFmpegPath,
                     Arguments = arguments,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -750,55 +701,19 @@ namespace VideoConversion.Services
         }
 
         /// <summary>
-        /// 通知进度更新
+        /// 通知进度更新 - 使用统一的 NotificationService
         /// </summary>
         private async Task NotifyProgressAsync(string taskId, int progress, string message, double speed = 0, int remainingSeconds = 0)
         {
-            try
-            {
-                _logger.LogDebug("📡 发送进度更新: {TaskId} - {Progress}% - {Message}", taskId, progress, message);
-
-                await _hubContext.Clients.Group($"task_{taskId}").SendAsync("ProgressUpdate", new
-                {
-                    TaskId = taskId,
-                    Progress = progress,
-                    Message = message,
-                    Speed = speed,
-                    RemainingSeconds = remainingSeconds
-                });
-
-                // 进度更新成功，使用Debug级别避免日志过多
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "发送进度更新失败: {TaskId} - {Progress}%", taskId, progress);
-            }
+            await _notificationService.NotifyProgressAsync(taskId, progress, message, speed, remainingSeconds);
         }
 
         /// <summary>
-        /// 通知任务状态变化（全局通知）
+        /// 通知任务状态变化（全局通知）- 使用统一的 NotificationService
         /// </summary>
         private async Task NotifyTaskStatusChangeAsync(string taskId, ConversionStatus status, int progress, string message)
         {
-            try
-            {
-                _logger.LogDebug("📢 发送任务状态变化通知: {TaskId} - {Status}", taskId, status);
-
-                await _hubContext.Clients.All.SendAsync("TaskStatusChanged", new
-                {
-                    TaskId = taskId,
-                    Status = status.ToString(),
-                    Progress = progress,
-                    Message = message,
-                    Timestamp = DateTime.Now
-                });
-
-                // 状态变化通知成功，使用Debug级别避免日志过多
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "发送任务状态变化通知失败: {TaskId} - {Status}", taskId, status);
-            }
+            await _notificationService.NotifyStatusChangeAsync(taskId, status, message);
         }
 
         /// <summary>

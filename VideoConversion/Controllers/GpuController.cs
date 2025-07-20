@@ -1,40 +1,42 @@
 using Microsoft.AspNetCore.Mvc;
 using VideoConversion.Services;
+using VideoConversion.Controllers.Base;
 
 namespace VideoConversion.Controllers
 {
     /// <summary>
-    /// GPU硬件加速信息控制器
+    /// GPU硬件加速信息控制器 - 已优化使用 BaseApiController
     /// </summary>
-    [ApiController]
     [Route("api/[controller]")]
-    public class GpuController : ControllerBase
+    public class GpuController : BaseApiController
     {
-        private readonly ILogger<GpuController> _logger;
         private readonly GpuDetectionService _gpuDetectionService;
+        private readonly GpuPerformanceService _gpuPerformanceService;
+        private readonly GpuDeviceInfoService _gpuDeviceInfoService;
 
-        public GpuController(ILogger<GpuController> logger, GpuDetectionService gpuDetectionService)
+        public GpuController(
+            ILogger<GpuController> logger,
+            GpuDetectionService gpuDetectionService,
+            GpuPerformanceService gpuPerformanceService,
+            GpuDeviceInfoService gpuDeviceInfoService) : base(logger)
         {
-            _logger = logger;
             _gpuDetectionService = gpuDetectionService;
+            _gpuPerformanceService = gpuPerformanceService;
+            _gpuDeviceInfoService = gpuDeviceInfoService;
         }
 
         /// <summary>
-        /// 获取GPU硬件加速能力信息
+        /// 获取GPU硬件加速能力信息 - 已优化使用 BaseApiController
         /// </summary>
         [HttpGet("capabilities")]
         public async Task<IActionResult> GetGpuCapabilities()
         {
-            try
-            {
-                _logger.LogInformation("获取GPU硬件加速能力信息");
-                
-                var capabilities = await _gpuDetectionService.DetectGpuCapabilitiesAsync();
-                
-                return Ok(new
+            return await SafeExecuteAsync(
+                async () =>
                 {
-                    success = true,
-                    data = new
+                    var capabilities = await _gpuDetectionService.DetectGpuCapabilitiesAsync();
+
+                    return new
                     {
                         hasAnyGpuSupport = capabilities.HasAnyGpuSupport,
                         supportedTypes = capabilities.GetSupportedGpuTypes(),
@@ -58,119 +60,163 @@ namespace VideoConversion.Controllers
                             supported = capabilities.VaapiSupported,
                             encoders = capabilities.VaapiEncoders
                         },
-                        gpuDevices = capabilities.GpuDevices
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取GPU能力信息失败");
-                return StatusCode(500, new { success = false, message = "获取GPU信息失败: " + ex.Message });
-            }
+                        gpuDevices = capabilities.GpuDevices,
+                        // 添加更多有用信息
+                        detectionTime = DateTime.Now,
+                        systemInfo = new
+                        {
+                            platform = Environment.OSVersion.Platform.ToString(),
+                            architecture = Environment.OSVersion.VersionString
+                        }
+                    };
+                },
+                "获取GPU硬件加速能力信息",
+                "GPU能力信息获取成功"
+            );
         }
 
         /// <summary>
-        /// 获取推荐的GPU编码器
+        /// 获取推荐的GPU编码器 - 已优化使用 BaseApiController
         /// </summary>
         [HttpGet("recommended-encoder")]
         public async Task<IActionResult> GetRecommendedEncoder([FromQuery] string codec = "h264")
         {
-            try
-            {
-                _logger.LogInformation("获取推荐的GPU编码器: {Codec}", codec);
-                
-                var recommendedEncoder = await _gpuDetectionService.GetRecommendedGpuEncoderAsync(codec);
-                
-                if (recommendedEncoder != null)
+            // 使用基类的参数验证
+            if (string.IsNullOrWhiteSpace(codec))
+                return ValidationError("编码器类型不能为空");
+
+            return await SafeExecuteAsync<object>(
+                async () =>
                 {
-                    return Ok(new
+                    var recommendedEncoder = await _gpuDetectionService.GetRecommendedGpuEncoderAsync(codec);
+
+                    if (recommendedEncoder != null)
                     {
-                        success = true,
-                        data = new
+                        return new
                         {
                             codec = codec,
                             recommendedEncoder = recommendedEncoder,
-                            message = $"推荐使用 {recommendedEncoder} 进行GPU加速"
-                        }
-                    });
-                }
-                else
-                {
-                    return Ok(new
+                            hasGpuSupport = true,
+                            message = $"推荐使用 {recommendedEncoder} 进行GPU加速",
+                            // 添加更多有用信息
+                            performance = "GPU加速可显著提升编码速度",
+                            supportedCodecs = new[] { "h264", "h265", "av1" }
+                        };
+                    }
+                    else
                     {
-                        success = false,
-                        message = $"未找到支持 {codec} 的GPU编码器，建议使用CPU编码"
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取推荐GPU编码器失败");
-                return StatusCode(500, new { success = false, message = "获取推荐编码器失败: " + ex.Message });
-            }
+                        return new
+                        {
+                            codec = codec,
+                            recommendedEncoder = (string?)null,
+                            hasGpuSupport = false,
+                            message = $"未找到支持 {codec} 的GPU编码器，建议使用CPU编码",
+                            fallbackEncoder = $"lib{codec}",
+                            performance = "将使用CPU编码，速度较慢但兼容性更好"
+                        };
+                    }
+                },
+                "获取推荐的GPU编码器",
+                "推荐编码器获取成功"
+            );
+        }
+      
+        /// <summary>
+        /// 检测GPU硬件信息
+        /// </summary>
+        [HttpGet("detect")]
+        public async Task<IActionResult> DetectGpu()
+        {
+            return await SafeExecuteAsync(
+                async () =>
+                {
+                    // 获取真实的GPU设备信息
+                    var gpuDevices = await _gpuDeviceInfoService.GetGpuDeviceInfoAsync();
+
+                    // 转换为API响应格式
+                    var result = gpuDevices.Select(device => new
+                    {
+                        name = device.Name,
+                        vendor = device.Vendor,
+                        driver = device.Driver,
+                        memory = device.Memory,
+                        encoder = device.Encoder,
+                        maxResolution = device.MaxResolution,
+                        performanceLevel = device.PerformanceLevel,
+                        supported = device.Supported,
+                        supportedFormats = device.SupportedFormats,
+                        reason = device.Reason
+                    }).ToList();
+
+                    return result;
+                },
+                "检测GPU硬件信息",
+                "GPU硬件检测完成"
+            );
         }
 
         /// <summary>
-        /// 刷新GPU检测缓存
+        /// 获取GPU性能数据
         /// </summary>
-        [HttpPost("refresh")]
-        public async Task<IActionResult> RefreshGpuDetection()
+        [HttpGet("performance")]
+        public async Task<IActionResult> GetGpuPerformance()
         {
-            try
-            {
-                _logger.LogInformation("刷新GPU检测缓存");
-                
-                _gpuDetectionService.ClearCache();
-                var capabilities = await _gpuDetectionService.DetectGpuCapabilitiesAsync();
-                
-                return Ok(new
+            return await SafeExecuteAsync(
+                async () =>
                 {
-                    success = true,
-                    message = "GPU检测缓存已刷新",
-                    data = new
+                    // 获取真实的GPU性能数据
+                    var performanceData = await _gpuPerformanceService.GetGpuPerformanceAsync();
+
+                    // 转换为API响应格式
+                    var result = performanceData.Select(gpu => new
                     {
-                        hasAnyGpuSupport = capabilities.HasAnyGpuSupport,
-                        supportedTypes = capabilities.GetSupportedGpuTypes()
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "刷新GPU检测失败");
-                return StatusCode(500, new { success = false, message = "刷新GPU检测失败: " + ex.Message });
-            }
+                        index = gpu.Index,
+                        name = gpu.Name,
+                        vendor = gpu.Vendor,
+                        usage = gpu.Usage,
+                        memoryUsed = gpu.MemoryUsed,
+                        memoryTotal = gpu.MemoryTotal,
+                        temperature = gpu.Temperature,
+                        encoderActive = gpu.EncoderActive,
+                        // 添加计算字段
+                        memoryUsagePercent = gpu.MemoryTotal > 0 ? (int)((double)gpu.MemoryUsed / gpu.MemoryTotal * 100) : 0,
+                        status = GetGpuStatus(gpu.Usage, gpu.Temperature),
+                        performanceLevel = GetPerformanceLevel(gpu.Usage)
+                    }).ToArray();
+
+                    return result;
+                },
+                "获取GPU性能数据",
+                "GPU性能数据获取成功"
+            );
         }
 
         /// <summary>
-        /// 测试GPU编码器
+        /// 根据使用率和温度获取GPU状态
         /// </summary>
-        [HttpPost("test-encoder")]
-        public async Task<IActionResult> TestGpuEncoder([FromBody] TestEncoderRequest request)
+        private string GetGpuStatus(int usage, int temperature)
         {
-            try
-            {
-                _logger.LogInformation("测试GPU编码器: {Encoder}", request.Encoder);
-                
-                // 这里可以添加实际的编码器测试逻辑
-                // 例如使用一个小的测试文件进行编码测试
-                
-                return Ok(new
-                {
-                    success = true,
-                    message = $"GPU编码器 {request.Encoder} 测试完成",
-                    data = new
-                    {
-                        encoder = request.Encoder,
-                        testResult = "通过", // 实际测试结果
-                        performance = "优秀" // 性能评估
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "测试GPU编码器失败: {Encoder}", request.Encoder);
-                return StatusCode(500, new { success = false, message = "测试编码器失败: " + ex.Message });
-            }
+            if (temperature > 80)
+                return "过热";
+            if (usage > 90)
+                return "高负载";
+            if (usage > 50)
+                return "中等负载";
+            if (usage > 10)
+                return "轻负载";
+            return "空闲";
+        }
+
+        /// <summary>
+        /// 根据使用率获取性能等级
+        /// </summary>
+        private string GetPerformanceLevel(int usage)
+        {
+            if (usage > 80)
+                return "高性能";
+            if (usage > 40)
+                return "中等性能";
+            return "低性能";
         }
     }
 

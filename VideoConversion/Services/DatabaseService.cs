@@ -1,7 +1,5 @@
 using SqlSugar;
 using VideoConversion.Models;
-using VideoConversion.Hubs;
-using Microsoft.AspNetCore.SignalR;
 
 namespace VideoConversion.Services
 {
@@ -12,12 +10,15 @@ namespace VideoConversion.Services
     {
         private readonly SqlSugarScope _db;
         private readonly ILogger<DatabaseService> _logger;
-        private readonly IHubContext<ConversionHub>? _hubContext;
+        private readonly NotificationService? _notificationService;
 
-        public DatabaseService(ILogger<DatabaseService> logger, IConfiguration configuration, IHubContext<ConversionHub>? hubContext = null)
+        public DatabaseService(
+            ILogger<DatabaseService> logger,
+            IConfiguration configuration,
+            NotificationService? notificationService = null)
         {
             _logger = logger;
-            _hubContext = hubContext;
+            _notificationService = notificationService;
             
             // 获取数据库连接字符串
             var connectionString = configuration.GetConnectionString("DefaultConnection") 
@@ -384,10 +385,9 @@ namespace VideoConversion.Services
                 _logger.LogInformation("任务状态更新: {TaskId} -> {Status}", taskId, status);
 
                 // 发送状态更新通知给客户端
-                if (_hubContext != null && result > 0)
+                if (_notificationService != null && result > 0)
                 {
-                    await _hubContext.SendTaskStatusAsync(taskId, status.ToString(), errorMessage);
-                    // 状态更新通知已发送
+                    await _notificationService.NotifyStatusChangeAsync(taskId, status, errorMessage);
                 }
 
                 // 强制验证更新结果 - 使用原生SQL确保一致性
@@ -407,10 +407,9 @@ namespace VideoConversion.Services
                     _logger.LogDebug("重试更新结果: 影响行数 {RetryResult}", retryResult);
 
                     // 重试成功后也发送状态更新
-                    if (_hubContext != null && retryResult > 0)
+                    if (_notificationService != null && retryResult > 0)
                     {
-                        await _hubContext.SendTaskStatusAsync(taskId, status.ToString(), errorMessage);
-                        // 重试后状态更新通知已发送
+                        await _notificationService.NotifyStatusChangeAsync(taskId, status, errorMessage);
                     }
 
                     return retryResult > 0;
@@ -532,10 +531,9 @@ namespace VideoConversion.Services
                     _logger.LogDebug("任务启动成功: {TaskId}", taskId);
 
                     // 发送状态更新通知给客户端
-                    if (_hubContext != null)
+                    if (_notificationService != null)
                     {
-                        await _hubContext.SendTaskStatusAsync(taskId, "Converting");
-                        // 状态更新通知已发送
+                        await _notificationService.NotifyStatusChangeAsync(taskId, ConversionStatus.Converting, "任务已开始");
                     }
                 }
                 else
@@ -596,6 +594,49 @@ namespace VideoConversion.Services
             {
                 _logger.LogError(ex, "清理旧任务失败");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// 获取任务总数
+        /// </summary>
+        public async Task<int> GetTaskCountAsync()
+        {
+            try
+            {
+                var count = await _db.Queryable<ConversionTask>().CountAsync();
+                _logger.LogDebug("获取任务总数: {Count}", count);
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取任务总数失败");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 获取最近任务列表
+        /// </summary>
+        public async Task<List<ConversionTask>> GetRecentTasksAsync(int count = 10)
+        {
+            try
+            {
+                _logger.LogDebug("获取最近任务列表: count={Count}", count);
+
+                var tasks = await _db.Queryable<ConversionTask>()
+                    .OrderBy(t => t.CreatedAt, OrderByType.Desc)
+                    .Take(count)
+                    .ToListAsync();
+
+                _logger.LogDebug("获取到 {Count} 个最近任务", tasks?.Count ?? 0);
+                return tasks ?? new List<ConversionTask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取最近任务列表失败");
+                // 返回空列表而不是抛出异常，这样前端可以正常显示"暂无数据"
+                return new List<ConversionTask>();
             }
         }
     }

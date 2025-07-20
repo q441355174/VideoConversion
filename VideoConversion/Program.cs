@@ -39,11 +39,17 @@ builder.Services.AddCors(options =>
 // 添加SignalR
 builder.Services.AddSignalR();
 
+// 注册新的优化服务（基础服务）
+builder.Services.AddSingleton<FFmpegConfigurationService>();
+builder.Services.AddScoped<NotificationService>();
+
 // 注册自定义服务
-builder.Services.AddSingleton<DatabaseService>();
+builder.Services.AddScoped<DatabaseService>(); // 改为 Scoped 以支持 NotificationService 依赖
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<GpuDetectionService>();
+builder.Services.AddScoped<GpuPerformanceService>();
+builder.Services.AddScoped<GpuDeviceInfoService>();
 builder.Services.AddScoped<VideoConversionService>();
 builder.Services.AddScoped<ConversionTaskService>();
 
@@ -100,7 +106,7 @@ else
 }
 
 // 使用全局异常处理中间件
-app.UseExceptionHandling();
+app.UseGlobalExceptionHandling();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

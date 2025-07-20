@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.SignalR;
 using VideoConversion.Models;
 using VideoConversion.Services;
 using VideoConversion.Hubs;
+using VideoConversion.Controllers.Base;
 using System.ComponentModel.DataAnnotations;
 
 namespace VideoConversion.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
-    public class ConversionController : ControllerBase
+    public class ConversionController : BaseApiController
     {
         private readonly DatabaseService _databaseService;
         private readonly FileService _fileService;
@@ -24,7 +24,7 @@ namespace VideoConversion.Controllers
             VideoConversionService conversionService,
             LoggingService loggingService,
             ILogger<ConversionController> logger,
-            IHubContext<ConversionHub> hubContext)
+            IHubContext<ConversionHub> hubContext) : base(logger)
         {
             _databaseService = databaseService;
             _fileService = fileService;
@@ -35,27 +35,44 @@ namespace VideoConversion.Controllers
         }
 
         /// <summary>
-        /// 开始转换任务
+        /// 开始转换任务 - 已优化（保持原有逻辑，增强验证和日志）
         /// </summary>
         [HttpPost("start")]
         public async Task<IActionResult> StartConversion([FromForm] StartConversionRequest request)
         {
+            // 使用基类的参数验证
+            if (request == null)
+                return ValidationError("请求参数不能为空");
+
+            if (request.VideoFile == null)
+                return ValidationError("视频文件不能为空");
+
+            Logger.LogInformation("开始处理转换任务请求: TaskName={TaskName}, OutputFormat={OutputFormat}",
+                request.TaskName, request.OutputFormat);
+
             return await ProcessConversionRequest(request, request.VideoFile);
         }
 
         /// <summary>
-        /// 从已上传文件开始转换任务
+        /// 从已上传文件开始转换任务 - 已优化（增强验证和日志）
         /// </summary>
         [HttpPost("start-from-upload")]
         public async Task<IActionResult> StartConversionFromUpload([FromForm] StartConversionFromUploadRequest request)
         {
             try
             {
+                // 使用基类的参数验证
+                if (request == null)
+                    return ValidationError("请求参数不能为空");
+
                 // 验证上传文件路径
                 if (string.IsNullOrEmpty(request.UploadedFilePath) || !System.IO.File.Exists(request.UploadedFilePath))
                 {
-                    return BadRequest(new { success = false, message = "上传文件不存在" });
+                    return ValidationError("上传文件不存在");
                 }
+
+                Logger.LogInformation("开始处理从上传文件的转换任务: FilePath={FilePath}, TaskName={TaskName}",
+                    request.UploadedFilePath, request.TaskName);
 
                 // 创建虚拟IFormFile对象
                 var fileInfo = new FileInfo(request.UploadedFilePath);
@@ -102,7 +119,7 @@ namespace VideoConversion.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "从上传文件创建转换任务失败");
+                Logger.LogError(ex, "从上传文件创建转换任务失败");
                 return StatusCode(500, new { success = false, message = "创建转换任务失败: " + ex.Message });
             }
         }
@@ -295,190 +312,214 @@ namespace VideoConversion.Controllers
             }
         }
 
+        // 注意：任务状态查询功能已移至 TaskController
+        // 请使用 /api/task/status/{taskId} 端点
+
         /// <summary>
-        /// 获取任务状态
+        /// 获取转换预设配置
         /// </summary>
-        [HttpGet("status/{taskId}")]
-        public async Task<IActionResult> GetTaskStatus(string taskId)
+        [HttpGet("presets")]
+        public IActionResult GetPresets()
         {
             try
             {
-                var task = await _databaseService.GetTaskAsync(taskId);
-                if (task == null)
-                {
-                    return NotFound(new { success = false, message = "任务不存在" });
-                }
+                var presets = ConversionPreset.GetAllPresets();
 
-                return Ok(new
-                {
-                    success = true,
-                    task = new
+                // 转换为字典格式，方便前端使用
+                var presetDict = presets.ToDictionary(
+                    p => p.Name,
+                    p => new
                     {
-                        id = task.Id,
-                        taskName = task.TaskName,
-                        status = task.Status.ToString(),
-                        progress = task.Progress,
-                        errorMessage = task.ErrorMessage,
-                        createdAt = task.CreatedAt,
-                        startedAt = task.StartedAt,
-                        completedAt = task.CompletedAt,
-                        estimatedTimeRemaining = task.EstimatedTimeRemaining,
-                        conversionSpeed = task.ConversionSpeed,
-                        duration = task.Duration,
-                        currentTime = task.CurrentTime,
-                        originalFileName = task.OriginalFileName,
-                        outputFileName = task.OutputFileName,
-                        inputFormat = task.InputFormat,
-                        outputFormat = task.OutputFormat,
-                        videoCodec = task.VideoCodec,
-                        audioCodec = task.AudioCodec
+                        p.Name,
+                        p.Description,
+                        p.OutputFormat,
+                        p.VideoCodec,
+                        p.AudioCodec,
+                        p.VideoQuality,
+                        p.AudioQuality,
+                        p.Resolution,
+                        p.FrameRate,
+                        p.IsDefault
                     }
-                });
+                );
+
+                return Success(presetDict, "预设配置获取成功");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取任务状态失败: {TaskId}", taskId);
-                return StatusCode(500, new { success = false, message = "服务器内部错误" });
+                _logger.LogError(ex, "获取预设配置失败");
+                return Error("获取预设配置失败");
             }
         }
 
         /// <summary>
-        /// 获取最近的任务
+        /// 获取最近的任务 - 已优化使用 BaseApiController
         /// </summary>
         [HttpGet("recent")]
         public async Task<IActionResult> GetRecentTasks([FromQuery] int count = 10)
         {
-            try
-            {
-                var tasks = await _databaseService.GetAllTasksAsync(1, count);
-                var result = tasks.Select(t => new
-                {
-                    t.Id,
-                    t.TaskName,
-                    t.Status,
-                    t.Progress,
-                    t.CreatedAt,
-                    t.CompletedAt,
-                    t.OriginalFileName,
-                    t.OutputFileName
-                }).ToList();
+            // 使用基类的参数验证
+            if (count < 1 || count > 100)
+                return ValidationError("数量必须在1-100之间");
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取最近任务失败");
-                return StatusCode(500, new { success = false, message = "服务器内部错误" });
-            }
+            // 使用基类的安全执行方法
+            return await SafeExecuteAsync(
+                async () =>
+                {
+                    var tasks = await _databaseService.GetAllTasksAsync(1, count);
+                    return tasks.Select(t => new
+                    {
+                        t.Id,
+                        t.TaskName,
+                        t.Status,
+                        t.Progress,
+                        t.CreatedAt,
+                        t.CompletedAt,
+                        t.OriginalFileName,
+                        t.OutputFileName,
+                        t.InputFormat,
+                        t.OutputFormat,
+                        t.OriginalFileSize,
+                        t.OutputFileSize,
+                        t.ErrorMessage
+                    }).ToList();
+                },
+                "获取最近任务",
+                "最近任务获取成功"
+            );
         }
 
         /// <summary>
-        /// 下载转换后的文件
+        /// 下载转换后的文件 - 已优化使用 BaseApiController（特殊处理文件下载）
         /// </summary>
         [HttpGet("download/{taskId}")]
         public async Task<IActionResult> DownloadFile(string taskId)
         {
+            // 使用基类的参数验证
+            if (string.IsNullOrWhiteSpace(taskId))
+                return ValidationError("任务ID不能为空");
+
             try
             {
+                Logger.LogInformation("开始处理文件下载请求: {TaskId}", taskId);
+
                 var task = await _databaseService.GetTaskAsync(taskId);
                 if (task == null)
                 {
-                    return NotFound("任务不存在");
+                    Logger.LogWarning("下载请求的任务不存在: {TaskId}", taskId);
+                    return NotFound(ApiResponse<object>.CreateError("任务不存在"));
                 }
 
                 if (task.Status != ConversionStatus.Completed || string.IsNullOrEmpty(task.OutputFilePath))
                 {
-                    return BadRequest("文件尚未准备好下载");
+                    Logger.LogWarning("任务文件尚未准备好下载: {TaskId}, Status: {Status}", taskId, task.Status);
+                    return BadRequest(ApiResponse<object>.CreateError("文件尚未准备好下载"));
                 }
 
                 var downloadResult = await _fileService.GetFileDownloadStreamAsync(task.OutputFilePath);
                 if (downloadResult.Stream == null)
                 {
-                    return NotFound("文件不存在");
+                    Logger.LogWarning("下载文件不存在: {TaskId}, Path: {Path}", taskId, task.OutputFilePath);
+                    return NotFound(ApiResponse<object>.CreateError("文件不存在"));
                 }
+
+                // 记录下载日志
+                _loggingService.LogFileDownloaded(taskId, downloadResult.FileName, GetClientIpAddress());
+                Logger.LogInformation("文件下载成功: {TaskId}, FileName: {FileName}", taskId, downloadResult.FileName);
 
                 return File(downloadResult.Stream, downloadResult.ContentType, downloadResult.FileName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "下载文件失败: {TaskId}", taskId);
-                return StatusCode(500, "下载失败");
+                Logger.LogError(ex, "下载文件失败: {TaskId}", taskId);
+                return ServerError("下载文件时发生错误");
             }
         }
 
         /// <summary>
-        /// 取消转换任务
+        /// 取消转换任务 - 已优化使用 BaseApiController
         /// </summary>
         [HttpPost("cancel/{taskId}")]
         public async Task<IActionResult> CancelTask(string taskId)
         {
-            try
-            {
-                _logger.LogInformation("收到取消任务请求: {TaskId}", taskId);
-                await _conversionService.CancelConversionAsync(taskId);
-                return Ok(new { success = true, message = "任务已取消" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "取消任务失败: {TaskId}", taskId);
-                return StatusCode(500, new { success = false, message = "服务器内部错误" });
-            }
+            // 使用基类的参数验证
+            if (string.IsNullOrWhiteSpace(taskId))
+                return ValidationError("任务ID不能为空");
+
+            return await SafeExecuteAsync(
+                async () =>
+                {
+                    await _conversionService.CancelConversionAsync(taskId);
+                    return new { taskId = taskId, status = "cancelled" };
+                },
+                "取消转换任务",
+                "任务已成功取消"
+            );
         }
 
         /// <summary>
-        /// 获取正在运行的进程信息
+        /// 获取正在运行的进程信息 - 已优化使用 BaseApiController
         /// </summary>
         [HttpGet("processes")]
-        public IActionResult GetRunningProcesses()
+        public async Task<IActionResult> GetRunningProcesses()
         {
-            try
-            {
-                var statistics = _conversionService.GetProcessStatistics();
-                return Ok(new { success = true, data = statistics });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取进程信息失败");
-                return StatusCode(500, new { success = false, message = "获取进程信息失败: " + ex.Message });
-            }
+            return await SafeExecuteAsync(
+                async () =>
+                {
+                    await Task.CompletedTask; // 占位符，因为原方法是同步的
+                    var statistics = _conversionService.GetProcessStatistics();
+                    return statistics;
+                },
+                "获取进程信息",
+                "进程信息获取成功"
+            );
         }
 
         /// <summary>
-        /// 检查任务是否正在运行
+        /// 检查任务是否正在运行 - 已优化使用 BaseApiController
         /// </summary>
         [HttpGet("is-running/{taskId}")]
-        public IActionResult IsTaskRunning(string taskId)
+        public async Task<IActionResult> IsTaskRunning(string taskId)
         {
-            try
-            {
-                var isRunning = _conversionService.IsTaskRunning(taskId);
-                return Ok(new { success = true, isRunning = isRunning, taskId = taskId });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "检查任务运行状态失败: {TaskId}", taskId);
-                return StatusCode(500, new { success = false, message = "检查任务状态失败: " + ex.Message });
-            }
+            // 使用基类的参数验证
+            if (string.IsNullOrWhiteSpace(taskId))
+                return ValidationError("任务ID不能为空");
+
+            // 使用基类的安全执行方法（同步操作包装为异步）
+            return await SafeExecuteAsync(
+                async () =>
+                {
+                    await Task.CompletedTask; // 占位符，因为原方法是同步的
+                    var isRunning = _conversionService.IsTaskRunning(taskId);
+                    return new { isRunning = isRunning, taskId = taskId };
+                },
+                "检查任务运行状态",
+                "任务运行状态检查完成"
+            );
         }
 
         /// <summary>
-        /// 获取任务详细信息（包括编码器设置）
+        /// 获取任务详细信息（包括编码器设置）- 已优化使用 BaseApiController
         /// </summary>
         [HttpGet("task-details/{taskId}")]
         public async Task<IActionResult> GetTaskDetails(string taskId)
         {
-            try
-            {
-                var task = await _databaseService.GetTaskAsync(taskId);
-                if (task == null)
-                {
-                    return NotFound(new { success = false, message = "任务不存在" });
-                }
+            // 使用基类的参数验证
+            if (string.IsNullOrWhiteSpace(taskId))
+                return ValidationError("任务ID不能为空");
 
-                return Ok(new
+            // 使用基类的安全执行方法
+            return await SafeExecuteAsync(
+                async () =>
                 {
-                    success = true,
-                    data = new
+                    var task = await _databaseService.GetTaskAsync(taskId);
+                    if (task == null)
+                    {
+                        throw new FileNotFoundException("任务不存在");
+                    }
+
+                    // 返回详细的任务信息
+                    return new
                     {
                         task.Id,
                         task.TaskName,
@@ -496,151 +537,100 @@ namespace VideoConversion.Controllers
                         task.OutputFilePath,
                         task.CreatedAt,
                         task.CompletedAt,
-                        task.ErrorMessage
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取任务详细信息失败: {TaskId}", taskId);
-                return StatusCode(500, new { success = false, message = "获取任务详细信息失败: " + ex.Message });
-            }
+                        task.ErrorMessage,
+                        // 添加更多详细信息
+                        task.OriginalFileName,
+                        task.OutputFileName,
+                        task.InputFormat,
+                        task.OriginalFileSize,
+                        task.OutputFileSize,
+                        task.Duration,
+                        task.ConversionSpeed,
+                        task.StartedAt,
+                        task.EstimatedTimeRemaining
+                    };
+                },
+                "获取任务详细信息",
+                "任务详细信息获取成功"
+            );
         }
 
         /// <summary>
-        /// 删除任务
+        /// 删除任务 - 已优化使用 BaseApiController
         /// </summary>
         [HttpDelete("{taskId}")]
         public async Task<IActionResult> DeleteTask(string taskId)
         {
-            try
-            {
-                var task = await _databaseService.GetTaskAsync(taskId);
-                if (task == null)
+            // 使用基类的参数验证
+            if (string.IsNullOrWhiteSpace(taskId))
+                return ValidationError("任务ID不能为空");
+
+            return await SafeExecuteAsync(
+                async () =>
                 {
-                    return NotFound(new { success = false, message = "任务不存在" });
-                }
-
-                // 删除相关文件
-                if (!string.IsNullOrEmpty(task.OriginalFilePath))
-                {
-                    await _fileService.DeleteFileAsync(task.OriginalFilePath);
-                }
-
-                if (!string.IsNullOrEmpty(task.OutputFilePath))
-                {
-                    await _fileService.DeleteFileAsync(task.OutputFilePath);
-                }
-
-                // 删除数据库记录
-                await _databaseService.DeleteTaskAsync(taskId);
-
-                return Ok(new { success = true, message = "任务已删除" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "删除任务失败: {TaskId}", taskId);
-                return StatusCode(500, new { success = false, message = "服务器内部错误" });
-            }
-        }
-
-        /// <summary>
-        /// 获取任务列表（支持分页和筛选）
-        /// </summary>
-        [HttpGet("tasks")]
-        public async Task<IActionResult> GetTasks(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
-            [FromQuery] string? status = null,
-            [FromQuery] string? search = null)
-        {
-            try
-            {
-                _logger.LogInformation("获取任务列表: page={Page}, pageSize={PageSize}, status={Status}, search={Search}",
-                    page, pageSize, status, search);
-
-                var tasks = await _databaseService.GetAllTasksAsync(page, pageSize);
-                _logger.LogInformation("从数据库获取到 {Count} 个任务", tasks?.Count ?? 0);
-
-                // 确保 tasks 不为 null
-                tasks = tasks ?? new List<ConversionTask>();
-
-                // 应用状态筛选
-                if (!string.IsNullOrEmpty(status) && Enum.TryParse<ConversionStatus>(status, out var statusEnum))
-                {
-                    tasks = tasks.Where(t => t.Status == statusEnum).ToList();
-                    _logger.LogInformation("状态筛选后剩余 {Count} 个任务", tasks.Count);
-                }
-
-                // 应用搜索筛选
-                if (!string.IsNullOrEmpty(search))
-                {
-                    tasks = tasks.Where(t =>
-                        (t.TaskName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                        (t.OriginalFileName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false)
-                    ).ToList();
-                    _logger.LogInformation("搜索筛选后剩余 {Count} 个任务", tasks.Count);
-                }
-
-                // 计算总页数（简化版本，实际应该在数据库层面处理）
-                var totalTasks = tasks.Count;
-                var totalPages = totalTasks > 0 ? (int)Math.Ceiling((double)totalTasks / pageSize) : 1;
-
-                var result = new
-                {
-                    success = true,
-                    tasks = tasks.Select(t => new
+                    var task = await _databaseService.GetTaskAsync(taskId);
+                    if (task == null)
                     {
-                        t.Id,
-                        TaskName = t.TaskName ?? "",
-                        Status = t.Status.ToString(),
-                        t.Progress,
-                        t.CreatedAt,
-                        t.StartedAt,
-                        t.CompletedAt,
-                        OriginalFileName = t.OriginalFileName ?? "",
-                        OutputFileName = t.OutputFileName ?? "",
-                        t.OriginalFileSize,
-                        t.OutputFileSize,
-                        InputFormat = t.InputFormat ?? "",
-                        OutputFormat = t.OutputFormat ?? "",
-                        VideoCodec = t.VideoCodec ?? "",
-                        AudioCodec = t.AudioCodec ?? "",
-                        ErrorMessage = t.ErrorMessage ?? ""
-                    }).ToList(),
-                    totalPages,
-                    currentPage = page,
-                    totalTasks
-                };
+                        throw new FileNotFoundException("任务不存在");
+                    }
 
-                _logger.LogInformation("返回任务列表: {TaskCount} 个任务, {TotalPages} 页", tasks.Count, totalPages);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "获取任务列表失败");
-                return StatusCode(500, new { success = false, message = "服务器内部错误: " + ex.Message });
-            }
+                    // 业务逻辑验证
+                    if (task.Status == ConversionStatus.Converting)
+                    {
+                        throw new InvalidOperationException("无法删除正在进行的转换任务，请先取消任务");
+                    }
+
+                    // 删除相关文件
+                    if (!string.IsNullOrEmpty(task.OriginalFilePath))
+                    {
+                        await _fileService.DeleteFileAsync(task.OriginalFilePath);
+                    }
+
+                    if (!string.IsNullOrEmpty(task.OutputFilePath))
+                    {
+                        await _fileService.DeleteFileAsync(task.OutputFilePath);
+                    }
+
+                    // 删除数据库记录
+                    await _databaseService.DeleteTaskAsync(taskId);
+
+                    return new { taskId = taskId, taskName = task.TaskName };
+                },
+                "删除任务",
+                "任务已成功删除"
+            );
         }
 
+        // 注意：任务列表查询功能已移至 TaskController
+        // 请使用 /api/task/list 端点
+
         /// <summary>
-        /// 清理旧任务
+        /// 清理旧任务 - 已优化使用 BaseApiController
         /// </summary>
         [HttpPost("cleanup")]
         public async Task<IActionResult> CleanupOldTasks([FromQuery] int daysOld = 30)
         {
-            try
-            {
-                var deletedCount = await _databaseService.CleanupOldTasksAsync(daysOld);
-                await _fileService.CleanupOldFilesAsync(daysOld);
+            // 使用基类的参数验证
+            if (daysOld < 1 || daysOld > 365)
+                return ValidationError("清理天数必须在1-365之间");
 
-                return Ok(new { success = true, deletedCount, message = $"清理了 {deletedCount} 个旧任务" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "清理旧任务失败");
-                return StatusCode(500, new { success = false, message = "清理失败" });
-            }
+            return await SafeExecuteAsync(
+                async () =>
+                {
+                    var deletedTaskCount = await _databaseService.CleanupOldTasksAsync(daysOld);
+                    var deletedFileCount = await _fileService.CleanupOldFilesAsync(daysOld);
+
+                    return new
+                    {
+                        deletedTaskCount = deletedTaskCount,
+                        deletedFileCount = deletedFileCount,
+                        daysOld = daysOld,
+                        cleanupDate = DateTime.Now
+                    };
+                },
+                "清理旧任务",
+                $"成功清理了 {daysOld} 天前的旧任务和文件"
+            );
         }
 
         /// <summary>

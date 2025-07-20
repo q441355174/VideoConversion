@@ -23,6 +23,26 @@
 **/values.dev.yaml
 LICENSE
 README.md
+
+# 视频转换应用特定的排除项
+uploads/
+outputs/
+temp_uploads/
+logs/
+*.log
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.m4v
+*.3gp
+*.db
+*.sqlite
+*.sqlite3
+
 !**/.gitignore
 !.git/HEAD
 !.git/config

@@ -172,12 +172,16 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const data = await response.json();
-                console.log('获取到任务数据:', data);
+                const result = await response.json();
+                console.log('获取到任务数据:', result);
 
-                // 确保 data.tasks 存在且是数组
-                const tasks = Array.isArray(data.tasks) ? data.tasks : [];
-                const totalPages = data.totalPages || 1;
+                // 检查统一的PagedApiResponse格式
+                if (!result.success) {
+                    throw new Error(result.message || '获取任务失败');
+                }
+
+                const tasks = Array.isArray(result.data) ? result.data : [];
+                const totalPages = result.pagination ? result.pagination.totalPages : 1;
 
                 renderTasks(tasks);
                 renderPagination(totalPages, currentPage);
@@ -386,10 +390,10 @@
             try {
                 console.log('获取任务详情:', taskId);
                 const response = await fetch(`/api/conversion/status/${taskId}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    const task = data.task;
+                const result = await response.json();
+
+                if (result.success) {
+                    const task = result.data;
                     const modal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
                     
                     document.getElementById('taskDetailContent').innerHTML = `

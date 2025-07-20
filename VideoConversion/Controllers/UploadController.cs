@@ -2,18 +2,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using VideoConversion.Hubs;
 using VideoConversion.Services;
+using VideoConversion.Controllers.Base;
 using System.Collections.Concurrent;
 
 namespace VideoConversion.Controllers
 {
     /// <summary>
     /// 文件上传控制器 - 支持大文件上传和进度跟踪
+    /// 已优化使用 BaseApiController
     /// </summary>
-    [ApiController]
     [Route("api/[controller]")]
-    public class UploadController : ControllerBase
+    public class UploadController : BaseApiController
     {
-        private readonly ILogger<UploadController> _logger;
         private readonly FileService _fileService;
         private readonly ConversionTaskService _conversionTaskService;
         private readonly IHubContext<ConversionHub> _hubContext;
@@ -23,16 +23,16 @@ namespace VideoConversion.Controllers
             ILogger<UploadController> logger,
             FileService fileService,
             ConversionTaskService conversionTaskService,
-            IHubContext<ConversionHub> hubContext)
+            IHubContext<ConversionHub> hubContext) : base(logger)
         {
-            _logger = logger;
             _fileService = fileService;
             _conversionTaskService = conversionTaskService;
             _hubContext = hubContext;
         }
 
         /// <summary>
-        /// 大文件上传并创建转换任务接口 - 支持进度跟踪
+        /// 大文件上传并创建转换任务接口 - 已优化（保持原有逻辑，增强验证和日志）
+        /// 支持进度跟踪和 SignalR 实时通知
         /// </summary>
         [HttpPost("large-file")]
         [RequestSizeLimit(32212254720)] // 30GB
@@ -40,18 +40,41 @@ namespace VideoConversion.Controllers
         public async Task<IActionResult> UploadLargeFileAndCreateTask()
         {
             var uploadId = Guid.NewGuid().ToString();
-            
+            IFormCollection? form = null;
+
             try
             {
-                var form = await Request.ReadFormAsync();
+                Logger.LogInformation("开始处理大文件上传请求: UploadId={UploadId}, ClientIP={ClientIP}",
+                    uploadId, GetClientIpAddress());
+
+                form = await Request.ReadFormAsync();
                 var file = form.Files.FirstOrDefault();
-                
-                if (file == null || file.Length == 0)
+
+                // 记录表单数据用于调试
+                Logger.LogInformation("收到表单数据: 文件数={FileCount}, 字段数={FieldCount}",
+                    form.Files.Count, form.Count);
+
+                foreach (var key in form.Keys)
                 {
-                    return BadRequest(new { success = false, message = "请选择一个文件" });
+                    Logger.LogDebug("表单字段: {Key} = {Value}", key, form[key]);
                 }
 
-                _logger.LogInformation("开始大文件上传: {FileName} ({FileSize} bytes)", file.FileName, file.Length);
+                // 使用基类的验证方法
+                if (file == null || file.Length == 0)
+                {
+                    Logger.LogWarning("上传请求无效: 未选择文件或文件为空, UploadId={UploadId}", uploadId);
+                    return ValidationError("请选择一个有效的文件");
+                }
+
+                // 文件大小验证
+                if (file.Length > 32212254720) // 30GB
+                {
+                    Logger.LogWarning("上传文件过大: {FileSize} bytes, UploadId={UploadId}", file.Length, uploadId);
+                    return ValidationError("文件大小不能超过30GB");
+                }
+
+                Logger.LogInformation("开始大文件上传: {FileName} ({FileSize} bytes), UploadId={UploadId}",
+                    file.FileName, file.Length, uploadId);
 
                 // 初始化上传进度
                 var progress = new UploadProgress
@@ -88,7 +111,8 @@ namespace VideoConversion.Controllers
                         Duration = (DateTime.Now - progress.StartTime).TotalSeconds
                     });
 
-                    _logger.LogInformation("大文件上传完成: {FileName} -> {FilePath}", file.FileName, result.FilePath);
+                    Logger.LogInformation("大文件上传完成: {FileName} -> {FilePath}, UploadId={UploadId}",
+                        file.FileName, result.FilePath, uploadId);
 
                     // 现在创建转换任务 - 这是关键的修复！
                     var conversionResult = await CreateConversionTaskFromUpload(file, result.FilePath, form);
@@ -110,7 +134,8 @@ namespace VideoConversion.Controllers
                     else
                     {
                         // 上传成功但创建任务失败
-                        _logger.LogError("上传成功但创建转换任务失败: {Error}", conversionResult.ErrorMessage);
+                        Logger.LogError("上传成功但创建转换任务失败: UploadId={UploadId}, Error={Error}",
+                            uploadId, conversionResult.ErrorMessage);
                         return StatusCode(500, new
                         {
                             success = false,
@@ -136,21 +161,24 @@ namespace VideoConversion.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "大文件上传失败: {UploadId}", uploadId);
-                
+                Logger.LogError(ex, "大文件上传失败: UploadId={UploadId}, FileName={FileName}, ClientIP={ClientIP}",
+                    uploadId, form?.Files?.FirstOrDefault()?.FileName ?? "Unknown", GetClientIpAddress());
+
                 if (_uploadProgress.TryGetValue(uploadId, out var progress))
                 {
                     progress.Status = "failed";
                     progress.ErrorMessage = ex.Message;
+                    progress.CompletedAt = DateTime.Now;
                 }
 
                 await _hubContext.Clients.All.SendAsync("UploadFailed", new
                 {
                     UploadId = uploadId,
-                    ErrorMessage = ex.Message
+                    ErrorMessage = ex.Message,
+                    Timestamp = DateTime.Now
                 });
 
-                return StatusCode(500, new { success = false, message = "上传过程中发生错误" });
+                return ServerError("上传过程中发生错误");
             }
             finally
             {
@@ -163,36 +191,52 @@ namespace VideoConversion.Controllers
         }
 
         /// <summary>
-        /// 获取上传进度
+        /// 获取上传进度 - 已优化使用 BaseApiController
         /// </summary>
         [HttpGet("progress/{uploadId}")]
-        public IActionResult GetUploadProgress(string uploadId)
+        public async Task<IActionResult> GetUploadProgress(string uploadId)
         {
-            if (_uploadProgress.TryGetValue(uploadId, out var progress))
-            {
-                var progressPercent = progress.TotalSize > 0 ? (int)((progress.UploadedSize * 100) / progress.TotalSize) : 0;
-                var elapsed = DateTime.Now - progress.StartTime;
-                var speed = elapsed.TotalSeconds > 0 ? progress.UploadedSize / elapsed.TotalSeconds : 0;
-                var remainingBytes = progress.TotalSize - progress.UploadedSize;
-                var estimatedTimeRemaining = speed > 0 ? (int)(remainingBytes / speed) : 0;
+            // 使用基类的参数验证
+            if (string.IsNullOrWhiteSpace(uploadId))
+                return ValidationError("上传ID不能为空");
 
-                return Ok(new
+            return await SafeExecuteAsync(
+                async () =>
                 {
-                    uploadId = progress.UploadId,
-                    fileName = progress.FileName,
-                    totalSize = progress.TotalSize,
-                    uploadedSize = progress.UploadedSize,
-                    progressPercent = progressPercent,
-                    speed = speed,
-                    estimatedTimeRemaining = estimatedTimeRemaining,
-                    status = progress.Status,
-                    errorMessage = progress.ErrorMessage,
-                    startTime = progress.StartTime,
-                    completedAt = progress.CompletedAt
-                });
-            }
+                    await Task.CompletedTask; // 占位符，因为原方法是同步的
 
-            return NotFound(new { success = false, message = "上传进度不存在" });
+                    if (!_uploadProgress.TryGetValue(uploadId, out var progress))
+                    {
+                        throw new FileNotFoundException("上传进度不存在");
+                    }
+
+                    var progressPercent = progress.TotalSize > 0 ? (int)((progress.UploadedSize * 100) / progress.TotalSize) : 0;
+                    var elapsed = DateTime.Now - progress.StartTime;
+                    var speed = elapsed.TotalSeconds > 0 ? progress.UploadedSize / elapsed.TotalSeconds : 0;
+                    var remainingBytes = progress.TotalSize - progress.UploadedSize;
+                    var estimatedTimeRemaining = speed > 0 ? (int)(remainingBytes / speed) : 0;
+
+                    return new
+                    {
+                        uploadId = progress.UploadId,
+                        fileName = progress.FileName,
+                        totalSize = progress.TotalSize,
+                        uploadedSize = progress.UploadedSize,
+                        progressPercent = progressPercent,
+                        speed = Math.Round(speed / 1024 / 1024, 2), // MB/s
+                        estimatedTimeRemaining = estimatedTimeRemaining,
+                        status = progress.Status,
+                        errorMessage = progress.ErrorMessage,
+                        startTime = progress.StartTime,
+                        completedAt = progress.CompletedAt,
+                        // 添加更多有用信息
+                        elapsedTime = elapsed.TotalSeconds,
+                        speedFormatted = $"{Math.Round(speed / 1024 / 1024, 2)} MB/s"
+                    };
+                },
+                "获取上传进度",
+                "上传进度获取成功"
+            );
         }
 
         /// <summary>
@@ -205,11 +249,18 @@ namespace VideoConversion.Controllers
             {
                 var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
+                Logger.LogInformation("开始从上传文件创建转换任务: 文件={FileName}, 路径={FilePath}",
+                    file.FileName, filePath);
+
+                // 记录关键表单字段
+                var preset = form["preset"].FirstOrDefault() ?? "default";
+                Logger.LogInformation("使用预设: {Preset}", preset);
+
                 // 创建转换任务请求对象
                 var request = new ConversionTaskRequest
                 {
                     TaskName = form["taskName"].FirstOrDefault(),
-                    Preset = form["preset"].FirstOrDefault() ?? "default",
+                    Preset = preset,
                     OutputFormat = form["outputFormat"].FirstOrDefault(),
                     VideoCodec = form["videoCodec"].FirstOrDefault(),
                     AudioCodec = form["audioCodec"].FirstOrDefault(),
@@ -262,7 +313,7 @@ namespace VideoConversion.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "从上传文件创建转换任务失败: {FilePath}", filePath);
+                Logger.LogError(ex, "从上传文件创建转换任务失败: {FilePath}", filePath);
                 return (false, "", "", $"创建转换任务异常: {ex.Message}");
             }
         }

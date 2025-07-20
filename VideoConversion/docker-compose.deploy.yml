@@ -1,0 +1,162 @@
+version: '3.8'
+
+# VideoConversion 部署配置文件
+# 使用预构建镜像: q441355174/videoconversion
+# 适用于生产环境部署
+
+services:
+  # 视频转换应用程序
+  videoconversion:
+    image: q441355174/videoconversion:latest
+    container_name: videoconversion-app
+    restart: unless-stopped
+    
+    # 端口映射
+    ports:
+      - "5065:8080"  # HTTP 端口
+      - "7065:8081"  # HTTPS 端口（可选）
+    
+    # 环境变量配置
+    environment:
+      # ASP.NET Core 基础配置
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_RUNNING_IN_CONTAINER=true
+      
+      # 数据库连接
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/videoconversion.db
+      
+      # 视频转换配置
+      - VideoConversion__UploadPath=/app/uploads
+      - VideoConversion__OutputPath=/app/outputs
+      - VideoConversion__TempPath=/app/temp_uploads
+      - VideoConversion__MaxFileSize=34359738368  # 32GB
+      - VideoConversion__MaxConcurrentConversions=2
+      - VideoConversion__CleanupIntervalMinutes=60
+      - VideoConversion__ConversionTimeout=120
+      
+      # FFmpeg 配置
+      - VideoConversion__FFmpegPath=/usr/bin/ffmpeg
+      - VideoConversion__FFprobePath=/usr/bin/ffprobe
+      
+      # 日志配置
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+      - Logging__LogLevel__VideoConversion=Information
+      
+      # 性能配置
+      - VideoConversion__MaxMemoryUsage=4096
+      - VideoConversion__TempFileCleanupInterval=24
+    
+    # 数据卷挂载
+    volumes:
+      # 持久化数据存储
+      - videoconversion-data:/app/data
+      - videoconversion-uploads:/app/uploads
+      - videoconversion-outputs:/app/outputs
+      - videoconversion-logs:/app/logs
+      - videoconversion-temp:/app/temp_uploads
+      
+      # 可选：挂载到宿主机目录（取消注释以使用）
+      # - ./data:/app/data
+      # - ./uploads:/app/uploads
+      # - ./outputs:/app/outputs
+      # - ./logs:/app/logs
+      # - ./temp_uploads:/app/temp_uploads
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # 网络配置
+    networks:
+      - videoconversion-network
+
+  # Nginx 反向代理（可选）
+  nginx:
+    image: nginx:alpine
+    container_name: videoconversion-nginx
+    restart: unless-stopped
+    
+    # 端口映射
+    ports:
+      - "80:80"    # HTTP
+      - "443:443"  # HTTPS
+    
+    # 配置文件挂载
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro  # SSL 证书目录（如果使用 HTTPS）
+      - videoconversion-outputs:/var/www/outputs:ro  # 静态文件服务
+    
+    # 依赖关系
+    depends_on:
+      videoconversion:
+        condition: service_healthy
+    
+    # 网络配置
+    networks:
+      - videoconversion-network
+    
+    # 仅在需要时启动（使用 profile）
+    profiles:
+      - with-nginx
+
+# 数据卷定义
+volumes:
+  videoconversion-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data
+  
+  videoconversion-uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./uploads
+  
+  videoconversion-outputs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./outputs
+  
+  videoconversion-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs
+  
+  videoconversion-temp:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./temp_uploads
+
+# 网络定义
+networks:
+  videoconversion-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

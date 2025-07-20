@@ -1,0 +1,47 @@
+version: '3.8'
+
+# VideoConversion 最小化部署配置
+# 使用预构建镜像: q441355174/videoconversion
+# 适用于快速测试和小规模部署
+
+services:
+  videoconversion:
+    image: q441355174/videoconversion:latest
+    container_name: videoconversion-app
+    restart: unless-stopped
+    
+    # 端口映射
+    ports:
+      - "5065:8080"
+    
+    # 基本环境变量
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_RUNNING_IN_CONTAINER=true
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/videoconversion.db
+      - VideoConversion__MaxFileSize=10737418240  # 10GB
+      - VideoConversion__MaxConcurrentConversions=1
+      - Logging__LogLevel__Default=Information
+    
+    # 数据卷（使用 Docker 卷）
+    volumes:
+      - app_data:/app/data
+      - app_uploads:/app/uploads
+      - app_outputs:/app/outputs
+      - app_logs:/app/logs
+    
+    # 基本健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+# 数据卷定义
+volumes:
+  app_data:
+  app_uploads:
+  app_outputs:
+  app_logs:

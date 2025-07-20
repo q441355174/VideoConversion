@@ -10,26 +10,20 @@ namespace VideoConversion.Services
     {
         private readonly ILogger<GpuDetectionService> _logger;
         private readonly IConfiguration _configuration;
-        private readonly string _ffmpegPath;
+        private readonly FFmpegConfigurationService _ffmpegConfig;
         private GpuCapabilities? _cachedCapabilities;
 
-        public GpuDetectionService(ILogger<GpuDetectionService> logger, IConfiguration configuration)
+        public GpuDetectionService(
+            ILogger<GpuDetectionService> logger,
+            IConfiguration configuration,
+            FFmpegConfigurationService ffmpegConfig)
         {
             _logger = logger;
             _configuration = configuration;
+            _ffmpegConfig = ffmpegConfig;
 
-            // 使用与VideoConversionService完全相同的路径逻辑
-            var currentDirectory = Environment.CurrentDirectory;
-            var ffmpegDirectory = Path.Combine(currentDirectory, "ffmpeg");
-
-            _ffmpegPath = Path.Combine(ffmpegDirectory, "ffmpeg.exe");
-
-            _logger.LogInformation("GPU检测服务初始化: {FFmpegPath}", _ffmpegPath);
-
-            if (!File.Exists(_ffmpegPath))
-            {
-                _logger.LogWarning("FFmpeg文件不存在，GPU检测将失败: {ExpectedPath}", _ffmpegPath);
-            }
+            _logger.LogInformation("GPU检测服务初始化，FFmpeg配置状态: {IsInitialized}",
+                _ffmpegConfig.IsInitialized);
         }
 
         /// <summary>
@@ -166,17 +160,17 @@ namespace VideoConversion.Services
 
             try
             {
-                _logger.LogInformation("检查FFmpeg路径: {FFmpegPath}", _ffmpegPath);
+                _logger.LogInformation("检查FFmpeg路径: {FFmpegPath}", _ffmpegConfig.FFmpegPath);
 
-                if (!File.Exists(_ffmpegPath))
+                if (!_ffmpegConfig.IsInitialized || !File.Exists(_ffmpegConfig.FFmpegPath))
                 {
-                    _logger.LogError("FFmpeg文件不存在: {FFmpegPath}", _ffmpegPath);
+                    _logger.LogError("FFmpeg未正确配置或文件不存在: {FFmpegPath}", _ffmpegConfig.FFmpegPath);
                     return encoders;
                 }
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = _ffmpegPath,
+                    FileName = _ffmpegConfig.FFmpegPath,
                     Arguments = "-encoders",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -257,7 +251,7 @@ namespace VideoConversion.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "获取FFmpeg编码器列表失败，FFmpeg路径: {FFmpegPath}", _ffmpegPath);
+                _logger.LogError(ex, "获取FFmpeg编码器列表失败，FFmpeg路径: {FFmpegPath}", _ffmpegConfig.FFmpegPath);
             }
 
             return encoders;
@@ -303,15 +297,15 @@ namespace VideoConversion.Services
         {
             try
             {
-                if (!File.Exists(_ffmpegPath))
+                if (!_ffmpegConfig.IsInitialized || !File.Exists(_ffmpegConfig.FFmpegPath))
                 {
-                    _logger.LogError("FFmpeg文件不存在: {FFmpegPath}", _ffmpegPath);
+                    _logger.LogError("FFmpeg未正确配置或文件不存在: {FFmpegPath}", _ffmpegConfig.FFmpegPath);
                     return;
                 }
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = _ffmpegPath,
+                    FileName = _ffmpegConfig.FFmpegPath,
                     Arguments = "-version",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -380,9 +374,9 @@ namespace VideoConversion.Services
         {
             try
             {
-                if (!File.Exists(_ffmpegPath))
+                if (!_ffmpegConfig.IsInitialized || !File.Exists(_ffmpegConfig.FFmpegPath))
                 {
-                    _logger.LogWarning("FFmpeg不存在，跳过硬件加速设备检测");
+                    _logger.LogWarning("FFmpeg未正确配置，跳过硬件加速设备检测");
                     return;
                 }
 
@@ -393,7 +387,7 @@ namespace VideoConversion.Services
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = _ffmpegPath,
+                    FileName = _ffmpegConfig.FFmpegPath,
                     Arguments = arguments,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -613,9 +607,9 @@ namespace VideoConversion.Services
         {
             try
             {
-                if (!File.Exists(_ffmpegPath))
+                if (!_ffmpegConfig.IsInitialized || !File.Exists(_ffmpegConfig.FFmpegPath))
                 {
-                    _logger.LogError("FFmpeg文件不存在，无法测试编码器: {Encoder}", encoder);
+                    _logger.LogError("FFmpeg未正确配置，无法测试编码器: {Encoder}", encoder);
                     return false;
                 }
 
@@ -627,7 +621,7 @@ namespace VideoConversion.Services
 
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = _ffmpegPath,
+                    FileName = _ffmpegConfig.FFmpegPath,
                     Arguments = arguments,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,

@@ -81,6 +81,16 @@
   },
   {
     "ContainingType": "VideoConversion.Controllers.ConversionController",
+    "Method": "GetPresets",
+    "RelativePath": "api/Conversion/presets",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ConversionController",
     "Method": "GetRunningProcesses",
     "RelativePath": "api/Conversion/processes",
     "HttpMethod": "GET",
@@ -504,22 +514,6 @@
   },
   {
     "ContainingType": "VideoConversion.Controllers.ConversionController",
-    "Method": "GetTaskStatus",
-    "RelativePath": "api/Conversion/status/{taskId}",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "taskId",
-        "Type": "System.String",
-        "IsRequired": true
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "VideoConversion.Controllers.ConversionController",
     "Method": "GetTaskDetails",
     "RelativePath": "api/Conversion/task-details/{taskId}",
     "HttpMethod": "GET",
@@ -535,136 +529,71 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "VideoConversion.Controllers.ConversionController",
-    "Method": "GetTasks",
-    "RelativePath": "api/Conversion/tasks",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "page",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "pageSize",
-        "Type": "System.Int32",
-        "IsRequired": false
-      },
-      {
-        "Name": "status",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "search",
-        "Type": "System.String",
-        "IsRequired": false
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "VideoConversion.Controllers.DebugController",
-    "Method": "CleanupTestData",
-    "RelativePath": "api/Debug/cleanup",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "VideoConversion.Controllers.DebugController",
-    "Method": "GetRawTasks",
-    "RelativePath": "api/Debug/tasks",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "VideoConversion.Controllers.DebugController",
-    "Method": "TestUpload",
-    "RelativePath": "api/Debug/test",
+    "ContainingType": "VideoConversion.Controllers.ErrorsController",
+    "Method": "SubmitFeedback",
+    "RelativePath": "api/Errors/feedback",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [
       {
-        "Name": "VideoFile",
-        "Type": "Microsoft.AspNetCore.Http.IFormFile",
-        "IsRequired": false
-      },
-      {
-        "Name": "TaskName",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "Preset",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "OutputFormat",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "VideoCodec",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "AudioCodec",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "QualityMode",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "EncodingPreset",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "AudioQualityMode",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "AudioBitrate",
-        "Type": "System.String",
-        "IsRequired": false
-      },
-      {
-        "Name": "AudioVolume",
-        "Type": "System.Nullable\u00601[[System.Int32, System.Private.CoreLib, Version=8.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]",
-        "IsRequired": false
-      },
-      {
-        "Name": "FastStart",
-        "Type": "System.Boolean",
-        "IsRequired": false
-      },
-      {
-        "Name": "CopyTimestamps",
-        "Type": "System.Boolean",
-        "IsRequired": false
+        "Name": "request",
+        "Type": "VideoConversion.Controllers.FeedbackRequest",
+        "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ErrorsController",
+    "Method": "ReportError",
+    "RelativePath": "api/Errors/report",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "VideoConversion.Controllers.ErrorReportRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.ErrorsController",
+    "Method": "GetErrorStatistics",
+    "RelativePath": "api/Errors/statistics",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
     "ContainingType": "VideoConversion.Controllers.GpuController",
     "Method": "GetGpuCapabilities",
     "RelativePath": "api/Gpu/capabilities",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.GpuController",
+    "Method": "DetectGpu",
+    "RelativePath": "api/Gpu/detect",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.GpuController",
+    "Method": "GetGpuPerformance",
+    "RelativePath": "api/Gpu/performance",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -683,32 +612,6 @@
         "Name": "codec",
         "Type": "System.String",
         "IsRequired": false
-      }
-    ],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "VideoConversion.Controllers.GpuController",
-    "Method": "RefreshGpuDetection",
-    "RelativePath": "api/Gpu/refresh",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "VideoConversion.Controllers.GpuController",
-    "Method": "TestGpuEncoder",
-    "RelativePath": "api/Gpu/test-encoder",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "request",
-        "Type": "VideoConversion.Controllers.TestEncoderRequest",
-        "IsRequired": true
       }
     ],
     "ReturnTypes": []
@@ -751,6 +654,101 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.TaskController",
+    "Method": "DeleteTask",
+    "RelativePath": "api/Task/{taskId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.TaskController",
+    "Method": "CleanupOldTasks",
+    "RelativePath": "api/Task/cleanup",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "daysOld",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.TaskController",
+    "Method": "GetTasks",
+    "RelativePath": "api/Task/list",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "page",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "pageSize",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "status",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "search",
+        "Type": "System.String",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.TaskController",
+    "Method": "GetRecentTasks",
+    "RelativePath": "api/Task/recent",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "count",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.TaskController",
+    "Method": "GetTaskStatus",
+    "RelativePath": "api/Task/status/{taskId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {
