@@ -312,6 +312,9 @@ namespace VideoConversion.Controllers
             }
         }
 
+        // 注意：任务列表查询功能已移至 TaskController
+        // 请使用 /api/task/list 端点
+
         // 注意：任务状态查询功能已移至 TaskController
         // 请使用 /api/task/status/{taskId} 端点
 

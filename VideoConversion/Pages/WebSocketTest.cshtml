@@ -1,0 +1,319 @@
+@page
+@{
+    ViewData["Title"] = "WebSocket测试";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-plug text-primary"></i>
+                WebSocket连接测试
+            </h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 连接控制面板 -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs"></i> 连接控制</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="wsUrl" class="form-label">WebSocket URL:</label>
+                        <input type="text" class="form-control" id="wsUrl" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">连接状态:</label>
+                        <span id="connectionStatus" class="badge bg-secondary">未连接</span>
+                        <span id="connectionId" class="text-muted ms-2"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <button id="connectBtn" class="btn btn-success me-2">
+                            <i class="fas fa-plug"></i> 连接
+                        </button>
+                        <button id="disconnectBtn" class="btn btn-danger me-2" disabled>
+                            <i class="fas fa-unlink"></i> 断开
+                        </button>
+                        <button id="pingBtn" class="btn btn-info" disabled>
+                            <i class="fas fa-heartbeat"></i> Ping
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="groupName" class="form-label">组名:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="groupName" placeholder="输入组名">
+                            <button id="joinGroupBtn" class="btn btn-outline-primary" disabled>加入</button>
+                            <button id="leaveGroupBtn" class="btn btn-outline-secondary" disabled>离开</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 消息发送面板 -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-paper-plane"></i> 消息发送</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="messageType" class="form-label">消息类型:</label>
+                        <select class="form-select" id="messageType">
+                            <option value="CustomMessage">自定义消息</option>
+                            <option value="Ping">Ping</option>
+                            <option value="JoinGroup">加入组</option>
+                            <option value="LeaveGroup">离开组</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="messageAction" class="form-label">动作:</label>
+                        <input type="text" class="form-control" id="messageAction" placeholder="消息动作">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="messagePayload" class="form-label">消息内容:</label>
+                        <textarea class="form-control" id="messagePayload" rows="3" placeholder="JSON格式的消息内容"></textarea>
+                    </div>
+
+                    <button id="sendMessageBtn" class="btn btn-primary" disabled>
+                        <i class="fas fa-paper-plane"></i> 发送消息
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <!-- 消息日志 -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-list"></i> 消息日志</h5>
+                    <button id="clearLogBtn" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash"></i> 清空
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="messageLog" style="height: 400px; overflow-y: auto; background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
+                        <!-- 消息日志将在这里显示 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/js/websocket-client.js"></script>
+<script>
+    let wsClient = null;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeWebSocketTest();
+    });
+
+    function initializeWebSocketTest() {
+        // 初始化UI
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws`;
+        document.getElementById('wsUrl').value = wsUrl;
+
+        // 绑定事件
+        document.getElementById('connectBtn').addEventListener('click', connectWebSocket);
+        document.getElementById('disconnectBtn').addEventListener('click', disconnectWebSocket);
+        document.getElementById('pingBtn').addEventListener('click', sendPing);
+        document.getElementById('joinGroupBtn').addEventListener('click', joinGroup);
+        document.getElementById('leaveGroupBtn').addEventListener('click', leaveGroup);
+        document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
+        document.getElementById('clearLogBtn').addEventListener('click', clearLog);
+
+        logMessage('系统', '页面初始化完成', 'info');
+    }
+
+    // 连接WebSocket
+    async function connectWebSocket() {
+        try {
+            wsClient = new WebSocketClient();
+            
+            // 注册事件监听器
+            wsClient.on('connected', (data) => {
+                updateConnectionStatus('已连接', 'success');
+                enableButtons(true);
+                logMessage('系统', 'WebSocket连接成功', 'success');
+            });
+
+            wsClient.on('disconnected', (data) => {
+                updateConnectionStatus('已断开', 'danger');
+                enableButtons(false);
+                logMessage('系统', 'WebSocket连接断开', 'warning');
+            });
+
+            wsClient.on('error', (data) => {
+                logMessage('错误', `WebSocket错误: ${data.event}`, 'danger');
+            });
+
+            wsClient.on('message', (message) => {
+                logMessage('接收', JSON.stringify(message, null, 2), 'info');
+                
+                // 处理连接ID
+                if (message.connectionId) {
+                    document.getElementById('connectionId').textContent = `ID: ${message.connectionId}`;
+                }
+            });
+
+            // 注册消息类型处理器
+            wsClient.onMessageType('TaskStatusUpdate', (message) => {
+                logMessage('任务状态', `任务 ${message.taskId}: ${message.status} (${message.progress}%)`, 'primary');
+            });
+
+            wsClient.onMessageType('SystemNotification', (message) => {
+                logMessage('系统通知', `${message.title}: ${message.message}`, 'warning');
+            });
+
+            // 开始连接
+            updateConnectionStatus('连接中...', 'warning');
+            await wsClient.connect();
+
+        } catch (error) {
+            logMessage('错误', `连接失败: ${error.message}`, 'danger');
+            updateConnectionStatus('连接失败', 'danger');
+        }
+    }
+
+    // 断开WebSocket
+    function disconnectWebSocket() {
+        if (wsClient) {
+            wsClient.disconnect();
+            wsClient = null;
+        }
+        updateConnectionStatus('未连接', 'secondary');
+        enableButtons(false);
+        document.getElementById('connectionId').textContent = '';
+    }
+
+    // 发送Ping
+    function sendPing() {
+        if (wsClient && wsClient.isConnected) {
+            wsClient.ping();
+            logMessage('发送', 'Ping消息已发送', 'info');
+        }
+    }
+
+    // 加入组
+    function joinGroup() {
+        const groupName = document.getElementById('groupName').value.trim();
+        if (!groupName) {
+            alert('请输入组名');
+            return;
+        }
+
+        if (wsClient && wsClient.isConnected) {
+            wsClient.joinGroup(groupName);
+            logMessage('发送', `加入组: ${groupName}`, 'info');
+        }
+    }
+
+    // 离开组
+    function leaveGroup() {
+        const groupName = document.getElementById('groupName').value.trim();
+        if (!groupName) {
+            alert('请输入组名');
+            return;
+        }
+
+        if (wsClient && wsClient.isConnected) {
+            wsClient.leaveGroup(groupName);
+            logMessage('发送', `离开组: ${groupName}`, 'info');
+        }
+    }
+
+    // 发送消息
+    function sendMessage() {
+        if (!wsClient || !wsClient.isConnected) {
+            alert('WebSocket未连接');
+            return;
+        }
+
+        const messageType = document.getElementById('messageType').value;
+        const action = document.getElementById('messageAction').value.trim();
+        const payloadText = document.getElementById('messagePayload').value.trim();
+
+        let payload = null;
+        if (payloadText) {
+            try {
+                payload = JSON.parse(payloadText);
+            } catch (error) {
+                alert('消息内容不是有效的JSON格式');
+                return;
+            }
+        }
+
+        const message = {
+            type: messageType,
+            timestamp: new Date().toISOString()
+        };
+
+        if (messageType === 'CustomMessage') {
+            message.action = action || 'test';
+            message.payload = payload;
+        } else if (messageType === 'JoinGroup' || messageType === 'LeaveGroup') {
+            message.groupName = action || document.getElementById('groupName').value.trim();
+        }
+
+        wsClient.send(message);
+        logMessage('发送', JSON.stringify(message, null, 2), 'primary');
+    }
+
+    // 更新连接状态
+    function updateConnectionStatus(status, type) {
+        const statusElement = document.getElementById('connectionStatus');
+        statusElement.textContent = status;
+        statusElement.className = `badge bg-${type}`;
+    }
+
+    // 启用/禁用按钮
+    function enableButtons(connected) {
+        document.getElementById('connectBtn').disabled = connected;
+        document.getElementById('disconnectBtn').disabled = !connected;
+        document.getElementById('pingBtn').disabled = !connected;
+        document.getElementById('joinGroupBtn').disabled = !connected;
+        document.getElementById('leaveGroupBtn').disabled = !connected;
+        document.getElementById('sendMessageBtn').disabled = !connected;
+    }
+
+    // 记录消息
+    function logMessage(type, message, level = 'info') {
+        const logContainer = document.getElementById('messageLog');
+        const timestamp = new Date().toLocaleTimeString();
+        
+        const logEntry = document.createElement('div');
+        logEntry.className = `mb-2 p-2 border-start border-${level} border-3`;
+        logEntry.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <strong class="text-${level}">[${type}]</strong>
+                <small class="text-muted">${timestamp}</small>
+            </div>
+            <pre class="mb-0 mt-1" style="white-space: pre-wrap; font-size: 0.9em;">${message}</pre>
+        `;
+
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // 清空日志
+    function clearLog() {
+        document.getElementById('messageLog').innerHTML = '';
+        logMessage('系统', '日志已清空', 'info');
+    }
+</script>
+}

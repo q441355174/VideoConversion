@@ -143,7 +143,7 @@ namespace VideoConversion.Services
             {
                 id = task.Id,
                 taskName = task.TaskName ?? "",
-                status = (int)task.Status,
+                status = task.Status.ToString(), // 返回字符串状态，与前端getStatusBadge函数匹配
                 statusText = GetStatusText(task.Status),
                 progress = task.Progress,
                 errorMessage = task.ErrorMessage ?? "",

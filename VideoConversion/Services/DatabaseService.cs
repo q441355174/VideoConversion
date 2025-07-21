@@ -639,5 +639,81 @@ namespace VideoConversion.Services
                 return new List<ConversionTask>();
             }
         }
+
+        /// <summary>
+        /// 获取任务列表（支持筛选和搜索）
+        /// </summary>
+        public async Task<List<ConversionTask>> GetTasksWithFilterAsync(int pageIndex = 1, int pageSize = 20, string? status = null, string? search = null)
+        {
+            try
+            {
+                _logger.LogDebug("获取任务列表: pageIndex={PageIndex}, pageSize={PageSize}, status={Status}, search={Search}",
+                    pageIndex, pageSize, status, search);
+
+                var query = _db.Queryable<ConversionTask>();
+
+                // 状态筛选
+                if (!string.IsNullOrEmpty(status) && Enum.TryParse<ConversionStatus>(status, out var statusEnum))
+                {
+                    query = query.Where(t => t.Status == statusEnum);
+                }
+
+                // 搜索筛选
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(t =>
+                        t.TaskName.Contains(search) ||
+                        t.OriginalFileName.Contains(search) ||
+                        t.OutputFileName.Contains(search));
+                }
+
+                var tasks = await query
+                    .OrderBy(t => t.CreatedAt, OrderByType.Desc)
+                    .ToPageListAsync(pageIndex, pageSize);
+
+                _logger.LogDebug("获取到 {Count} 个任务", tasks?.Count ?? 0);
+                return tasks ?? new List<ConversionTask>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取任务列表失败");
+                return new List<ConversionTask>();
+            }
+        }
+
+        /// <summary>
+        /// 获取任务总数（支持筛选和搜索）
+        /// </summary>
+        public async Task<int> GetTaskCountWithFilterAsync(string? status = null, string? search = null)
+        {
+            try
+            {
+                var query = _db.Queryable<ConversionTask>();
+
+                // 状态筛选
+                if (!string.IsNullOrEmpty(status) && Enum.TryParse<ConversionStatus>(status, out var statusEnum))
+                {
+                    query = query.Where(t => t.Status == statusEnum);
+                }
+
+                // 搜索筛选
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(t =>
+                        t.TaskName.Contains(search) ||
+                        t.OriginalFileName.Contains(search) ||
+                        t.OutputFileName.Contains(search));
+                }
+
+                var count = await query.CountAsync();
+                _logger.LogDebug("获取任务总数: {Count}", count);
+                return count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取任务总数失败");
+                return 0;
+            }
+        }
     }
 }

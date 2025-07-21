@@ -39,6 +39,10 @@ builder.Services.AddCors(options =>
 // 添加SignalR
 builder.Services.AddSignalR();
 
+// 添加WebSocket服务
+builder.Services.AddWebSocketServices();
+builder.Services.AddScoped<WebSocketNotificationService>();
+
 // 注册新的优化服务（基础服务）
 builder.Services.AddSingleton<FFmpegConfigurationService>();
 builder.Services.AddScoped<NotificationService>();
@@ -48,7 +52,6 @@ builder.Services.AddScoped<DatabaseService>(); // 改为 Scoped 以支持 Notifi
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<GpuDetectionService>();
-builder.Services.AddScoped<GpuPerformanceService>();
 builder.Services.AddScoped<GpuDeviceInfoService>();
 builder.Services.AddScoped<VideoConversionService>();
 builder.Services.AddScoped<ConversionTaskService>();
@@ -110,6 +113,12 @@ app.UseGlobalExceptionHandling();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+// 启用WebSocket支持
+app.UseWebSockets();
+
+// 使用WebSocket中间件
+app.UseWebSocketMiddleware();
 
 app.UseRouting();
 

@@ -319,15 +319,82 @@
                                                         <option value="h264_nvenc">H.264 (NVIDIA)</option>
                                                         <option value="h264_qsv">H.264 (Intel QSV)</option>
                                                         <option value="h264_amf">H.264 (AMD AMF)</option>
+                                                        <option value="libx265">H.265/HEVC (CPU)</option>
+                                                        <option value="hevc_nvenc">H.265/HEVC (NVIDIA)</option>
+                                                        <option value="hevc_qsv">H.265/HEVC (Intel QSV)</option>
+                                                        <option value="hevc_amf">H.265/HEVC (AMD AMF)</option>
+                                                        <option value="libvpx-vp9">VP9 (CPU)</option>
+                                                        <option value="av1_nvenc">AV1 (NVIDIA)</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-md-6">
+                                                    <label for="encodingPreset" class="form-label">编码预设</label>
+                                                    <select class="form-select" id="encodingPreset" name="encodingPreset">
+                                                        <option value="ultrafast">极快 (最低质量)</option>
+                                                        <option value="superfast">超快</option>
+                                                        <option value="veryfast">很快</option>
+                                                        <option value="faster">较快</option>
+                                                        <option value="fast">快</option>
+                                                        <option value="medium" selected>中等 (推荐)</option>
+                                                        <option value="slow">慢</option>
+                                                        <option value="slower">较慢</option>
+                                                        <option value="veryslow">很慢 (最高质量)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-6">
+                                                    <label for="qualityMode" class="form-label">质量模式</label>
+                                                    <select class="form-select" id="qualityMode" name="qualityMode">
+                                                        <option value="crf" selected>恒定质量 (CRF)</option>
+                                                        <option value="bitrate">恒定比特率 (CBR)</option>
+                                                        <option value="vbr">可变比特率 (VBR)</option>
+                                                        <option value="2pass">两遍编码</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6" id="crfQualityContainer">
                                                     <label for="videoQuality" class="form-label">
-                                                        视频质量 <span id="qualityValue">23</span>
+                                                        CRF质量值 <span id="qualityValue">23</span>
                                                     </label>
                                                     <input type="range" class="form-range" id="videoQuality"
-                                                           name="videoQuality" min="18" max="28" value="23">
-                                                    <div class="form-text">较低值 = 更高质量，较高值 = 更小文件</div>
+                                                           name="videoQuality" min="0" max="51" value="23">
+                                                    <div class="form-text">0=无损, 18=视觉无损, 23=高质量, 28=中等质量</div>
+                                                </div>
+                                                <div class="col-md-6" id="bitrateContainer" style="display: none;">
+                                                    <label for="videoBitrate" class="form-label">视频比特率</label>
+                                                    <div class="input-group">
+                                                        <input type="number" class="form-control" id="videoBitrate"
+                                                               name="videoBitrate" min="100" max="50000" value="5000">
+                                                        <span class="input-group-text">kbps</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-6">
+                                                    <label for="frameRate" class="form-label">帧率</label>
+                                                    <select class="form-select" id="frameRate" name="frameRate">
+                                                        <option value="">保持原始</option>
+                                                        <option value="24">24 fps (电影)</option>
+                                                        <option value="25">25 fps (PAL)</option>
+                                                        <option value="30">30 fps (NTSC)</option>
+                                                        <option value="50">50 fps</option>
+                                                        <option value="60">60 fps</option>
+                                                        <option value="120">120 fps</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="profile" class="form-label">编码配置</label>
+                                                    <select class="form-select" id="profile" name="profile">
+                                                        <option value="">自动</option>
+                                                        <option value="baseline">Baseline</option>
+                                                        <option value="main">Main</option>
+                                                        <option value="high">High</option>
+                                                        <option value="high10">High 10</option>
+                                                        <option value="high422">High 4:2:2</option>
+                                                        <option value="high444">High 4:4:4</option>
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>
@@ -348,20 +415,271 @@
                                                 <div class="col-md-6">
                                                     <label for="audioCodec" class="form-label">音频编解码器</label>
                                                     <select class="form-select" id="audioCodec" name="audioCodec">
-                                                        <option value="aac">AAC</option>
+                                                        <option value="aac">AAC (推荐)</option>
                                                         <option value="mp3">MP3</option>
-                                                        <option value="opus">Opus</option>
+                                                        <option value="opus">Opus (高效)</option>
+                                                        <option value="flac">FLAC (无损)</option>
+                                                        <option value="ac3">AC3 (杜比)</option>
+                                                        <option value="eac3">E-AC3 (杜比增强)</option>
                                                         <option value="copy">复制原始</option>
+                                                        <option value="none">移除音频</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-md-6">
+                                                    <label for="audioQualityMode" class="form-label">音频质量模式</label>
+                                                    <select class="form-select" id="audioQualityMode" name="audioQualityMode">
+                                                        <option value="bitrate" selected>比特率</option>
+                                                        <option value="quality">质量等级</option>
+                                                        <option value="vbr">可变比特率</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-6" id="audioBitrateContainer">
                                                     <label for="audioQuality" class="form-label">音频比特率</label>
                                                     <select class="form-select" id="audioQuality" name="audioQuality">
-                                                        <option value="128k">128 kbps</option>
-                                                        <option value="192k">192 kbps</option>
-                                                        <option value="256k">256 kbps</option>
-                                                        <option value="320k">320 kbps</option>
+                                                        <option value="96k">96 kbps (低质量)</option>
+                                                        <option value="128k">128 kbps (标准)</option>
+                                                        <option value="192k" selected>192 kbps (高质量)</option>
+                                                        <option value="256k">256 kbps (很高质量)</option>
+                                                        <option value="320k">320 kbps (最高质量)</option>
+                                                        <option value="512k">512 kbps (专业)</option>
                                                     </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="audioChannels" class="form-label">声道配置</label>
+                                                    <select class="form-select" id="audioChannels" name="audioChannels">
+                                                        <option value="">保持原始</option>
+                                                        <option value="1">单声道</option>
+                                                        <option value="2">立体声</option>
+                                                        <option value="6">5.1环绕声</option>
+                                                        <option value="8">7.1环绕声</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-6">
+                                                    <label for="sampleRate" class="form-label">采样率</label>
+                                                    <select class="form-select" id="sampleRate" name="sampleRate">
+                                                        <option value="">保持原始</option>
+                                                        <option value="22050">22.05 kHz</option>
+                                                        <option value="44100">44.1 kHz (CD质量)</option>
+                                                        <option value="48000">48 kHz (DVD质量)</option>
+                                                        <option value="96000">96 kHz (高保真)</option>
+                                                        <option value="192000">192 kHz (专业)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="audioVolume" class="form-label">
+                                                        音量调整 <span id="volumeValue">0</span> dB
+                                                    </label>
+                                                    <input type="range" class="form-range" id="audioVolume"
+                                                           name="audioVolume" min="-20" max="20" value="0" step="0.5">
+                                                    <div class="form-text">-20dB (很小) 到 +20dB (很大)</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 高级设置 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#advancedPanel">
+                                            <i class="fas fa-cog"></i>&nbsp;高级设置
+                                        </button>
+                                    </h2>
+                                    <div id="advancedPanel" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label for="hardwareAcceleration" class="form-label">硬件加速</label>
+                                                    <select class="form-select" id="hardwareAcceleration" name="hardwareAcceleration">
+                                                        <option value="auto" selected>自动检测</option>
+                                                        <option value="none">禁用</option>
+                                                        <option value="nvenc">NVIDIA NVENC</option>
+                                                        <option value="qsv">Intel Quick Sync</option>
+                                                        <option value="amf">AMD AMF</option>
+                                                        <option value="videotoolbox">Apple VideoToolbox</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="twoPass" class="form-label">编码模式</label>
+                                                    <select class="form-select" id="twoPass" name="twoPass">
+                                                        <option value="false" selected>单遍编码 (快速)</option>
+                                                        <option value="true">两遍编码 (高质量)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-6">
+                                                    <label for="pixelFormat" class="form-label">像素格式</label>
+                                                    <select class="form-select" id="pixelFormat" name="pixelFormat">
+                                                        <option value="">自动</option>
+                                                        <option value="yuv420p">YUV420P (标准)</option>
+                                                        <option value="yuv422p">YUV422P (专业)</option>
+                                                        <option value="yuv444p">YUV444P (无损)</option>
+                                                        <option value="yuv420p10le">YUV420P 10-bit</option>
+                                                        <option value="yuv422p10le">YUV422P 10-bit</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="colorSpace" class="form-label">色彩空间</label>
+                                                    <select class="form-select" id="colorSpace" name="colorSpace">
+                                                        <option value="">保持原始</option>
+                                                        <option value="bt709">BT.709 (HD)</option>
+                                                        <option value="bt2020">BT.2020 (4K HDR)</option>
+                                                        <option value="smpte170m">SMPTE-170M (NTSC)</option>
+                                                        <option value="bt470bg">BT.470BG (PAL)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-12">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" id="fastStart" name="fastStart" checked>
+                                                        <label class="form-check-label" for="fastStart">
+                                                            快速启动 (Web优化)
+                                                        </label>
+                                                        <div class="form-text">将元数据移到文件开头，便于网络播放</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-12">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" id="deinterlace" name="deinterlace">
+                                                        <label class="form-check-label" for="deinterlace">
+                                                            去隔行扫描
+                                                        </label>
+                                                        <div class="form-text">移除隔行扫描视频的锯齿效果</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 滤镜设置 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#filtersPanel">
+                                            <i class="fas fa-magic"></i>&nbsp;滤镜设置
+                                        </button>
+                                    </h2>
+                                    <div id="filtersPanel" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label for="denoise" class="form-label">降噪滤镜</label>
+                                                    <select class="form-select" id="denoise" name="denoise">
+                                                        <option value="">无</option>
+                                                        <option value="hqdn3d">高质量降噪</option>
+                                                        <option value="nlmeans">非局部均值降噪</option>
+                                                        <option value="bm3d">BM3D降噪 (最佳)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="videoFilters" class="form-label">自定义视频滤镜</label>
+                                                    <input type="text" class="form-control" id="videoFilters" name="videoFilters"
+                                                           placeholder="例如: scale=1920:1080,unsharp=5:5:1.0">
+                                                    <div class="form-text">FFmpeg滤镜语法</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-12">
+                                                    <label for="audioFilters" class="form-label">自定义音频滤镜</label>
+                                                    <input type="text" class="form-control" id="audioFilters" name="audioFilters"
+                                                           placeholder="例如: highpass=f=200,lowpass=f=3000">
+                                                    <div class="form-text">FFmpeg音频滤镜语法</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 时间裁剪 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#trimPanel">
+                                            <i class="fas fa-cut"></i>&nbsp;时间裁剪
+                                        </button>
+                                    </h2>
+                                    <div id="trimPanel" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label for="startTime" class="form-label">开始时间</label>
+                                                    <input type="text" class="form-control" id="startTime" name="startTime"
+                                                           placeholder="00:00:00 或 秒数">
+                                                    <div class="form-text">格式: HH:MM:SS 或秒数</div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="endTime" class="form-label">结束时间</label>
+                                                    <input type="text" class="form-control" id="endTime" name="endTime"
+                                                           placeholder="00:10:00 或 秒数">
+                                                    <div class="form-text">格式: HH:MM:SS 或秒数</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 任务设置 -->
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button"
+                                                data-bs-toggle="collapse" data-bs-target="#taskPanel">
+                                            <i class="fas fa-tasks"></i>&nbsp;任务设置
+                                        </button>
+                                    </h2>
+                                    <div id="taskPanel" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label for="priority" class="form-label">任务优先级</label>
+                                                    <select class="form-select" id="priority" name="priority">
+                                                        <option value="-2">很低</option>
+                                                        <option value="-1">低</option>
+                                                        <option value="0" selected>正常</option>
+                                                        <option value="1">高</option>
+                                                        <option value="2">很高</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="tags" class="form-label">标签</label>
+                                                    <input type="text" class="form-control" id="tags" name="tags"
+                                                           placeholder="用逗号分隔多个标签">
+                                                    <div class="form-text">便于任务分类和搜索</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-12">
+                                                    <label for="notes" class="form-label">备注</label>
+                                                    <textarea class="form-control" id="notes" name="notes" rows="2"
+                                                              placeholder="任务备注信息"></textarea>
+                                                </div>
+                                            </div>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-12">
+                                                    <label for="customParams" class="form-label">自定义FFmpeg参数</label>
+                                                    <textarea class="form-control" id="customParams" name="customParams" rows="2"
+                                                              placeholder="高级用户可添加自定义FFmpeg参数"></textarea>
+                                                    <div class="form-text">
+                                                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                        警告: 不正确的参数可能导致转换失败
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -369,31 +687,9 @@
                                 </div>
                             </div>
 
-                            <!-- 隐藏字段 - 提供默认值 -->
-                            <input type="hidden" name="frameRate" value="">
-                            <input type="hidden" name="qualityMode" value="crf">
-                            <input type="hidden" name="audioQualityMode" value="bitrate">
-                            <input type="hidden" name="customParams" value="">
-                            <input type="hidden" name="hardwareAcceleration" value="auto">
-                            <input type="hidden" name="videoFilters" value="">
-                            <input type="hidden" name="audioFilters" value="">
-                            <input type="hidden" name="priority" value="0">
-                            <input type="hidden" name="tags" value="">
-                            <input type="hidden" name="notes" value="">
-                            <input type="hidden" name="encodingPreset" value="medium">
-                            <input type="hidden" name="profile" value="">
-                            <input type="hidden" name="audioChannels" value="">
-                            <input type="hidden" name="sampleRate" value="">
-                            <input type="hidden" name="audioVolume" value="">
-                            <input type="hidden" name="denoise" value="">
-                            <input type="hidden" name="colorSpace" value="">
-                            <input type="hidden" name="pixelFormat" value="">
-                            <input type="hidden" name="twoPass" value="false">
-                            <input type="hidden" name="fastStart" value="true">
+                            <!-- 隐藏字段 - 为未显示的参数提供默认值 -->
                             <input type="hidden" name="copyTimestamps" value="true">
-                            <input type="hidden" name="deinterlace" value="false">
-                            <input type="hidden" name="startTime" value="">
-                            <input type="hidden" name="endTime" value="">
+                            <input type="hidden" name="videoBitrate" value="5000">
 
                             <!-- 提交按钮 -->
                             <div class="mt-4">
@@ -438,26 +734,17 @@
                                 <!-- GPU卡片列表 -->
                                 <div id="gpuCards"></div>
 
-                                <!-- GPU性能监控 -->
-                                <div class="mt-4" id="gpuMonitoring" style="display: none;">
-                                    <h6 class="mb-3">
-                                        <i class="fas fa-chart-line text-primary"></i>
-                                        性能监控
-                                    </h6>
-                                    <div class="row" id="gpuMetrics">
-                                        <!-- 动态生成GPU性能指标 -->
-                                    </div>
-                                </div>
+
 
 
                             </div>
 
-                            <!-- GPU检测失败 -->
+                            <!-- GPU检测失败或无支持 -->
                             <div id="gpuError" style="display: none;">
                                 <div class="alert alert-warning" role="alert">
                                     <i class="fas fa-exclamation-triangle"></i>
-                                    <strong>GPU检测失败</strong>
-                                    <p class="mb-0 mt-2">无法检测到GPU信息，可能的原因：</p>
+                                    <strong>未检测到GPU硬件加速支持</strong>
+                                    <p class="mb-0 mt-2">系统将使用CPU进行视频转码，可能的原因：</p>
                                     <ul class="mb-0 mt-2">
                                         <li>没有安装GPU驱动程序</li>
                                         <li>GPU不支持硬件加速</li>
@@ -539,8 +826,10 @@ window.VideoConversionApp = (function($) {
     const Utils = {
         // 消息提示函数
         showAlert: function(type, message) {
+            // 创建提示元素
             const alertDiv = $(`
-                <div class="alert alert-${type} alert-dismissible fade show">
+                <div class="alert alert-${type} alert-dismissible fade show position-fixed"
+                     style="top: 20px; right: 20px; z-index: 9999; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                     <i class="fas fa-${type === 'success' ? 'check-circle' :
                                         type === 'danger' ? 'exclamation-triangle' :
                                         type === 'warning' ? 'exclamation-triangle' :
@@ -550,10 +839,15 @@ window.VideoConversionApp = (function($) {
                 </div>
             `);
 
-            $('.container-fluid').prepend(alertDiv);
+            // 添加到body而不是container-fluid，避免挤压页面布局
+            $('body').append(alertDiv);
 
             // 5秒后自动消失
-            setTimeout(() => alertDiv.remove(), 5000);
+            setTimeout(() => {
+                if (alertDiv.length && alertDiv.parent().length) {
+                    alertDiv.alert('close');
+                }
+            }, 5000);
         },
 
         // 文件大小格式化
@@ -1346,6 +1640,9 @@ window.VideoConversionApp = (function($) {
             const $presetSelect = $('#preset');
             const $qualitySlider = $('#videoQuality');
             const $qualityValue = $('#qualityValue');
+            const $volumeSlider = $('#audioVolume');
+            const $volumeValue = $('#volumeValue');
+            const $qualityMode = $('#qualityMode');
 
             // 绑定表单提交事件
             $form.on('submit', (e) => {
@@ -1362,6 +1659,34 @@ window.VideoConversionApp = (function($) {
             $qualitySlider.on('input', (e) => {
                 $qualityValue.text(e.target.value);
             });
+
+            // 绑定音量滑块事件
+            $volumeSlider.on('input', (e) => {
+                $volumeValue.text(e.target.value);
+            });
+
+            // 绑定质量模式变化事件
+            $qualityMode.on('change', (e) => {
+                this.toggleQualityMode(e.target.value);
+            });
+
+            // 绑定音频质量模式变化事件
+            $('#audioQualityMode').on('change', (e) => {
+                this.toggleAudioQualityMode(e.target.value);
+            });
+
+            // 绑定编码器变化事件
+            $('#videoCodec').on('change', (e) => {
+                this.updateCodecSettings(e.target.value);
+            });
+
+            // 绑定硬件加速变化事件
+            $('#hardwareAcceleration').on('change', (e) => {
+                this.updateHardwareAcceleration(e.target.value);
+            });
+
+            // 绑定预设参数重置按钮
+            this.bindPresetResetButton();
         },
 
         // 加载默认设置
@@ -1719,9 +2044,23 @@ window.VideoConversionApp = (function($) {
             }
 
             // 验证视频质量范围
-            const quality = parseInt($('#videoQuality').val());
-            if (quality < 18 || quality > 28) {
-                Utils.showAlert('warning', '视频质量值应在18-28之间');
+            const qualityMode = $('#qualityMode').val();
+            if (qualityMode === 'crf') {
+                const quality = parseInt($('#videoQuality').val());
+                if (quality < 0 || quality > 51) {
+                    Utils.showAlert('warning', 'CRF质量值应在0-51之间');
+                    return false;
+                }
+            } else if (qualityMode === 'bitrate' || qualityMode === 'vbr') {
+                const bitrate = parseInt($('#videoBitrate').val());
+                if (bitrate < 100 || bitrate > 50000) {
+                    Utils.showAlert('warning', '视频比特率应在100-50000 kbps之间');
+                    return false;
+                }
+            }
+
+            // 验证高级设置
+            if (!this.validateAdvancedSettings()) {
                 return false;
             }
 
@@ -1945,6 +2284,236 @@ window.VideoConversionApp = (function($) {
                     $cancelTask.show().prop('disabled', true);
                     break;
             }
+        },
+
+        // 切换质量模式
+        toggleQualityMode: function(mode) {
+            console.log('🎛️ 切换质量模式:', mode);
+
+            const $crfContainer = $('#crfQualityContainer');
+            const $bitrateContainer = $('#bitrateContainer');
+
+            if (mode === 'crf') {
+                $crfContainer.show();
+                $bitrateContainer.hide();
+            } else if (mode === 'bitrate' || mode === 'vbr' || mode === '2pass') {
+                $crfContainer.hide();
+                $bitrateContainer.show();
+            }
+        },
+
+        // 切换音频质量模式
+        toggleAudioQualityMode: function(mode) {
+            console.log('🎵 切换音频质量模式:', mode);
+
+            const $bitrateContainer = $('#audioBitrateContainer');
+
+            // 根据模式显示不同的控件
+            if (mode === 'bitrate' || mode === 'vbr') {
+                $bitrateContainer.show();
+            } else if (mode === 'quality') {
+                $bitrateContainer.show();
+                // 可以在这里添加质量等级选项
+            }
+        },
+
+        // 更新编码器设置
+        updateCodecSettings: function(codec) {
+            console.log('🎬 更新编码器设置:', codec);
+
+            // 根据编码器类型更新相关设置
+            const $profile = $('#profile');
+            const $encodingPreset = $('#encodingPreset');
+
+            if (codec.includes('nvenc') || codec.includes('qsv') || codec.includes('amf')) {
+                // GPU编码器
+                this.updateGpuCodecSettings(codec);
+            } else if (codec.includes('libx264') || codec.includes('libx265')) {
+                // CPU编码器
+                this.updateCpuCodecSettings(codec);
+            }
+        },
+
+        // 更新GPU编码器设置
+        updateGpuCodecSettings: function(codec) {
+            const $encodingPreset = $('#encodingPreset');
+
+            // GPU编码器通常有不同的预设选项
+            if (codec.includes('nvenc')) {
+                // NVIDIA编码器预设
+                $encodingPreset.html(`
+                    <option value="p1">P1 (最快)</option>
+                    <option value="p2">P2 (快)</option>
+                    <option value="p3">P3 (中等)</option>
+                    <option value="p4" selected>P4 (平衡)</option>
+                    <option value="p5">P5 (慢)</option>
+                    <option value="p6">P6 (较慢)</option>
+                    <option value="p7">P7 (最慢)</option>
+                `);
+            } else {
+                // 其他GPU编码器使用标准预设
+                this.resetEncodingPresets();
+            }
+        },
+
+        // 更新CPU编码器设置
+        updateCpuCodecSettings: function(codec) {
+            this.resetEncodingPresets();
+        },
+
+        // 重置编码预设选项
+        resetEncodingPresets: function() {
+            const $encodingPreset = $('#encodingPreset');
+            $encodingPreset.html(`
+                <option value="ultrafast">极快 (最低质量)</option>
+                <option value="superfast">超快</option>
+                <option value="veryfast">很快</option>
+                <option value="faster">较快</option>
+                <option value="fast">快</option>
+                <option value="medium" selected>中等 (推荐)</option>
+                <option value="slow">慢</option>
+                <option value="slower">较慢</option>
+                <option value="veryslow">很慢 (最高质量)</option>
+            `);
+        },
+
+        // 更新硬件加速设置
+        updateHardwareAcceleration: function(acceleration) {
+            console.log('⚡ 更新硬件加速设置:', acceleration);
+
+            const $videoCodec = $('#videoCodec');
+
+            if (acceleration === 'nvenc') {
+                // 自动选择NVIDIA编码器
+                $videoCodec.val('h264_nvenc');
+                this.updateCodecSettings('h264_nvenc');
+            } else if (acceleration === 'qsv') {
+                // 自动选择Intel编码器
+                $videoCodec.val('h264_qsv');
+                this.updateCodecSettings('h264_qsv');
+            } else if (acceleration === 'amf') {
+                // 自动选择AMD编码器
+                $videoCodec.val('h264_amf');
+                this.updateCodecSettings('h264_amf');
+            } else if (acceleration === 'none') {
+                // 使用CPU编码器
+                $videoCodec.val('libx264');
+                this.updateCodecSettings('libx264');
+            }
+        },
+
+        // 绑定预设重置按钮
+        bindPresetResetButton: function() {
+            // 添加重置按钮到预设选择旁边
+            const $presetContainer = $('#preset').parent();
+            if ($presetContainer.find('.preset-reset-btn').length === 0) {
+                const $resetBtn = $(`
+                    <button type="button" class="btn btn-outline-secondary btn-sm mt-2 preset-reset-btn">
+                        <i class="fas fa-undo"></i> 重置为默认设置
+                    </button>
+                `);
+
+                $resetBtn.on('click', () => {
+                    this.resetToDefaultSettings();
+                });
+
+                $presetContainer.append($resetBtn);
+            }
+        },
+
+        // 重置为默认设置
+        resetToDefaultSettings: function() {
+            console.log('🔄 重置为默认设置...');
+
+            // 重置所有表单控件
+            $('#preset').val('');
+            $('#outputFormat').val('mp4');
+            $('#resolution').val('');
+            $('#videoCodec').val('libx264');
+            $('#qualityMode').val('crf');
+            $('#videoQuality').val('23');
+            $('#qualityValue').text('23');
+            $('#encodingPreset').val('medium');
+            $('#profile').val('');
+            $('#frameRate').val('');
+
+            // 重置音频设置
+            $('#audioCodec').val('aac');
+            $('#audioQualityMode').val('bitrate');
+            $('#audioQuality').val('192k');
+            $('#audioChannels').val('');
+            $('#sampleRate').val('');
+            $('#audioVolume').val('0');
+            $('#volumeValue').text('0');
+
+            // 重置高级设置
+            $('#hardwareAcceleration').val('auto');
+            $('#twoPass').val('false');
+            $('#pixelFormat').val('');
+            $('#colorSpace').val('');
+            $('#fastStart').prop('checked', true);
+            $('#deinterlace').prop('checked', false);
+
+            // 重置滤镜设置
+            $('#denoise').val('');
+            $('#videoFilters').val('');
+            $('#audioFilters').val('');
+
+            // 重置时间裁剪
+            $('#startTime').val('');
+            $('#endTime').val('');
+
+            // 重置任务设置
+            $('#priority').val('0');
+            $('#tags').val('');
+            $('#notes').val('');
+            $('#customParams').val('');
+
+            // 触发相关事件
+            this.toggleQualityMode('crf');
+            this.toggleAudioQualityMode('bitrate');
+
+            Utils.showAlert('success', '设置已重置为默认值');
+        },
+
+        // 验证高级参数
+        validateAdvancedSettings: function() {
+            // 验证时间格式
+            const startTime = $('#startTime').val();
+            const endTime = $('#endTime').val();
+
+            if (startTime && !this.isValidTimeFormat(startTime)) {
+                Utils.showAlert('warning', '开始时间格式不正确，请使用 HH:MM:SS 或秒数格式');
+                return false;
+            }
+
+            if (endTime && !this.isValidTimeFormat(endTime)) {
+                Utils.showAlert('warning', '结束时间格式不正确，请使用 HH:MM:SS 或秒数格式');
+                return false;
+            }
+
+            // 验证自定义滤镜语法（基础检查）
+            const videoFilters = $('#videoFilters').val();
+            const audioFilters = $('#audioFilters').val();
+
+            if (videoFilters && videoFilters.includes('..')) {
+                Utils.showAlert('warning', '视频滤镜语法可能有误，请检查');
+                return false;
+            }
+
+            if (audioFilters && audioFilters.includes('..')) {
+                Utils.showAlert('warning', '音频滤镜语法可能有误，请检查');
+                return false;
+            }
+
+            return true;
+        },
+
+        // 验证时间格式
+        isValidTimeFormat: function(timeStr) {
+            // 支持 HH:MM:SS 格式或纯数字（秒）
+            const timeRegex = /^(\d{1,2}:\d{2}:\d{2}|\d+(\.\d+)?)$/;
+            return timeRegex.test(timeStr);
         }
     };
 
@@ -2611,9 +3180,6 @@ window.VideoConversionApp = (function($) {
                     const capabilities = await this.getGPUCapabilities();
                     console.log('GPU能力检测结果:', capabilities);
 
-                    // 开始性能监控
-                    this.startPerformanceMonitoring(gpuData.data);
-
                 } else {
                     console.log('⚠️ 未检测到GPU或GPU不支持硬件加速');
                     this.showNoGPUMessage();
@@ -2641,9 +3207,9 @@ window.VideoConversionApp = (function($) {
                     throw new Error(`GPU检测API调用失败: ${response.status}`);
                 }
             } catch (error) {
-                console.log('API调用失败，使用模拟数据:', error.message);
-                // 返回模拟GPU数据用于演示
-                return this.getMockGPUData();
+                console.log('API调用失败:', error.message);
+                // 返回空数据，表示没有GPU支持
+                return { success: false, data: [] };
             }
         },
 
@@ -2661,11 +3227,16 @@ window.VideoConversionApp = (function($) {
             const $gpuCards = $('#gpuCards');
             let html = '';
 
-            gpuList.forEach((gpu, index) => {
-                const statusClass = gpu.supported ? 'success' : 'warning';
-                const statusIcon = gpu.supported ? 'check-circle' : 'exclamation-triangle';
-                const statusText = gpu.supported ? '支持硬件加速' : '不支持硬件加速';
+            // 只显示支持硬件加速的GPU
+            const supportedGPUs = gpuList.filter(gpu => gpu.supported);
 
+            if (supportedGPUs.length === 0) {
+                // 如果没有支持的GPU，显示无GPU支持消息
+                this.showNoGPUMessage();
+                return;
+            }
+
+            supportedGPUs.forEach((gpu, index) => {
                 html += `
                     <div class="card mb-3 gpu-card" data-gpu-index="${index}">
                         <div class="card-body">
@@ -2677,8 +3248,8 @@ window.VideoConversionApp = (function($) {
                                     </h6>
                                     <p class="text-muted mb-2">${gpu.vendor} | ${gpu.driver || '未知驱动'}</p>
                                 </div>
-                                <span class="badge bg-${statusClass}">
-                                    <i class="fas fa-${statusIcon}"></i> ${statusText}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> 支持硬件加速
                                 </span>
                             </div>
 
@@ -2701,21 +3272,12 @@ window.VideoConversionApp = (function($) {
                                 </div>
                             </div>
 
-                            ${gpu.supported ? `
-                                <div class="mt-3">
-                                    <small class="text-success">
-                                        <i class="fas fa-rocket"></i>
-                                        此GPU支持${gpu.supportedFormats?.join(', ') || 'H.264'}硬件加速
-                                    </small>
-                                </div>
-                            ` : `
-                                <div class="mt-3">
-                                    <small class="text-warning">
-                                        <i class="fas fa-info-circle"></i>
-                                        ${gpu.reason || '此GPU不支持视频编码硬件加速'}
-                                    </small>
-                                </div>
-                            `}
+                            <div class="mt-3">
+                                <small class="text-success">
+                                    <i class="fas fa-rocket"></i>
+                                    此GPU支持${gpu.supportedFormats?.join(', ') || 'H.264'}硬件加速
+                                </small>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2727,189 +3289,6 @@ window.VideoConversionApp = (function($) {
             $('#gpuLoading').hide();
             $('#gpuResults').show();
         },
-
-        // 开始性能监控
-        startPerformanceMonitoring: function(gpuList) {
-            console.log('📊 开始GPU性能监控');
-
-            // 只监控支持硬件加速的GPU
-            const supportedGPUs = gpuList.filter(gpu => gpu.supported);
-
-            if (supportedGPUs.length === 0) {
-                return;
-            }
-
-            // 显示性能监控区域
-            $('#gpuMonitoring').show();
-
-            // 初始化性能指标显示
-            this.initializePerformanceMetrics(supportedGPUs);
-
-            // 开始定期更新性能数据
-            this.startPerformanceUpdates(supportedGPUs);
-        },
-
-        // 初始化性能指标
-        initializePerformanceMetrics: function(gpuList) {
-            const $metricsContainer = $('#gpuMetrics');
-            let html = '';
-
-            gpuList.forEach((gpu, index) => {
-                html += `
-                    <div class="col-md-6 mb-3">
-                        <div class="card border-primary">
-                            <div class="card-body p-3">
-                                <h6 class="card-title mb-3">${gpu.name}</h6>
-
-                                <!-- GPU使用率 -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <small class="text-muted">GPU使用率</small>
-                                        <small class="fw-bold" id="gpuUsage-${index}">0%</small>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-primary" id="gpuUsageBar-${index}"
-                                             style="width: 0%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- 显存使用率 -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <small class="text-muted">显存使用</small>
-                                        <small class="fw-bold" id="memoryUsage-${index}">0 MB / ${gpu.memory}</small>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-info" id="memoryUsageBar-${index}"
-                                             style="width: 0%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- 温度 -->
-                                <div class="mb-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <small class="text-muted">温度</small>
-                                        <small class="fw-bold" id="temperature-${index}">--°C</small>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-warning" id="temperatureBar-${index}"
-                                             style="width: 0%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- 编码器状态 -->
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">编码器状态</small>
-                                    <span class="badge bg-secondary" id="encoderStatus-${index}">空闲</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            $metricsContainer.html(html);
-        },
-
-        // 开始性能数据更新
-        startPerformanceUpdates: function(gpuList) {
-            // 清除之前的定时器
-            if (window.gpuMonitorTimer) {
-                clearInterval(window.gpuMonitorTimer);
-            }
-
-            // 每5秒更新一次性能数据
-            window.gpuMonitorTimer = setInterval(async () => {
-                try {
-                    const performanceData = await this.getGPUPerformanceData();
-                    this.updatePerformanceMetrics(performanceData, gpuList);
-                } catch (error) {
-                    console.error('获取GPU性能数据失败:', error);
-                }
-            }, 5000);
-
-            // 立即执行一次
-            setTimeout(async () => {
-                try {
-                    const performanceData = await this.getGPUPerformanceData();
-                    this.updatePerformanceMetrics(performanceData, gpuList);
-                } catch (error) {
-                    console.error('获取GPU性能数据失败:', error);
-                }
-            }, 1000);
-        },
-
-        // 获取GPU性能数据
-        getGPUPerformanceData: async function() {
-            try {
-                const response = await fetch('/api/gpu/performance');
-                if (response.ok) {
-                    return await response.json();
-                } else {
-                    throw new Error('API调用失败');
-                }
-            } catch (error) {
-                // 返回模拟性能数据
-                return this.getMockPerformanceData();
-            }
-        },
-
-        // 更新性能指标显示
-        updatePerformanceMetrics: function(performanceData, gpuList) {
-            if (!performanceData.success || !performanceData.data) {
-                return;
-            }
-
-            performanceData.data.forEach((gpuPerf, index) => {
-                if (index >= gpuList.length) return;
-
-                // 更新GPU使用率
-                if (gpuPerf.usage !== undefined) {
-                    $(`#gpuUsage-${index}`).text(`${gpuPerf.usage}%`);
-                    $(`#gpuUsageBar-${index}`).css('width', `${gpuPerf.usage}%`);
-                }
-
-                // 更新显存使用
-                if (gpuPerf.memoryUsed !== undefined && gpuPerf.memoryTotal !== undefined) {
-                    const memoryPercent = Math.round((gpuPerf.memoryUsed / gpuPerf.memoryTotal) * 100);
-                    $(`#memoryUsage-${index}`).text(`${gpuPerf.memoryUsed} MB / ${gpuPerf.memoryTotal} MB`);
-                    $(`#memoryUsageBar-${index}`).css('width', `${memoryPercent}%`);
-                }
-
-                // 更新温度
-                if (gpuPerf.temperature !== undefined) {
-                    const tempPercent = Math.min(gpuPerf.temperature / 100 * 100, 100);
-                    $(`#temperature-${index}`).text(`${gpuPerf.temperature}°C`);
-                    $(`#temperatureBar-${index}`).css('width', `${tempPercent}%`);
-
-                    // 根据温度调整颜色
-                    const $tempBar = $(`#temperatureBar-${index}`);
-                    $tempBar.removeClass('bg-success bg-warning bg-danger');
-                    if (gpuPerf.temperature < 60) {
-                        $tempBar.addClass('bg-success');
-                    } else if (gpuPerf.temperature < 80) {
-                        $tempBar.addClass('bg-warning');
-                    } else {
-                        $tempBar.addClass('bg-danger');
-                    }
-                }
-
-                // 更新编码器状态
-                if (gpuPerf.encoderActive !== undefined) {
-                    const $encoderStatus = $(`#encoderStatus-${index}`);
-                    if (gpuPerf.encoderActive) {
-                        $encoderStatus.removeClass('bg-secondary').addClass('bg-success').text('工作中');
-                    } else {
-                        $encoderStatus.removeClass('bg-success').addClass('bg-secondary').text('空闲');
-                    }
-                }
-            });
-        },
-
-
-
-
-
         // 显示无GPU消息
         showNoGPUMessage: function() {
             $('#gpuLoading').hide();
@@ -2942,52 +3321,10 @@ window.VideoConversionApp = (function($) {
                     throw new Error(`GPU能力检测失败: ${response.status}`);
                 }
             } catch (error) {
-                console.log('⚠️ GPU能力检测失败，使用模拟数据:', error.message);
-                return this.getMockCapabilitiesData();
+                console.log('⚠️ GPU能力检测失败:', error.message);
+                return { success: false, data: { hasAnyGpuSupport: false } };
             }
         },
-
-        // 获取模拟GPU能力数据
-        getMockCapabilitiesData: function() {
-            return {
-                success: true,
-                data: {
-                    hasAnyGpuSupport: true,
-                    supportedTypes: 'NVIDIA NVENC',
-                    nvidia: {
-                        supported: true,
-                        encoders: ['h264_nvenc', 'hevc_nvenc', 'av1_nvenc'],
-                        maxResolution: '8K',
-                        performanceLevel: 'High'
-                    },
-                    intel: {
-                        supported: true,
-                        encoders: ['h264_qsv', 'hevc_qsv'],
-                        maxResolution: '4K',
-                        performanceLevel: 'Medium'
-                    },
-                    amd: {
-                        supported: false,
-                        encoders: [],
-                        maxResolution: '',
-                        performanceLevel: 'None'
-                    }
-                }
-            };
-        },
-
-
-
-
-
-        // 停止性能监控
-        stopPerformanceMonitoring: function() {
-            if (window.gpuMonitorTimer) {
-                clearInterval(window.gpuMonitorTimer);
-                window.gpuMonitorTimer = null;
-                console.log('🛑 GPU性能监控已停止');
-            }
-        }
     };
 
     // 错误处理模块
@@ -3561,7 +3898,6 @@ window.VideoConversionApp = (function($) {
                     setTimeout(() => SignalRManager.startConnection(), 2000);
                 },
                 'gpu': () => {
-                    GPUManager.stopPerformanceMonitoring();
                     setTimeout(() => GPUManager.loadInfo(), 3000);
                 },
                 'storage': () => {
@@ -3620,7 +3956,6 @@ window.VideoConversionApp = (function($) {
             $(window).on('beforeunload', function() {
                 console.log('🧹 清理页面资源...');
                 SignalRManager.stopConnection();
-                GPUManager.stopPerformanceMonitoring();
             });
 
             // 页面可见性变化处理

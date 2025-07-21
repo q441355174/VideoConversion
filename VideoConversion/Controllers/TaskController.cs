@@ -91,29 +91,30 @@ namespace VideoConversion.Controllers
             return await SafeExecutePagedAsync(
                 async () =>
                 {
-                    var tasks = await _databaseService.GetAllTasksAsync(page, pageSize);
-                    var totalCount = await _databaseService.GetTaskCountAsync();
+                    // 使用支持筛选和搜索的方法
+                    var tasks = await _databaseService.GetTasksWithFilterAsync(page, pageSize, status, search);
+                    var totalCount = await _databaseService.GetTaskCountWithFilterAsync(status, search);
 
                     var taskList = tasks.Select(t => new
                     {
-                        t.Id,
-                        t.TaskName,
-                        t.Status,
-                        t.Progress,
-                        t.CreatedAt,
-                        t.StartedAt,
-                        t.CompletedAt,
-                        t.OriginalFileName,
-                        t.OutputFileName,
-                        t.InputFormat,
-                        t.OutputFormat,
-                        t.OriginalFileSize,
-                        t.OutputFileSize,
-                        t.ErrorMessage,
-                        t.VideoCodec,
-                        t.AudioCodec,
-                        t.Resolution,
-                        t.FrameRate
+                        id = t.Id,
+                        taskName = t.TaskName,
+                        status = t.Status.ToString(),
+                        progress = t.Progress,
+                        createdAt = t.CreatedAt,
+                        startedAt = t.StartedAt,
+                        completedAt = t.CompletedAt,
+                        originalFileName = t.OriginalFileName,
+                        outputFileName = t.OutputFileName,
+                        inputFormat = t.InputFormat,
+                        outputFormat = t.OutputFormat,
+                        originalFileSize = t.OriginalFileSize,
+                        outputFileSize = t.OutputFileSize,
+                        errorMessage = t.ErrorMessage,
+                        videoCodec = t.VideoCodec,
+                        audioCodec = t.AudioCodec,
+                        resolution = t.Resolution,
+                        frameRate = t.FrameRate
                     }).ToList();
 
                     return PagedApiResponse<object>.CreateSuccess(taskList, page, pageSize, totalCount);

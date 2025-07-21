@@ -166,7 +166,7 @@
                     search: currentSearch
                 });
 
-                const response = await fetch(`/api/conversion/tasks?${params}`);
+                const response = await fetch(`/api/task/list?${params}`);
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -389,7 +389,7 @@
 
             try {
                 console.log('获取任务详情:', taskId);
-                const response = await fetch(`/api/conversion/status/${taskId}`);
+                const response = await fetch(`/api/task/status/${taskId}`);
                 const result = await response.json();
 
                 if (result.success) {
@@ -458,7 +458,7 @@
             if (!confirm('确定要删除这个任务吗？相关文件也会被删除，此操作不可撤销。')) return;
             
             try {
-                const response = await fetch(`/api/conversion/${taskId}`, {
+                const response = await fetch(`/api/task/${taskId}`, {
                     method: 'DELETE'
                 });
                 const result = await response.json();
@@ -477,7 +477,7 @@
         // 清理旧任务
         async function cleanupOldTasks() {
             try {
-                const response = await fetch('/api/conversion/cleanup', {
+                const response = await fetch('/api/task/cleanup', {
                     method: 'POST'
                 });
                 const result = await response.json();
@@ -502,5 +502,6 @@
                 statusCell.innerHTML = getStatusBadge(status);
             }
         }
+
     </script>
 }

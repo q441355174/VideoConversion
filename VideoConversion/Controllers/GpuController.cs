@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VideoConversion.Services;
 using VideoConversion.Controllers.Base;
+using VideoConversion.Models;
 
 namespace VideoConversion.Controllers
 {
@@ -11,17 +12,14 @@ namespace VideoConversion.Controllers
     public class GpuController : BaseApiController
     {
         private readonly GpuDetectionService _gpuDetectionService;
-        private readonly GpuPerformanceService _gpuPerformanceService;
         private readonly GpuDeviceInfoService _gpuDeviceInfoService;
 
         public GpuController(
             ILogger<GpuController> logger,
             GpuDetectionService gpuDetectionService,
-            GpuPerformanceService gpuPerformanceService,
             GpuDeviceInfoService gpuDeviceInfoService) : base(logger)
         {
             _gpuDetectionService = gpuDetectionService;
-            _gpuPerformanceService = gpuPerformanceService;
             _gpuDeviceInfoService = gpuDeviceInfoService;
         }
 
@@ -155,69 +153,9 @@ namespace VideoConversion.Controllers
             );
         }
 
-        /// <summary>
-        /// 获取GPU性能数据
-        /// </summary>
-        [HttpGet("performance")]
-        public async Task<IActionResult> GetGpuPerformance()
-        {
-            return await SafeExecuteAsync(
-                async () =>
-                {
-                    // 获取真实的GPU性能数据
-                    var performanceData = await _gpuPerformanceService.GetGpuPerformanceAsync();
 
-                    // 转换为API响应格式
-                    var result = performanceData.Select(gpu => new
-                    {
-                        index = gpu.Index,
-                        name = gpu.Name,
-                        vendor = gpu.Vendor,
-                        usage = gpu.Usage,
-                        memoryUsed = gpu.MemoryUsed,
-                        memoryTotal = gpu.MemoryTotal,
-                        temperature = gpu.Temperature,
-                        encoderActive = gpu.EncoderActive,
-                        // 添加计算字段
-                        memoryUsagePercent = gpu.MemoryTotal > 0 ? (int)((double)gpu.MemoryUsed / gpu.MemoryTotal * 100) : 0,
-                        status = GetGpuStatus(gpu.Usage, gpu.Temperature),
-                        performanceLevel = GetPerformanceLevel(gpu.Usage)
-                    }).ToArray();
 
-                    return result;
-                },
-                "获取GPU性能数据",
-                "GPU性能数据获取成功"
-            );
-        }
 
-        /// <summary>
-        /// 根据使用率和温度获取GPU状态
-        /// </summary>
-        private string GetGpuStatus(int usage, int temperature)
-        {
-            if (temperature > 80)
-                return "过热";
-            if (usage > 90)
-                return "高负载";
-            if (usage > 50)
-                return "中等负载";
-            if (usage > 10)
-                return "轻负载";
-            return "空闲";
-        }
-
-        /// <summary>
-        /// 根据使用率获取性能等级
-        /// </summary>
-        private string GetPerformanceLevel(int usage)
-        {
-            if (usage > 80)
-                return "高性能";
-            if (usage > 40)
-                return "中等性能";
-            return "低性能";
-        }
     }
 
     /// <summary>
