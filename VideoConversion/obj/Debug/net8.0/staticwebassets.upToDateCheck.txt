@@ -18,6 +18,7 @@ wwwroot\js\layui\font\iconfont.woff2
 wwwroot\js\layui\layui.js
 wwwroot\js\layui\layui.js.map
 wwwroot\js\site.js
+wwwroot\js\websocket-client.js
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css.map
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.min.css

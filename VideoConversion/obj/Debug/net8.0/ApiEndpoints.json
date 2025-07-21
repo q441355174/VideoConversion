@@ -592,16 +592,6 @@
   },
   {
     "ContainingType": "VideoConversion.Controllers.GpuController",
-    "Method": "GetGpuPerformance",
-    "RelativePath": "api/Gpu/performance",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "VideoConversion.Controllers.GpuController",
     "Method": "GetRecommendedEncoder",
     "RelativePath": "api/Gpu/recommended-encoder",
     "HttpMethod": "GET",
@@ -775,6 +765,116 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.WebSocketController",
+    "Method": "BroadcastMessage",
+    "RelativePath": "api/WebSocket/broadcast",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "request",
+        "Type": "VideoConversion.Controllers.BroadcastMessageRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.WebSocketController",
+    "Method": "CleanupConnections",
+    "RelativePath": "api/WebSocket/cleanup",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.WebSocketController",
+    "Method": "DisconnectConnection",
+    "RelativePath": "api/WebSocket/disconnect/{connectionId}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "connectionId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.WebSocketController",
+    "Method": "GetGroupConnections",
+    "RelativePath": "api/WebSocket/groups/{groupName}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "groupName",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.WebSocketController",
+    "Method": "SendToGroup",
+    "RelativePath": "api/WebSocket/groups/{groupName}/send",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "groupName",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "VideoConversion.Controllers.SendMessageRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.WebSocketController",
+    "Method": "SendMessage",
+    "RelativePath": "api/WebSocket/send/{connectionId}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "connectionId",
+        "Type": "System.String",
+        "IsRequired": true
+      },
+      {
+        "Name": "request",
+        "Type": "VideoConversion.Controllers.SendMessageRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "VideoConversion.Controllers.WebSocketController",
+    "Method": "GetConnectionStats",
+    "RelativePath": "api/WebSocket/stats",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   }
 ]
