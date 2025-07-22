@@ -6,80 +6,235 @@
 
     <Application.Styles>
         <FluentTheme />
-        
-        <!-- 自定义样式 -->
-        <Style Selector="Border.section">
-            <Setter Property="BorderBrush" Value="Gray" />
+
+        <!-- 现代化卡片样式 -->
+        <Style Selector="Border.modern-card">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#e1e8ed" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="24" />
+            <Setter Property="Margin" Value="0,0,0,0" />
+        </Style>
+
+        <!-- 任务卡片特殊样式 -->
+        <Style Selector="Border.task-card">
+            <Setter Property="BorderBrush" Value="#3498db" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+
+        <!-- 进度卡片样式 -->
+        <Style Selector="Border.progress-card">
+            <Setter Property="BorderBrush" Value="#f39c12" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+
+        <!-- 拖拽区域样式 -->
+        <Style Selector="Border.drop-zone">
+            <Setter Property="Background" Value="#f8f9fa" />
+            <Setter Property="BorderBrush" Value="#dee2e6" />
             <Setter Property="BorderThickness" Value="2" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="20" />
-            <Setter Property="Margin" Value="0,10" />
         </Style>
-        
-        <Style Selector="Border.file-section">
-            <Setter Property="Background" Value="AliceBlue" />
+
+        <Style Selector="Border.drop-zone:pointerover">
+            <Setter Property="BorderBrush" Value="#3498db" />
+            <Setter Property="Background" Value="#e7f3ff" />
         </Style>
-        
-        <Style Selector="Border.settings-section">
-            <Setter Property="Background" Value="LightGreen" />
+
+        <!-- 信息面板样式 -->
+        <Style Selector="Border.info-panel">
+            <Setter Property="Background" Value="#f8f9fa" />
+            <Setter Property="BorderBrush" Value="#e9ecef" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12" />
         </Style>
-        
-        <Style Selector="Border.progress-section">
-            <Setter Property="Background" Value="LightYellow" />
+
+        <!-- 状态提醒样式 -->
+        <Style Selector="Border.status-alert">
+            <Setter Property="Background" Value="#d1ecf1" />
+            <Setter Property="BorderBrush" Value="#bee5eb" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12" />
         </Style>
-        
-        <Style Selector="Border.history-section">
-            <Setter Property="Background" Value="LightCyan" />
+
+        <!-- 空状态样式 -->
+        <Style Selector="Border.empty-state">
+            <Setter Property="Background" Value="#f8f9fa" />
+            <Setter Property="BorderBrush" Value="#e9ecef" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="30,20" />
         </Style>
-        
-        <Style Selector="Border.server-section">
-            <Setter Property="Background" Value="Lavender" />
-        </Style>
-        
-        <Style Selector="Border.download-section">
-            <Setter Property="Background" Value="LightGoldenrodYellow" />
-        </Style>
-        
-        <Style Selector="Border.app-section">
-            <Setter Property="Background" Value="LightSeaGreen" />
-        </Style>
-        
-        <Style Selector="TextBlock.section-title">
+
+        <!-- 卡片标题样式 -->
+        <Style Selector="TextBlock.card-title">
             <Setter Property="FontSize" Value="16" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="0,0,0,15" />
+            <Setter Property="Foreground" Value="#2c3e50" />
         </Style>
-        
-        <Style Selector="TextBlock.page-title">
-            <Setter Property="FontSize" Value="28" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,10,0,20" />
+
+        <!-- 字段标签样式 -->
+        <Style Selector="TextBlock.field-label">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#495057" />
+            <Setter Property="Margin" Value="0,0,0,6" />
         </Style>
-        
-        <Style Selector="Button.nav-button">
-            <Setter Property="Padding" Value="15,8" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="5" />
+
+        <!-- 现代化输入框样式 -->
+        <Style Selector="TextBox.modern-input">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#ced4da" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
         </Style>
-        
-        <Style Selector="Button.action-button">
-            <Setter Property="Padding" Value="25,12" />
+
+        <Style Selector="TextBox.modern-input:focus">
+            <Setter Property="BorderBrush" Value="#3498db" />
+        </Style>
+
+        <Style Selector="ComboBox.modern-input">
+            <Setter Property="Height" Value="40" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#ced4da" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+
+        <!-- 现代化进度条样式 -->
+        <Style Selector="ProgressBar.modern-progress">
+            <Setter Property="Background" Value="#e9ecef" />
+            <Setter Property="Foreground" Value="#28a745" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+
+        <Style Selector="ProgressBar.conversion-progress">
+            <Setter Property="Foreground" Value="#3498db" />
+        </Style>
+
+        <!-- 按钮样式 -->
+        <Style Selector="Button.primary-button">
+            <Setter Property="Background" Value="#3498db" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.primary-button:pointerover">
+            <Setter Property="Background" Value="#2980b9" />
+        </Style>
+
+        <Style Selector="Button.start-button">
+            <Setter Property="Background" Value="#27ae60" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="32,12" />
             <Setter Property="FontSize" Value="16" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Margin" Value="10" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
-        
-        <Style Selector="TextBox.input-field">
-            <Setter Property="Height" Value="35" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="Background" Value="White" />
+
+        <Style Selector="Button.start-button:pointerover">
+            <Setter Property="Background" Value="#229954" />
         </Style>
-        
-        <Style Selector="ComboBox.input-field">
-            <Setter Property="Height" Value="35" />
+
+        <Style Selector="Button.secondary-button">
+            <Setter Property="Background" Value="#6c757d" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,10" />
             <Setter Property="FontSize" Value="14" />
-            <Setter Property="Background" Value="White" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.secondary-button:pointerover">
+            <Setter Property="Background" Value="#5a6268" />
+        </Style>
+
+        <Style Selector="Button.danger-button">
+            <Setter Property="Background" Value="#e74c3c" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.danger-button:pointerover">
+            <Setter Property="Background" Value="#c0392b" />
+        </Style>
+
+        <Style Selector="Button.success-button">
+            <Setter Property="Background" Value="#27ae60" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.success-button:pointerover">
+            <Setter Property="Background" Value="#229954" />
+        </Style>
+
+        <Style Selector="Button.small-button">
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style Selector="Button.icon-button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#6c757d" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#dee2e6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.icon-button:pointerover">
+            <Setter Property="Background" Value="#f8f9fa" />
+            <Setter Property="BorderBrush" Value="#adb5bd" />
+        </Style>
+
+        <Style Selector="Button.clear-button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#dc3545" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="50" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.clear-button:pointerover">
+            <Setter Property="Background" Value="#f8d7da" />
         </Style>
     </Application.Styles>
 </Application>

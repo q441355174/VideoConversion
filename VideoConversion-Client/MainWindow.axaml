@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:VideoConversion_Client.Views"
         x:Class="VideoConversion_Client.MainWindow"
         Title="视频转换工具"
-        Width="800" Height="600"
-        MinWidth="800" MinHeight="600"
+        Width="1200" Height="800"
+        MinWidth="1000" MinHeight="700"
         WindowStartupLocation="CenterScreen"
         >
 
@@ -14,196 +15,146 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- 导航栏 -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="LightGray" Margin="10,5">
-            <Button Name="ConversionNavButton" 
-                    Content="视频转换" 
-                    Classes="nav-button"
-                    Background="LightBlue"
-                    Click="ConversionNavButton_Click" />
-            <Button Name="HistoryNavButton" 
-                    Content="历史记录" 
-                    Classes="nav-button"
-                    Background="LightGreen"
-                    Click="HistoryNavButton_Click" />
-            <Button Name="SettingsNavButton" 
-                    Content="设置" 
-                    Classes="nav-button"
-                    Background="LightYellow"
-                    Click="SettingsNavButton_Click" />
-        </StackPanel>
+        <!-- 顶部标题栏 -->
+        <Border Grid.Row="0" Background="#2c3e50" Padding="20,15">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <!-- 内容区域 -->
-        <Border Grid.Row="1" 
-                Name="ContentArea"
-                Background="White" 
-                Margin="10"
-                BorderBrush="Gray" 
-                BorderThickness="1">
-            
-            <!-- 默认显示转换页面 -->
-            <ScrollViewer Name="ConversionPage">
-                <StackPanel Spacing="20" Margin="20">
-                    
-                    <!-- 页面标题 -->
-                    <TextBlock Text="视频转换功能" 
-                               Classes="page-title"
-                               Foreground="DarkBlue" />
-
-                    <!-- 文件选择区域 -->
-                    <Border Classes="section file-section">
-                        <StackPanel Spacing="15">
-                            <TextBlock Text="📁 选择视频文件" 
-                                       Classes="section-title"
-                                       Foreground="DarkBlue" />
-                            
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                
-                                <TextBox Name="FilePathTextBox"
-                                         Grid.Column="0"
-                                         Classes="input-field"
-                                         Watermark="请选择要转换的视频文件..."
-                                         IsReadOnly="True" />
-                                
-                                <Button Name="BrowseButton"
-                                        Grid.Column="1"
-                                        Content="浏览文件..."
-                                        Margin="10,0,0,0"
-                                        Padding="20,8"
-                                        FontSize="14"
-                                        FontWeight="Bold"
-                                        Background="Orange"
-                                        Foreground="White"
-                                        Click="BrowseButton_Click" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- 转换设置区域 -->
-                    <Border Classes="section settings-section">
-                        <StackPanel Spacing="15">
-                            <TextBlock Text="⚙️ 转换设置" 
-                                       Classes="section-title"
-                                       Foreground="DarkGreen" />
-                            
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                
-                                <!-- 任务名称 -->
-                                <TextBlock Grid.Row="0" Grid.Column="0"
-                                           Text="任务名称:"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,15,0"
-                                           FontSize="14"
-                                           FontWeight="Bold" />
-                                
-                                <TextBox Name="TaskNameTextBox"
-                                         Grid.Row="0" Grid.Column="1"
-                                         Classes="input-field"
-                                         Watermark="输入任务名称..." />
-                                
-                                <!-- 转换预设 -->
-                                <TextBlock Grid.Row="1" Grid.Column="0"
-                                           Text="转换预设:"
-                                           VerticalAlignment="Center"
-                                           Margin="0,10,15,0"
-                                           FontSize="14"
-                                           FontWeight="Bold" />
-                                
-                                <ComboBox Name="PresetComboBox"
-                                          Grid.Row="1" Grid.Column="1"
-                                          Classes="input-field"
-                                          Margin="0,10,0,0" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- 进度区域 -->
-                    <Border Name="ProgressSection"
-                            Classes="section progress-section"
-                            IsVisible="False">
-                        <StackPanel Spacing="15">
-                            <TextBlock Text="📊 转换进度" 
-                                       Classes="section-title"
-                                       Foreground="DarkOrange" />
-                            
-                            <ProgressBar Name="ProgressBar"
-                                         Height="25"
-                                         Maximum="100"
-                                         Value="0"
-                                         Background="LightGray"
-                                         Foreground="Green" />
-                            
-                            <TextBlock Name="ProgressText"
-                                       Text="准备中..."
-                                       HorizontalAlignment="Center"
-                                       FontSize="14"
-                                       FontWeight="Bold"
-                                       Foreground="DarkOrange" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- 操作按钮 -->
-                    <StackPanel Orientation="Horizontal" 
-                                HorizontalAlignment="Center" 
-                                Spacing="20"
-                                Margin="0,30,0,20">
-                        
-                        <Button Name="StartButton"
-                                Content="🚀 开始转换"
-                                Classes="action-button"
-                                Background="Green"
-                                Foreground="White"
-                                Click="StartButton_Click" />
-                        
-                        <Button Name="CancelButton"
-                                Content="❌ 取消转换"
-                                Classes="action-button"
-                                Background="Red"
-                                Foreground="White"
-                                IsVisible="False"
-                                Click="CancelButton_Click" />
-                        
-                        <Button Name="TestButton"
-                                Content="🔗 测试连接"
-                                Classes="action-button"
-                                Background="Blue"
-                                Foreground="White"
-                                Click="TestButton_Click" />
-                    </StackPanel>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🎬" FontSize="24" Margin="0,0,10,0" />
+                    <TextBlock Text="视频转换工具"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="基于HandBrake的强大视频转换功能"
+                               FontSize="12"
+                               Foreground="#bdc3c7"
+                               VerticalAlignment="Center"
+                               Margin="20,0,0,0" />
                 </StackPanel>
-            </ScrollViewer>
+
+                <!-- 连接状态指示器 -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="连接状态:" FontSize="12" Foreground="#bdc3c7" Margin="0,0,8,0" />
+                    <Border Name="ConnectionIndicator"
+                            Width="12" Height="12"
+                            Background="Red"
+                            CornerRadius="6"
+                            VerticalAlignment="Center" />
+                    <TextBlock Name="ConnectionStatusText"
+                               Text="未连接"
+                               FontSize="12"
+                               Foreground="#bdc3c7"
+                               Margin="8,0,0,0" />
+                </StackPanel>
+            </Grid>
         </Border>
 
+        <!-- 主要内容区域 -->
+        <Grid Grid.Row="1" Background="#ecf0f1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧：文件上传和转换设置 -->
+            <ScrollViewer Grid.Column="0" Margin="5,5,2,5">
+                <StackPanel Spacing="5">
+
+                    <!-- 文件上传组件 -->
+                    <views:FileUploadView Name="FileUploadView" />
+
+                    <!-- 转换设置组件 -->
+                    <views:ConversionSettingsView Name="ConversionSettingsView" />
+
+
+                    <!-- 上传进度区域 -->
+                    <Border Name="UploadProgressSection"
+                            Classes="modern-card progress-card"
+                            IsVisible="False">
+                        <StackPanel Spacing="15">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Text="📤" FontSize="18" />
+                                <TextBlock Text="文件上传进度" Classes="card-title" />
+                            </StackPanel>
+
+                            <ProgressBar Name="UploadProgressBar"
+                                         Height="8"
+                                         Maximum="100"
+                                         Value="0"
+                                         Classes="modern-progress" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                    <TextBlock Name="UploadPercentage" Text="0%" FontWeight="Bold" HorizontalAlignment="Center" />
+                                    <TextBlock Text="完成度" FontSize="11" Foreground="#7f8c8d" HorizontalAlignment="Center" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                    <TextBlock Name="UploadSpeed" Text="0 MB/s" FontWeight="Bold" HorizontalAlignment="Center" />
+                                    <TextBlock Text="上传速度" FontSize="11" Foreground="#7f8c8d" HorizontalAlignment="Center" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                    <TextBlock Name="UploadTimeRemaining" Text="计算中..." FontWeight="Bold" HorizontalAlignment="Center" />
+                                    <TextBlock Text="剩余时间" FontSize="11" Foreground="#7f8c8d" HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 右侧：当前任务和历史记录 -->
+            <ScrollViewer Grid.Column="1" Margin="2,5,5,5">
+                <StackPanel Spacing="5">
+
+                    <!-- 当前任务组件 -->
+                    <views:CurrentTaskView Name="CurrentTaskView" />
+
+                    <!-- 最近任务组件 -->
+                    <views:RecentTasksView Name="RecentTasksView" />
+
+                    <!-- 测试连接按钮 -->
+                    <Button Name="TestConnectionButton"
+                            Content="🔗 测试服务器连接"
+                            Classes="secondary-button"
+                            HorizontalAlignment="Stretch"
+                            Click="TestConnectionButton_Click" />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
         <!-- 状态栏 -->
-        <Border Grid.Row="2"
-                Background="LightGray"
-                BorderBrush="Gray"
-                BorderThickness="0,2,0,0"
-                Padding="15,10">
-            <StackPanel Orientation="Horizontal" Spacing="15">
-                <Border Name="ConnectionIndicator"
-                        Width="16" Height="16"
-                        Background="Red"
-                        CornerRadius="8" />
+        <Border Grid.Row="2" Background="#34495e" Padding="20,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
                 <TextBlock Name="StatusText"
+                           Grid.Column="0"
                            Text="就绪 - 请选择视频文件开始转换"
                            VerticalAlignment="Center"
-                           FontSize="14"
-                           FontWeight="Bold"
-                           Foreground="DarkSlateGray" />
-            </StackPanel>
+                           FontSize="13"
+                           Foreground="White" />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="15">
+                    <TextBlock Text="服务器:" FontSize="12" Foreground="#bdc3c7" VerticalAlignment="Center" />
+                    <TextBlock Name="ServerUrl" Text="localhost:5065" FontSize="12" Foreground="White" VerticalAlignment="Center" />
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>

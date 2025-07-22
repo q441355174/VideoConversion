@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VideoConversion_Client.Views.FileUploadView">
+
+    <!-- 文件上传区域 -->
+    <Border Classes="modern-card">
+        <StackPanel Spacing="15">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="📁" FontSize="18" />
+                <TextBlock Text="文件上传" Classes="card-title" />
+            </StackPanel>
+            
+            <!-- 拖拽上传区域 -->
+            <Border Name="FileDropZone" 
+                    Classes="drop-zone"
+                    Height="150"
+                    DragDrop.AllowDrop="True"
+                    DragDrop.DragEnter="FileDropZone_DragEnter"
+                    DragDrop.DragLeave="FileDropZone_DragLeave"
+                    DragDrop.Drop="FileDropZone_Drop">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+                    <TextBlock Text="☁️" FontSize="32" HorizontalAlignment="Center" Foreground="#7f8c8d" />
+                    <TextBlock Text="拖拽视频文件到此处或点击选择文件" 
+                               HorizontalAlignment="Center" 
+                               FontSize="14"
+                               Foreground="#7f8c8d" />
+                    <Button Name="BrowseButton"
+                            Content="选择文件"
+                            Classes="primary-button"
+                            HorizontalAlignment="Center"
+                            Click="BrowseButton_Click" />
+                </StackPanel>
+            </Border>
+            
+            <!-- 文件信息显示 -->
+            <Border Name="SelectedFileInfo" 
+                    Classes="info-panel"
+                    IsVisible="False">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="0" Text="🎥" FontSize="20" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Margin="15,0">
+                        <TextBlock Name="SelectedFileName" 
+                                   Text="文件名" 
+                                   FontWeight="Bold" 
+                                   FontSize="14" />
+                        <TextBlock Name="SelectedFileSize" 
+                                   Text="文件大小" 
+                                   FontSize="12" 
+                                   Foreground="#7f8c8d" />
+                    </StackPanel>
+                    <Button Grid.Column="2" 
+                            Name="ClearFileButton"
+                            Content="✕" 
+                            Classes="clear-button"
+                            Click="ClearFileButton_Click" />
+                </Grid>
+            </Border>
+            
+            <TextBlock Text="支持格式: MP4, AVI, MOV, MKV, WMV, FLV, WebM, M4V (最大2GB)" 
+                       FontSize="11" 
+                       Foreground="#7f8c8d" 
+                       HorizontalAlignment="Center" />
+        </StackPanel>
+    </Border>
+</UserControl>

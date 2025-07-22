@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VideoConversion_Client.Views.ConversionSettingsView"
+             MinWidth="500">
+
+    <!-- 转换设置区域 -->
+    <Border Classes="modern-card">
+        <StackPanel Spacing="15">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="⚙️" FontSize="18" />
+                <TextBlock Text="转换设置" Classes="card-title" />
+            </StackPanel>
+            
+            <Grid MinWidth="450">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="220" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- 任务名称 -->
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="任务名称" Classes="field-label" />
+                    <TextBox Name="TaskNameTextBox"
+                             Classes="modern-input"
+                             Watermark="输入任务名称..." />
+                </StackPanel>
+
+                <!-- 转换预设 -->
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="转换预设" Classes="field-label" />
+                    <ComboBox Name="PresetComboBox"
+                              Classes="modern-input"
+                              PlaceholderText="请选择预设..." />
+                </StackPanel>
+
+                <!-- 输出格式 -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,15,8,0">
+                    <TextBlock Text="输出格式" Classes="field-label" />
+                    <ComboBox Name="OutputFormatComboBox"
+                              Classes="modern-input">
+                        <ComboBoxItem Content="MP4 (H.264)" IsSelected="True" />
+                        <ComboBoxItem Content="MP4 (H.265/HEVC)" />
+                        <ComboBoxItem Content="WebM (VP9)" />
+                        <ComboBoxItem Content="AVI" />
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- 分辨率 -->
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,15,0,0">
+                    <TextBlock Text="分辨率" Classes="field-label" />
+                    <ComboBox Name="ResolutionComboBox"
+                              Classes="modern-input">
+                        <ComboBoxItem Content="保持原始" IsSelected="True" />
+                        <ComboBoxItem Content="4K (3840x2160)" />
+                        <ComboBoxItem Content="1080p (1920x1080)" />
+                        <ComboBoxItem Content="720p (1280x720)" />
+                        <ComboBoxItem Content="480p (854x480)" />
+                    </ComboBox>
+                </StackPanel>
+                
+                <!-- 质量设置 -->
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,15,0,0">
+                    <TextBlock Text="视频质量" Classes="field-label" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider Name="QualitySlider"
+                                Grid.Column="0"
+                                Minimum="18"
+                                Maximum="28"
+                                Value="23"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                Margin="0,0,15,0" />
+                        <TextBlock Name="QualityValue"
+                                   Grid.Column="1"
+                                   Text="23"
+                                   VerticalAlignment="Center"
+                                   FontWeight="Bold"
+                                   MinWidth="30" />
+                    </Grid>
+                    <TextBlock Text="较低值 = 更高质量，较大文件" 
+                               FontSize="11" 
+                               Foreground="#7f8c8d" 
+                               Margin="0,5,0,0" />
+                </StackPanel>
+            </Grid>
+            
+            <!-- 开始转换按钮 -->
+            <Button Name="StartButton"
+                    Content="🚀 开始转换"
+                    Classes="start-button"
+                    HorizontalAlignment="Center"
+                    Click="StartButton_Click" />
+        </StackPanel>
+    </Border>
+</UserControl>

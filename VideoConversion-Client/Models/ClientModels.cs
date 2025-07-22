@@ -15,6 +15,7 @@ namespace VideoConversion_Client.Models
         private string _taskName = string.Empty;
         private string _originalFileName = string.Empty;
         private string _outputFileName = string.Empty;
+        private string? _outputPath;
         private ConversionStatus _status = ConversionStatus.Pending;
         private int _progress = 0;
         private string? _errorMessage;
@@ -48,6 +49,12 @@ namespace VideoConversion_Client.Models
         {
             get => _outputFileName;
             set => SetProperty(ref _outputFileName, value);
+        }
+
+        public string? OutputPath
+        {
+            get => _outputPath;
+            set => SetProperty(ref _outputPath, value);
         }
 
         public ConversionStatus Status
