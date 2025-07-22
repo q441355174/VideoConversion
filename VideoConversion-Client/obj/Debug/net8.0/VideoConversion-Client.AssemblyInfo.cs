@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VideoConversion-Client")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bb71665fd72b1a03949f70cf35b276808ddd9264")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5ae9ccf02c76d16c41a8269ec3160e8bf13f1eb9")]
 [assembly: System.Reflection.AssemblyProductAttribute("VideoConversion-Client")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VideoConversion-Client")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
