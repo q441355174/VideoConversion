@@ -1,0 +1,259 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="VideoConversion_Client.Views.ConversionSettingsWindow"
+        Title=""
+        Width="580"
+        Height="450"
+        MinWidth="580"
+        MinHeight="450"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#f8f9fa">
+
+    <Window.Styles>
+        <!-- 标题样式 -->
+        <Style Selector="TextBlock.title">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Foreground" Value="#24292e" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
+
+        <!-- 标签样式 -->
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#24292e" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Width" Value="80" />
+            <Setter Property="TextAlignment" Value="Left" />
+        </Style>
+
+        <!-- 下拉框样式 -->
+        <Style Selector="ComboBox.setting-combo">
+            <Setter Property="Width" Value="140" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#d0d7de" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+
+        <!-- 输入框样式 -->
+        <Style Selector="TextBox.title-input">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#d0d7de" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Height" Value="28" />
+        </Style>
+
+        <!-- 复选框样式 -->
+        <Style Selector="CheckBox.audio-checkbox">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#0969da" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+
+        <Style Selector="CheckBox.audio-checkbox:checked /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="#0969da" />
+        </Style>
+
+        <!-- 按钮样式 -->
+        <Style Selector="Button.save-button">
+            <Setter Property="Background" Value="#0969da" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="MinWidth" Value="80" />
+            <Setter Property="Height" Value="32" />
+        </Style>
+
+        <Style Selector="Button.cancel-button">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#24292e" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#d0d7de" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="MinWidth" Value="80" />
+            <Setter Property="Height" Value="32" />
+        </Style>
+
+        <Style Selector="Button.cancel-button:pointerover">
+            <Setter Property="Background" Value="#f6f8fa" />
+        </Style>
+
+        <Style Selector="Button.save-button:pointerover">
+            <Setter Property="Background" Value="#0860ca" />
+        </Style>
+
+        <!-- 分组标题样式 -->
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#24292e" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 顶部标题区域 -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="标题" FontSize="16" FontWeight="Medium" Foreground="#24292e" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBox Name="TitleTextBox" Text="自定义1" Width="120" Classes="title-input" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <Button Grid.Column="2" Content="另存为新的预设" Classes="save-button" VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- 设置内容 -->
+        <StackPanel Grid.Row="1" Spacing="16">
+            <!-- 视频设置区域 -->
+            <StackPanel Spacing="12">
+                <TextBlock Text="视频" Classes="section-title" />
+
+                <!-- 编码器和分辨率 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="编码器" Classes="label" />
+                    <ComboBox Grid.Column="1" Name="VideoCodecCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="H.264" />
+                        <ComboBoxItem Content="H.265" />
+                        <ComboBoxItem Content="VP9" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Column="3" Text="分辨率" Classes="label" />
+                    <ComboBox Grid.Column="4" Name="ResolutionCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="3840×2160" />
+                        <ComboBoxItem Content="1920×1080" />
+                        <ComboBoxItem Content="1280×720" />
+                        <ComboBoxItem Content="854×480" />
+                    </ComboBox>
+                </Grid>
+
+                <!-- 帧率和比特率 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="帧率" Classes="label" />
+                    <ComboBox Grid.Column="1" Name="FrameRateCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="60fps" />
+                        <ComboBoxItem Content="30fps" />
+                        <ComboBoxItem Content="24fps" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Column="3" Text="比特率" Classes="label" />
+                    <ComboBox Grid.Column="4" Name="BitrateCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="高质量" />
+                        <ComboBoxItem Content="中等质量" />
+                        <ComboBoxItem Content="压缩优先" />
+                    </ComboBox>
+                </Grid>
+            </StackPanel>
+
+            <!-- 音频设置区域 -->
+            <StackPanel Spacing="12">
+                <CheckBox Name="AudioEnabledCheckBox" Content="音频" Classes="audio-checkbox" IsChecked="True" />
+
+                <!-- 编码器和声音轨道 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="编码器" Classes="label" />
+                    <ComboBox Grid.Column="1" Name="AudioCodecCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="AAC" />
+                        <ComboBoxItem Content="MP3" />
+                        <ComboBoxItem Content="AC3" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Column="3" Text="声音轨道" Classes="label" />
+                    <ComboBox Grid.Column="4" Name="AudioTrackCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="轨道1" />
+                        <ComboBoxItem Content="轨道2" />
+                        <ComboBoxItem Content="全部" />
+                    </ComboBox>
+                </Grid>
+
+                <!-- 采样率和比特率 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="150" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="采样率" Classes="label" />
+                    <ComboBox Grid.Column="1" Name="SampleRateCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="48kHz" />
+                        <ComboBoxItem Content="44.1kHz" />
+                        <ComboBoxItem Content="22kHz" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Column="3" Text="比特率" Classes="label" />
+                    <ComboBox Grid.Column="4" Name="AudioBitrateCombo" Classes="setting-combo">
+                        <ComboBoxItem Content="自动" IsSelected="True" />
+                        <ComboBoxItem Content="320kbps" />
+                        <ComboBoxItem Content="192kbps" />
+                        <ComboBoxItem Content="128kbps" />
+                    </ComboBox>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 底部按钮区域 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center"
+                   VerticalAlignment="Center" Spacing="12" Margin="0,20,0,0">
+            <Button Name="ApplyButton" Content="保存" Classes="save-button" Click="ApplyButton_Click" />
+            <Button Name="CancelButton" Content="取消" Classes="cancel-button" Click="CancelButton_Click" />
+        </StackPanel>
+    </Grid>
+</Window>
