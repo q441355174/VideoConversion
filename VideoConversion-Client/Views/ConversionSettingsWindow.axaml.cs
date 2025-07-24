@@ -42,7 +42,7 @@ namespace VideoConversion_Client.Views
             SetComboBoxValue(BitrateCombo, settings.Bitrate);
 
             // 设置音频编码器
-            SetComboBoxValue(AudioCodecCombo, settings.AudioCodec);
+            SetComboBoxValue(AudioCodecCombo, settings.AudioCodec); 
 
             // 设置音频比特率
             SetComboBoxValue(AudioBitrateCombo, settings.AudioQuality);

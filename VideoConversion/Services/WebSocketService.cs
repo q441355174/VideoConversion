@@ -21,7 +21,7 @@ namespace VideoConversion.Services
             _connectionManager = connectionManager;
             _logger = logger;
             _jsonOptions = new JsonSerializerOptions
-            {
+            { 
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = false
             };

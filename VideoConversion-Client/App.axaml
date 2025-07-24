@@ -18,7 +18,7 @@
         </Style>
 
         <!-- 任务卡片特殊样式 -->
-        <Style Selector="Border.task-card">
+        <Style Selector="Border.task-card"> 
             <Setter Property="BorderBrush" Value="#3498db" />
             <Setter Property="BorderThickness" Value="2" />
         </Style>

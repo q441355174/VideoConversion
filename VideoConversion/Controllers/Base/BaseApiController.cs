@@ -11,7 +11,6 @@ namespace VideoConversion.Controllers.Base
     public abstract class BaseApiController : ControllerBase
     {
         protected readonly ILogger Logger;
-
         protected BaseApiController(ILogger logger)
         {
             Logger = logger;

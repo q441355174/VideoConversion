@@ -21,7 +21,7 @@ namespace VideoConversion.Services
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = false
+                WriteIndented = false 
             };
         }
 

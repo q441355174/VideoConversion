@@ -18,7 +18,7 @@
             <Setter Property="Background" Value="#9b59b6" />
             <Setter Property="Foreground" Value="White" />
         </Style>
-
+ 
         <Style Selector="Button.status-toggle-button.inactive">
             <Setter Property="Background" Value="#f0f0f0" />
             <Setter Property="Foreground" Value="#666" />

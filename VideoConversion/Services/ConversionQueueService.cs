@@ -15,7 +15,7 @@ namespace VideoConversion.Services
         private readonly int _checkIntervalSeconds;
         private readonly HashSet<string> _runningTasks = new(); // 跟踪正在执行的任务
         private readonly HashSet<string> _cancelledTasks = new(); // 跟踪被取消的任务
-
+         
         public ConversionQueueService(
             IServiceProvider serviceProvider,
             ILogger<ConversionQueueService> logger,

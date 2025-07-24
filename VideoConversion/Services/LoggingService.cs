@@ -24,7 +24,7 @@ namespace VideoConversion.Services
         /// <summary>
         /// 记录转换任务完成
         /// </summary>
-        public void LogConversionCompleted(string taskId, string taskName, TimeSpan duration, long outputFileSize)
+        public void LogConversionCompleted(string taskId, string taskName, TimeSpan duration, long outputFileSize) 
         {
             _logger.LogInformation("转换任务完成 - TaskId: {TaskId}, TaskName: {TaskName}, Duration: {Duration}, OutputSize: {OutputSize}",
                 taskId, taskName, duration, outputFileSize);

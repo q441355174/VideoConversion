@@ -8,7 +8,7 @@ namespace VideoConversion.Pages
     public class IndexModel : PageModel
     {
         private readonly ILogger<IndexModel> _logger;
-        private readonly FileService _fileService;
+        private readonly FileService _fileService; 
 
         public IndexModel(ILogger<IndexModel> logger, FileService fileService)
         {

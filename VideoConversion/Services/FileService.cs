@@ -25,7 +25,7 @@ namespace VideoConversion.Services
             _allowedExtensions = _configuration.GetSection("VideoConversion:AllowedExtensions").Get<string[]>() 
                 ?? new[] { ".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v", ".3gp" };
 
-            // 确保目录存在
+            // 确保目录存在 
             EnsureDirectoriesExist();
         }
 

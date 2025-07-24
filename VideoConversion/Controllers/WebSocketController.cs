@@ -13,7 +13,6 @@ namespace VideoConversion.Controllers
         private readonly IWebSocketService _webSocketService;
         private readonly WebSocketNotificationService _notificationService;
         private readonly WebSocketConnectionManager _connectionManager;
-
         public WebSocketController(
             IWebSocketService webSocketService,
             WebSocketNotificationService notificationService,

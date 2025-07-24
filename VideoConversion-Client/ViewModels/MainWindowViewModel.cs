@@ -15,7 +15,7 @@ namespace VideoConversion_Client.ViewModels
 
         private string _statusText = "就绪 - 请选择视频文件开始转换";
         private bool _isConnectedToServer = false;
-        private string? _currentTaskId = null;
+        private string? _currentTaskId = null; 
         private DateTime? _currentTaskStartTime = null;
 
         public MainWindowViewModel()

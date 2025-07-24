@@ -15,7 +15,7 @@ namespace VideoConversion_Client
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                desktop.MainWindow = new MainWindow();
+                desktop.MainWindow = new MainWindow(); 
             }
 
             base.OnFrameworkInitializationCompleted();

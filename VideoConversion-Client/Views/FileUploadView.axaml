@@ -17,7 +17,7 @@
                 BorderBrush="#e0e0e0"
                 BorderThickness="2"
                 CornerRadius="12"
-                Padding="30"
+                Padding="30" 
                 MinHeight="300">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
                 <!-- 紫色文件夹图标 -->
@@ -90,11 +90,17 @@
         </Border>
 
         <!-- 状态2：文件列表状态 -->
-        <ScrollViewer Grid.Row="0" Name="FileListView" IsVisible="False">
-            <StackPanel Name="FileListContainer" Spacing="8" Margin="0,5">
-                <!-- 文件项将动态添加到这里 -->
-            </StackPanel>
-        </ScrollViewer>
+        <Grid Grid.Row="0" Name="FileListView" IsVisible="False">
+            <!-- 添加拖拽支持到文件列表区域 -->
+            <Border DragDrop.AllowDrop="True"
+                    Background="Transparent">
+                <ScrollViewer>
+                    <StackPanel Name="FileListContainer" Spacing="8" Margin="0,5">
+                        <!-- 文件项将动态添加到这里 -->
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
 
         <!-- 底部输出设置 -->
         <Grid Grid.Row="1" Margin="0,12,0,0">

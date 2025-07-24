@@ -14,6 +14,6 @@ namespace VideoConversion.Models
         public string PerformanceLevel { get; set; } = string.Empty;
         public bool Supported { get; set; }
         public string[] SupportedFormats { get; set; } = Array.Empty<string>();
-        public string? Reason { get; set; }
+        public string? Reason { get; set; } 
     }
 }

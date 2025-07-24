@@ -18,5 +18,5 @@ namespace VideoConversion_Client
                 .UsePlatformDetect()
                 .WithInterFont()
                 .LogToTrace();
-    }
+    } 
 }

@@ -327,7 +327,7 @@ namespace VideoConversion.Services
                 _logger.LogError(ex, "更新任务进度失败: {TaskId}", taskId);
                 throw;
             }
-        }
+        } 
 
         /// <summary>
         /// 更新任务状态

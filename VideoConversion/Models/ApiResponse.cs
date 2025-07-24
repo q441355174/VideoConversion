@@ -17,7 +17,7 @@ namespace VideoConversion.Models
 
         /// <summary>
         /// 响应时间戳
-        /// </summary>
+        /// </summary> 
         public DateTime Timestamp { get; set; }
 
         /// <summary>

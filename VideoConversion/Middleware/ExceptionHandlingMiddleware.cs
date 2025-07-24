@@ -29,7 +29,6 @@ namespace VideoConversion.Middleware
                 await HandleExceptionAsync(context, ex);
             }
         }
-
         private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             context.Response.ContentType = "application/json";

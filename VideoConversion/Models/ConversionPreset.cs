@@ -13,7 +13,7 @@ namespace VideoConversion.Models
         public string VideoQuality { get; set; } = string.Empty;
         public string AudioQuality { get; set; } = string.Empty;
         public string? Resolution { get; set; }
-        public string? FrameRate { get; set; }
+        public string? FrameRate { get; set; } 
         public bool IsDefault { get; set; } = false;
 
         /// <summary>

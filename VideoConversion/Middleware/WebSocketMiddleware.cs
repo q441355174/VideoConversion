@@ -20,7 +20,7 @@ namespace VideoConversion.Middleware
             _next = next;
             _logger = logger;
             _connectionManager = connectionManager;
-        }
+        } 
 
         public async Task InvokeAsync(HttpContext context)
         {

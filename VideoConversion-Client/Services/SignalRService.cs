@@ -15,7 +15,7 @@ namespace VideoConversion_Client.Services
 
         public bool IsConnected => _connection?.State == HubConnectionState.Connected;
 
-        // 事件
+        // 事件 
         public event Action<string, int, string, double?, int?>? ProgressUpdated;
         public event Action<string, string, string?>? StatusUpdated;
         public event Action<string, string, bool, string?>? TaskCompleted;

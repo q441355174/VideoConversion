@@ -16,7 +16,7 @@ namespace VideoConversion.Services
         public string? IpAddress { get; set; }
         public HashSet<string> Groups { get; set; } = new();
         public DateTime LastPingAt { get; set; }
-        public bool IsAlive => WebSocket.State == WebSocketState.Open;
+        public bool IsAlive => WebSocket.State == WebSocketState.Open; 
     }
 
     /// <summary>

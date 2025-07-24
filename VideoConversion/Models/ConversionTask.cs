@@ -14,7 +14,7 @@ namespace VideoConversion.Models
         [SugarColumn(IsPrimaryKey = true, IsNullable = false)]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        /// <summary>
+        /// <summary> 
         /// 任务名称
         /// </summary>
         [SugarColumn(IsNullable = false)]

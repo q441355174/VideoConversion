@@ -13,7 +13,6 @@ namespace VideoConversion.Controllers
     {
         private readonly GpuDetectionService _gpuDetectionService;
         private readonly GpuDeviceInfoService _gpuDeviceInfoService;
-
         public GpuController(
             ILogger<GpuController> logger,
             GpuDetectionService gpuDetectionService,

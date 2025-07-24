@@ -21,7 +21,7 @@ namespace VideoConversion.Models
         TaskCancelled,
         
         // 系统通知
-        SystemNotification,
+        SystemNotification, 
         Error,
         
         // 组管理

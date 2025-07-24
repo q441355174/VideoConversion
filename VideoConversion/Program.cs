@@ -51,7 +51,7 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<DatabaseService>(); // 改为 Scoped 以支持 NotificationService 依赖
 builder.Services.AddSingleton<FileService>();
 builder.Services.AddSingleton<LoggingService>();
-builder.Services.AddSingleton<GpuDetectionService>();
+builder.Services.AddSingleton<GpuDetectionService>(); 
 builder.Services.AddScoped<GpuDeviceInfoService>();
 builder.Services.AddScoped<VideoConversionService>();
 builder.Services.AddScoped<ConversionTaskService>();

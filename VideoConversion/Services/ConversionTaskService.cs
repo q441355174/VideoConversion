@@ -16,7 +16,7 @@ namespace VideoConversion.Services
         private readonly VideoConversionService _videoConversionService;
         private readonly LoggingService _loggingService;
         private readonly IHubContext<ConversionHub> _hubContext;
-
+         
         public ConversionTaskService(
             ILogger<ConversionTaskService> logger,
             DatabaseService databaseService,

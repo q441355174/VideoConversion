@@ -19,7 +19,7 @@
             <Setter Property="Margin" Value="0,0,0,16" />
         </Style>
 
-        <!-- 标签样式 -->
+        <!-- 标签样式 --> 
         <Style Selector="TextBlock.label">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Foreground" Value="#24292e" />

@@ -24,7 +24,7 @@ namespace VideoConversion.Services
 
         /// <summary>
         /// 发送消息给指定组
-        /// </summary>
+        /// </summary> 
         Task SendToGroupAsync(string groupName, string message);
 
         /// <summary>

@@ -12,7 +12,6 @@ namespace VideoConversion.Hubs
         private readonly DatabaseService _databaseService;
         private readonly ILogger<ConversionHub> _logger;
         private readonly ConversionQueueService _queueService;
-
         public ConversionHub(
             DatabaseService databaseService,
             ILogger<ConversionHub> logger,

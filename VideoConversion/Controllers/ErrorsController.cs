@@ -11,6 +11,7 @@ namespace VideoConversion.Controllers
     {
         public ErrorsController(ILogger<ErrorsController> logger) : base(logger)
         {
+
         }
 
         /// <summary>

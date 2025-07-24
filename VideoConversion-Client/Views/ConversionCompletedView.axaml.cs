@@ -14,7 +14,6 @@ namespace VideoConversion_Client.Views
             InitializeComponent();
             LoadCompletedFiles();
         }
-
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);

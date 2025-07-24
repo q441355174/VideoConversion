@@ -23,7 +23,7 @@
                            FontSize="18"
                            FontWeight="Bold"
                            Foreground="White"
-                           VerticalAlignment="Center" />
+                           VerticalAlignment="Center" /> 
             </StackPanel>
         </Border>
 

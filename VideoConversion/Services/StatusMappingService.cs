@@ -25,7 +25,7 @@ namespace VideoConversion.Services
                 CreatedAt = task.CreatedAt,
                 StartedAt = task.StartedAt,
                 CompletedAt = task.CompletedAt,
-                EstimatedTimeRemaining = task.EstimatedTimeRemaining,
+                EstimatedTimeRemaining = task.EstimatedTimeRemaining, 
                 ConversionSpeed = task.ConversionSpeed,
                 Duration = (int?)task.Duration,
                 CurrentTime = (int?)task.CurrentTime,

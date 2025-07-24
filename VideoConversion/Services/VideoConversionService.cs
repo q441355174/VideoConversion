@@ -201,7 +201,7 @@ namespace VideoConversion.Services
                 // 1. 首先检查是否有正在运行的进程
                 if (_runningProcesses.TryGetValue(taskId, out var process))
                 {
-                    _logger.LogInformation("找到正在运行的FFmpeg进程: {TaskId} -> PID: {ProcessId}", taskId, process.Id);
+                    _logger.LogInformation("找到正在运行的FFmpeg进程: {TaskId} -> PID: {ProcessId}", taskId, process.Id); 
 
                     // 2. 触发取消令牌
                     if (_cancellationTokens.TryGetValue(taskId, out var cancellationTokenSource))

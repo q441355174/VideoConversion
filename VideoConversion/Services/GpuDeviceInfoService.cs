@@ -26,7 +26,7 @@ namespace VideoConversion.Services
             var deviceInfoList = new List<GpuDeviceInfo>();
 
             try
-            {
+            { 
                 var capabilities = await _gpuDetectionService.DetectGpuCapabilitiesAsync();
 
                 // 基于能力检测生成设备信息

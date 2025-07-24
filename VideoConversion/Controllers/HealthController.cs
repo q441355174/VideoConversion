@@ -14,7 +14,6 @@ namespace VideoConversion.Controllers
     {
         private readonly DatabaseService _databaseService;
         private readonly LoggingService _loggingService;
-
         public HealthController(
             DatabaseService databaseService,
             LoggingService loggingService,

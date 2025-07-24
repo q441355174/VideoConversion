@@ -27,7 +27,7 @@ namespace VideoConversion.Services
         {
             try
             {
-                await _hubContext.Clients.Group($"task_{taskId}").SendAsync("ProgressUpdate", new
+                await _hubContext.Clients.Group($"task_{taskId}").SendAsync("ProgressUpdate", new 
                 {
                     TaskId = taskId,
                     Progress = progress,

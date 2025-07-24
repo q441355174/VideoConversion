@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
@@ -16,7 +17,7 @@ namespace VideoConversion_Client.Views
     {
         public event EventHandler<EventArgs>? SettingsRequested;
 
-        private bool _hasFiles = false;
+        private bool _hasFiles = false; 
         private bool _isConverting = false;
         private List<string> _selectedFiles = new List<string>();
 
@@ -24,11 +25,37 @@ namespace VideoConversion_Client.Views
         {
             InitializeComponent();
             UpdateViewState();
+            SetupDragAndDrop();
         }
 
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
+        }
+
+        private void SetupDragAndDrop()
+        {
+            // 为空状态视图设置拖拽事件
+            var emptyStateView = this.FindControl<Border>("EmptyStateView");
+            if (emptyStateView != null)
+            {
+                emptyStateView.AddHandler(DragDrop.DragEnterEvent, FileDropZone_DragEnter);
+                emptyStateView.AddHandler(DragDrop.DragLeaveEvent, FileDropZone_DragLeave);
+                emptyStateView.AddHandler(DragDrop.DropEvent, FileDropZone_Drop);
+            }
+
+            // 为文件列表视图设置拖拽事件
+            var fileListView = this.FindControl<Grid>("FileListView");
+            if (fileListView != null)
+            {
+                var border = fileListView.Children.OfType<Border>().FirstOrDefault();
+                if (border != null)
+                {
+                    border.AddHandler(DragDrop.DragEnterEvent, FileDropZone_DragEnter);
+                    border.AddHandler(DragDrop.DragLeaveEvent, FileDropZone_DragLeave);
+                    border.AddHandler(DragDrop.DropEvent, FileDropZone_Drop);
+                }
+            }
         }
 
 
@@ -37,7 +64,7 @@ namespace VideoConversion_Client.Views
         private void UpdateViewState()
         {
             var emptyStateView = this.FindControl<Border>("EmptyStateView");
-            var fileListView = this.FindControl<ScrollViewer>("FileListView");
+            var fileListView = this.FindControl<Grid>("FileListView");
 
             if (emptyStateView != null && fileListView != null)
             {
@@ -58,6 +85,62 @@ namespace VideoConversion_Client.Views
         private async void FileDropZone_PointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e)
         {
             await OpenFileDialog();
+        }
+
+        // 拖拽进入事件
+        private void FileDropZone_DragEnter(object? sender, DragEventArgs e)
+        {
+            // 检查拖拽的数据是否包含文件
+            if (e.Data.Contains(DataFormats.Files))
+            {
+                e.DragEffects = DragDropEffects.Copy;
+
+                // 更新拖拽区域的视觉效果
+                if (sender is Border border)
+                {
+                    border.BorderBrush = Avalonia.Media.Brush.Parse("#9b59b6");
+                    border.BorderThickness = new Avalonia.Thickness(3);
+                    border.Background = Avalonia.Media.Brush.Parse("#f0f0ff");
+                }
+            }
+            else
+            {
+                e.DragEffects = DragDropEffects.None;
+            }
+        }
+
+        // 拖拽离开事件
+        private void FileDropZone_DragLeave(object? sender, DragEventArgs e)
+        {
+            // 恢复拖拽区域的原始视觉效果
+            if (sender is Border border)
+            {
+                border.BorderBrush = Avalonia.Media.Brush.Parse("#e0e0e0");
+                border.BorderThickness = new Avalonia.Thickness(2);
+                border.Background = Avalonia.Media.Brush.Parse("#f5f5f5");
+            }
+        }
+
+        // 拖拽放下事件
+        private async void FileDropZone_Drop(object? sender, DragEventArgs e)
+        {
+            // 恢复拖拽区域的原始视觉效果
+            if (sender is Border border)
+            {
+                border.BorderBrush = Avalonia.Media.Brush.Parse("#e0e0e0");
+                border.BorderThickness = new Avalonia.Thickness(2);
+                border.Background = Avalonia.Media.Brush.Parse("#f5f5f5");
+            }
+
+            // 处理拖拽的文件
+            if (e.Data.Contains(DataFormats.Files))
+            {
+                var files = e.Data.GetFiles();
+                if (files != null)
+                {
+                    await ProcessDroppedFiles(files);
+                }
+            }
         }
 
         // 选择文件按钮点击事件
@@ -124,6 +207,60 @@ namespace VideoConversion_Client.Views
                 {
                     AddFile(file);
                 }
+            }
+        }
+
+        // 处理拖拽的文件和文件夹
+        private async Task ProcessDroppedFiles(IEnumerable<IStorageItem> items)
+        {
+            var supportedExtensions = new[] { ".mp4", ".avi", ".mov", ".mkv", ".wmv", ".flv", ".webm", ".m4v", ".3gp" };
+
+            foreach (var item in items)
+            {
+                if (item is IStorageFile file)
+                {
+                    // 处理单个文件
+                    var extension = Path.GetExtension(file.Name).ToLower();
+                    if (supportedExtensions.Contains(extension))
+                    {
+                        AddFile(file.Path.LocalPath);
+                    }
+                }
+                else if (item is IStorageFolder folder)
+                {
+                    // 处理文件夹 - 递归查找视频文件
+                    await ProcessFolderRecursively(folder.Path.LocalPath, supportedExtensions);
+                }
+            }
+        }
+
+        // 递归处理文件夹中的视频文件
+        private async Task ProcessFolderRecursively(string folderPath, string[] supportedExtensions)
+        {
+            try
+            {
+                // 获取文件夹中的所有视频文件
+                var videoFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
+                    .Where(file => supportedExtensions.Contains(Path.GetExtension(file).ToLower()))
+                    .ToArray();
+
+                // 添加找到的视频文件
+                foreach (var file in videoFiles)
+                {
+                    AddFile(file);
+                }
+
+                // 如果找到了文件，显示提示信息
+                if (videoFiles.Length > 0)
+                {
+                    // 可以在这里添加状态提示，比如"已添加 X 个视频文件"
+                    System.Diagnostics.Debug.WriteLine($"从文件夹 {folderPath} 中添加了 {videoFiles.Length} 个视频文件");
+                }
+            }
+            catch (Exception ex)
+            {
+                // 处理文件夹访问错误
+                System.Diagnostics.Debug.WriteLine($"处理文件夹时出错: {ex.Message}");
             }
         }
 

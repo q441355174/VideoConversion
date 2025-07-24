@@ -18,7 +18,7 @@ namespace VideoConversion.Services
         {
             _logger = logger;
             _configuration = configuration;
-            InitializeFFmpeg();
+            InitializeFFmpeg(); 
         }
 
         /// <summary>

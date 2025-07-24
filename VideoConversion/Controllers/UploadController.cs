@@ -18,7 +18,6 @@ namespace VideoConversion.Controllers
         private readonly ConversionTaskService _conversionTaskService;
         private readonly IHubContext<ConversionHub> _hubContext;
         private static readonly ConcurrentDictionary<string, UploadProgress> _uploadProgress = new();
-
         public UploadController(
             ILogger<UploadController> logger,
             FileService fileService,

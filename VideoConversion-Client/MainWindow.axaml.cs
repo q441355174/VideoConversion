@@ -20,7 +20,7 @@ namespace VideoConversion_Client
         // View组件
         private FileUploadView fileUploadView;
         private ConversionCompletedView conversionCompletedView;
-        public MainWindow()
+        public MainWindow() 
         {
             InitializeComponent();
 
