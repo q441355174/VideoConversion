@@ -43,6 +43,20 @@
             <Setter Property="Background" Value="#e7f3ff" />
         </Style>
 
+        <!-- 主要拖拽区域样式 -->
+        <Style Selector="Border.main-drop-zone">
+            <Setter Property="Background" Value="#f8f9fa" />
+            <Setter Property="BorderBrush" Value="#e1e8ed" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="40" />
+        </Style>
+
+        <Style Selector="Border.main-drop-zone:pointerover">
+            <Setter Property="BorderBrush" Value="#3498db" />
+            <Setter Property="Background" Value="#e7f3ff" />
+        </Style>
+
         <!-- 信息面板样式 -->
         <Style Selector="Border.info-panel">
             <Setter Property="Background" Value="#f8f9fa" />
@@ -235,6 +249,168 @@
 
         <Style Selector="Button.clear-button:pointerover">
             <Setter Property="Background" Value="#f8d7da" />
+        </Style>
+
+        <!-- 状态按钮样式 -->
+        <Style Selector="Button.status-button">
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.status-button.converting">
+            <Setter Property="Background" Value="#fff3cd" />
+            <Setter Property="Foreground" Value="#856404" />
+            <Setter Property="BorderBrush" Value="#ffeaa7" />
+        </Style>
+
+        <Style Selector="Button.status-button.completed">
+            <Setter Property="Background" Value="#d1ecf1" />
+            <Setter Property="Foreground" Value="#0c5460" />
+            <Setter Property="BorderBrush" Value="#bee5eb" />
+        </Style>
+
+        <!-- 快速转换按钮样式 -->
+        <Style Selector="Button.fast-convert-button">
+            <Setter Property="Background" Value="#ff6b35" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="20" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.fast-convert-button:pointerover">
+            <Setter Property="Background" Value="#e55a2b" />
+        </Style>
+
+        <!-- 设置面板样式 -->
+        <Style Selector="Border.settings-panel">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#e1e8ed" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="24" />
+            <Setter Property="Margin" Value="0,10,0,0" />
+        </Style>
+
+        <!-- 设置组样式 -->
+        <Style Selector="Border.setting-group">
+            <Setter Property="Background" Value="#f8f9fa" />
+            <Setter Property="BorderBrush" Value="#e9ecef" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,15" />
+        </Style>
+
+        <!-- 复选框样式 -->
+        <Style Selector="CheckBox.setting-checkbox">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="0,5" />
+        </Style>
+
+        <!-- 居中状态按钮样式 -->
+        <Style Selector="Button.status-button-center">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="20,8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+
+        <Style Selector="Button.status-button-center.active">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#333" />
+            <Setter Property="CornerRadius" Value="20,0,0,20" />
+        </Style>
+
+        <Style Selector="Button.status-button-center.inactive">
+            <Setter Property="Background" Value="#e9ecef" />
+            <Setter Property="Foreground" Value="#6c757d" />
+            <Setter Property="CornerRadius" Value="0,20,20,0" />
+        </Style>
+
+        <!-- 转换按钮样式 -->
+        <Style Selector="Button.convert-button-purple">
+            <Setter Property="Background" Value="#9b59b6" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.convert-button-purple:pointerover">
+            <Setter Property="Background" Value="#8e44ad" />
+        </Style>
+
+        <Style Selector="Button.convert-button-white">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="Foreground" Value="#333" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#dee2e6" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.convert-button-white:pointerover">
+            <Setter Property="Background" Value="#f8f9fa" />
+        </Style>
+
+        <!-- 现代化下拉框样式 -->
+        <Style Selector="ComboBox.modern-combobox">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderBrush" Value="#dee2e6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+
+        <!-- 设置图标按钮样式 -->
+        <Style Selector="Button.settings-icon-button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#6c757d" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.settings-icon-button:pointerover">
+            <Setter Property="Background" Value="#f8f9fa" />
+        </Style>
+
+        <!-- 主转换按钮样式 -->
+        <Style Selector="Button.main-convert-button">
+            <Setter Property="Background" Value="#e9ecef" />
+            <Setter Property="Foreground" Value="#6c757d" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="24,12" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style Selector="Button.main-convert-button:pointerover">
+            <Setter Property="Background" Value="#dee2e6" />
         </Style>
     </Application.Styles>
 </Application>

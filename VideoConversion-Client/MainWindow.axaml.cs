@@ -19,10 +19,7 @@ namespace VideoConversion_Client
 
         // View组件
         private FileUploadView fileUploadView;
-        private ConversionSettingsView conversionSettingsView;
-        private CurrentTaskView currentTaskView;
-        private RecentTasksView recentTasksView;
-
+        private ConversionCompletedView conversionCompletedView;
         public MainWindow()
         {
             InitializeComponent();
@@ -37,6 +34,9 @@ namespace VideoConversion_Client
             // 设置事件处理
             SetupEventHandlers();
 
+            // 初始化界面状态
+            InitializeViewState();
+
             // 窗口关闭事件
             Closing += OnWindowClosing;
         }
@@ -50,135 +50,34 @@ namespace VideoConversion_Client
         {
             // 获取View组件引用
             fileUploadView = this.FindControl<FileUploadView>("FileUploadView")!;
-            conversionSettingsView = this.FindControl<ConversionSettingsView>("ConversionSettingsView")!;
-            currentTaskView = this.FindControl<CurrentTaskView>("CurrentTaskView")!;
-            recentTasksView = this.FindControl<RecentTasksView>("RecentTasksView")!;
+            conversionCompletedView = this.FindControl<ConversionCompletedView>("ConversionCompletedView")!;
         }
 
         private void SetupEventHandlers()
         {
-            // 文件上传View事件
-            fileUploadView.FileSelected += OnFileSelected;
-            fileUploadView.FileCleared += OnFileCleared;
-
-            // 转换设置View事件
-            conversionSettingsView.ConversionStartRequested += OnConversionStartRequested;
-
-            // 当前任务View事件
-            currentTaskView.TaskCancelRequested += OnTaskCancelRequested;
-            currentTaskView.TaskRefreshRequested += OnTaskRefreshRequested;
-            currentTaskView.TaskDownloadRequested += OnTaskDownloadRequested;
-
-            // 最近任务View事件
-            recentTasksView.RefreshRequested += OnRecentTasksRefreshRequested;
-            recentTasksView.TaskSelected += OnTaskSelected;
-
             // ViewModel属性变化事件
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
         }
 
-        // 事件处理方法
-        private void OnFileSelected(object? sender, string filePath)
+        private void InitializeViewState()
         {
-            // 自动设置任务名称
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            conversionSettingsView.SetTaskName(fileName);
-
-            UpdateStatus($"✅ 已选择文件: {Path.GetFileName(filePath)}");
+            // 默认显示文件上传界面
+            SwitchToFileUploadView();
         }
 
-        private void OnFileCleared(object? sender, EventArgs e)
+        // 切换按钮事件处理方法
+        private void ConvertingStatusBtn_Click(object? sender, RoutedEventArgs e)
         {
-            conversionSettingsView.SetTaskName("");
-            UpdateStatus("📂 请选择视频文件");
+            SwitchToFileUploadView();
         }
 
-        private async void OnConversionStartRequested(object? sender, ConversionStartEventArgs e)
+        private void CompletedStatusBtn_Click(object? sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(fileUploadView.SelectedFilePath))
-            {
-                UpdateStatus("⚠️ 请先选择视频文件");
-                return;
-            }
-
-            if (string.IsNullOrEmpty(e.TaskName))
-            {
-                UpdateStatus("⚠️ 请输入任务名称");
-                return;
-            }
-
-            conversionSettingsView.SetEnabled(false);
-            var success = await viewModel.StartConversionAsync(fileUploadView.SelectedFilePath, e);
-
-            if (success)
-            {
-                // 显示当前任务
-                var task = viewModel.ConversionTasks.FirstOrDefault();
-                if (task != null)
-                {
-                    currentTaskView.ShowTask(task);
-                    currentTaskView.SetFileSize(GetFileSize(fileUploadView.SelectedFilePath));
-                    currentTaskView.SetOutputFormat(e.OutputFormat.ToUpper());
-                }
-
-                // 更新最近任务列表
-                recentTasksView.UpdateTasks(viewModel.ConversionTasks);
-            }
-
-            conversionSettingsView.SetEnabled(true);
+            SwitchToCompletedView();
         }
 
-        private async void OnTaskCancelRequested(object? sender, string taskId)
-        {
-            var success = await viewModel.CancelTaskAsync(taskId);
-            if (success)
-            {
-                currentTaskView.HideTask();
-            }
-        }
 
-        private async void OnTaskRefreshRequested(object? sender, string taskId)
-        {
-            // 刷新任务状态的逻辑可以在这里实现
-            UpdateStatus("🔄 任务状态已刷新");
-        }
 
-        private async void OnTaskDownloadRequested(object? sender, string taskId)
-        {
-            try
-            {
-                var options = new FolderPickerOpenOptions
-                {
-                    Title = "选择保存位置"
-                };
-
-                var result = await StorageProvider.OpenFolderPickerAsync(options);
-                var folder = result?.FirstOrDefault();
-
-                if (folder != null)
-                {
-                    var savePath = Path.Combine(folder.Path.LocalPath, $"converted_{taskId}.mp4");
-                    // 这里需要实现下载逻辑
-                    UpdateStatus($"✅ 文件已下载到: {savePath}");
-                }
-            }
-            catch (Exception ex)
-            {
-                UpdateStatus($"❌ 下载失败: {ex.Message}");
-            }
-        }
-
-        private async void OnRecentTasksRefreshRequested(object? sender, EventArgs e)
-        {
-            await viewModel.LoadRecentTasks();
-            recentTasksView.UpdateTasks(viewModel.ConversionTasks);
-        }
-
-        private void OnTaskSelected(object? sender, ConversionTask task)
-        {
-            // 显示选中的任务详情
-            currentTaskView.ShowTask(task);
-        }
 
         private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
@@ -193,10 +92,62 @@ namespace VideoConversion_Client
             }
         }
 
-        // 测试连接按钮事件
-        private async void TestConnectionButton_Click(object? sender, RoutedEventArgs e)
+
+
+        // 界面切换方法
+        private void SwitchToFileUploadView()
         {
-            await viewModel.TestConnectionAsync();
+            // 切换页面显示
+            fileUploadView.IsVisible = true;
+            conversionCompletedView.IsVisible = false;
+
+            // 更新按钮状态
+            UpdateButtonStates(true);
+
+            UpdateStatus("📁 文件上传界面");
+        }
+
+        private void SwitchToCompletedView()
+        {
+            // 切换页面显示
+            fileUploadView.IsVisible = false;
+            conversionCompletedView.IsVisible = true;
+
+            // 更新按钮状态
+            UpdateButtonStates(false);
+
+            UpdateStatus("✅ 转换完成界面");
+        }
+
+        // 更新切换按钮的状态
+        private void UpdateButtonStates(bool isConvertingActive)
+        {
+            var convertingBtn = this.FindControl<Button>("ConvertingStatusBtn");
+            var completedBtn = this.FindControl<Button>("CompletedStatusBtn");
+
+            if (convertingBtn != null && completedBtn != null)
+            {
+                if (isConvertingActive)
+                {
+                    // 正在转换按钮激活
+                    convertingBtn.Background = Avalonia.Media.Brush.Parse("#9b59b6");
+                    convertingBtn.Foreground = Avalonia.Media.Brushes.White;
+
+                    // 转换完成按钮非激活
+                    completedBtn.Background = Avalonia.Media.Brush.Parse("#f0f0f0");
+                    completedBtn.Foreground = Avalonia.Media.Brush.Parse("#666");
+                }
+                else
+                {
+                    // 正在转换按钮非激活
+                    convertingBtn.Background = Avalonia.Media.Brush.Parse("#f0f0f0");
+                    convertingBtn.Foreground = Avalonia.Media.Brush.Parse("#666");
+
+                    // 转换完成按钮激活
+                    completedBtn.Background = Avalonia.Media.Brush.Parse("#9b59b6");
+                    completedBtn.Foreground = Avalonia.Media.Brushes.White;
+                }
+            }
         }
 
         // 辅助方法
@@ -213,7 +164,6 @@ namespace VideoConversion_Client
         {
             var indicator = this.FindControl<Border>("ConnectionIndicator");
             var statusText = this.FindControl<TextBlock>("ConnectionStatusText");
-            var serverUrl = this.FindControl<TextBlock>("ServerUrl");
 
             if (indicator != null)
             {
@@ -224,28 +174,12 @@ namespace VideoConversion_Client
 
             if (statusText != null)
             {
-                statusText.Text = connected ? "已连接" : "未连接";
-            }
-
-            if (serverUrl != null)
-            {
-                serverUrl.Text = viewModel.ServerUrl;
+                statusText.Text = connected ?
+                    $"SignalR连接: 已连接 ({viewModel.ServerUrl})" :
+                    $"SignalR连接: 连接失败: 由于目标计算机积极拒绝，无法连接。 ({viewModel.ServerUrl})";
             }
         }
 
-        private string GetFileSize(string filePath)
-        {
-            try
-            {
-                var fileInfo = new FileInfo(filePath);
-                var sizeInMB = fileInfo.Length / (1024.0 * 1024.0);
-                return sizeInMB > 1024 ? $"{sizeInMB / 1024:F1} GB" : $"{sizeInMB:F1} MB";
-            }
-            catch
-            {
-                return "未知大小";
-            }
-        }
 
         private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
         {

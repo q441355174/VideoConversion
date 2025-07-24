@@ -307,4 +307,35 @@ namespace VideoConversion_Client.Models
         public string? AudioQuality { get; set; }
         public string? FrameRate { get; set; }
     }
+
+    /// <summary>
+    /// 转换设置模型
+    /// </summary>
+    public class ConversionSettings
+    {
+        public string VideoCodec { get; set; } = "H.264";
+        public string Resolution { get; set; } = "1920x1080";
+        public string FrameRate { get; set; } = "30";
+        public string Bitrate { get; set; } = "5000k";
+        public string AudioCodec { get; set; } = "AAC";
+        public string AudioQuality { get; set; } = "128k";
+        public string HardwareAcceleration { get; set; } = "自动";
+        public string Threads { get; set; } = "自动";
+    }
+
+    /// <summary>
+    /// 转换开始事件参数
+    /// </summary>
+    public class ConversionStartEventArgs : EventArgs
+    {
+        public string Preset { get; set; } = "Fast 1080p30";
+        public string? OutputFormat { get; set; }
+        public string? Resolution { get; set; }
+        public string? VideoCodec { get; set; }
+        public string? AudioCodec { get; set; }
+        public string? VideoQuality { get; set; }
+        public string? AudioQuality { get; set; }
+        public string? FrameRate { get; set; }
+        public string? TaskName { get; set; }
+    }
 }
