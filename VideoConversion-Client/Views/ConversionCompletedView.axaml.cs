@@ -12,7 +12,7 @@ namespace VideoConversion_Client.Views
         public ConversionCompletedView()
         {
             InitializeComponent();
-            LoadCompletedFiles();
+            //LoadCompletedFiles();
         }
         private void InitializeComponent()
         {
