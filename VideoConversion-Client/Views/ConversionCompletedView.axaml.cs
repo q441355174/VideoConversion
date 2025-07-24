@@ -27,9 +27,13 @@ namespace VideoConversion_Client.Views
         {
             var searchBox = this.FindControl<TextBox>("SearchBox");
 <<<<<<< HEAD
+<<<<<<< HEAD
             var searchToggleBtn = this.FindControl<Button>("SearchToggleBtn");
 
             if (searchBox != null && searchToggleBtn != null)
+=======
+            if (searchBox != null)
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
 =======
             if (searchBox != null)
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
@@ -38,6 +42,7 @@ namespace VideoConversion_Client.Views
                 if (searchBox.IsVisible)
                 {
                     searchBox.Focus();
+<<<<<<< HEAD
 <<<<<<< HEAD
                     searchToggleBtn.Content = "✕";
                     Avalonia.Controls.ToolTip.SetTip(searchToggleBtn, "关闭搜索");
@@ -103,6 +108,8 @@ namespace VideoConversion_Client.Views
                     statsText.Text = $"找到 {visibleCount} 项（共 {totalCount} 项）";
 =======
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
+=======
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
                 }
             }
         }
@@ -122,7 +129,11 @@ namespace VideoConversion_Client.Views
             completedContainer.Children.Clear();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             // 添加示例文件用于测试搜索功能
+=======
+            // 添加示例完成文件（与设计图一致）
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
 =======
             // 添加示例完成文件（与设计图一致）
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
@@ -133,9 +144,13 @@ namespace VideoConversion_Client.Views
                 new { Name = "FC2PPV-4647709 (2)", Format = "MP4", Resolution = "1920*1080", Size = "1.34 GB", Duration = "01:01:24" },
                 new { Name = "FC2PPV-4647352-1 (2)", Format = "MP4", Resolution = "1920*1080", Size = "1.64 GB", Duration = "01:14:50" },
 <<<<<<< HEAD
+<<<<<<< HEAD
                 new { Name = "FC2PPV-4647381-1 (2)", Format = "MP4", Resolution = "1920*1080", Size = "1.45 GB", Duration = "01:08:30" },
                 new { Name = "测试视频文件", Format = "AVI", Resolution = "1280*720", Size = "0.85 GB", Duration = "45:30" },
                 new { Name = "会议录像", Format = "MOV", Resolution = "1920*1080", Size = "2.1 GB", Duration = "01:30:15" }
+=======
+                new { Name = "FC2PPV-4647381-1 (2)", Format = "MP4", Resolution = "1920*1080", Size = "1.45 GB", Duration = "01:08:30" }
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
 =======
                 new { Name = "FC2PPV-4647381-1 (2)", Format = "MP4", Resolution = "1920*1080", Size = "1.45 GB", Duration = "01:08:30" }
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
@@ -148,9 +163,14 @@ namespace VideoConversion_Client.Views
             }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             // 更新统计信息和空状态显示
             UpdateCompletedStats();
             UpdateEmptyStateVisibility();
+=======
+            // 更新统计信息
+            UpdateCompletedStats();
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
 =======
             // 更新统计信息
             UpdateCompletedStats();
@@ -338,7 +358,10 @@ namespace VideoConversion_Client.Views
                     completedContainer.Children.Remove(itemToRemove);
                     UpdateCompletedStats();
 <<<<<<< HEAD
+<<<<<<< HEAD
                     UpdateEmptyStateVisibility();
+=======
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
 =======
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
                 }
@@ -355,6 +378,7 @@ namespace VideoConversion_Client.Views
         {
             var completedContainer = this.FindControl<StackPanel>("CompletedFileListContainer");
             var statsText = this.FindControl<TextBlock>("CompletedStatsText");
+<<<<<<< HEAD
 <<<<<<< HEAD
             var clearButton = this.FindControl<Button>("ClearListButton");
             var searchBox = this.FindControl<TextBox>("SearchBox");
@@ -446,12 +470,17 @@ namespace VideoConversion_Client.Views
                 // 处理错误，可以显示消息框或日志
                 System.Diagnostics.Debug.WriteLine($"打开输出文件夹失败: {ex.Message}");
 =======
+=======
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
             
             if (completedContainer != null && statsText != null)
             {
                 var count = completedContainer.Children.Count;
                 // 这里应该计算实际的总大小，现在使用示例数据
                 statsText.Text = $"{count} 项，28.45 GB";
+<<<<<<< HEAD
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
+=======
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
             }
         }

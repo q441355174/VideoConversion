@@ -26,7 +26,11 @@
     </UserControl.Styles>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     <Grid Margin="12">
+=======
+    <Grid Margin="15">
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
 =======
     <Grid Margin="15">
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
@@ -35,6 +39,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+<<<<<<< HEAD
 <<<<<<< HEAD
         <!-- 转换完成的文件列表区域 -->
         <Border Grid.Row="1"
@@ -232,6 +237,8 @@
             </Grid>
         </Border>
 =======
+=======
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
         <!-- 顶部搜索区域 -->
         <StackPanel Grid.Row="0"
                    Name="SearchArea"
@@ -282,6 +289,9 @@
                            HorizontalAlignment="Center" />
             </Border>
         </Grid>
+<<<<<<< HEAD
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
+=======
 >>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
     </Grid>
 </UserControl>
