@@ -25,12 +25,17 @@
         </Style>
     </UserControl.Styles>
 
+<<<<<<< HEAD
     <Grid Margin="12">
+=======
+    <Grid Margin="15">
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
+<<<<<<< HEAD
         <!-- 转换完成的文件列表区域 -->
         <Border Grid.Row="1"
                 Background="White"
@@ -226,5 +231,57 @@
                 </Border>
             </Grid>
         </Border>
+=======
+        <!-- 顶部搜索区域 -->
+        <StackPanel Grid.Row="0"
+                   Name="SearchArea"
+                   Orientation="Horizontal"
+                   HorizontalAlignment="Right"
+                   Spacing="8"
+                   Margin="0,0,0,8">
+            <Button Content="📁"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="8"
+                    Click="OpenFolderBtn_Click" />
+            <Button Content="🔍"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="8"
+                    Click="SearchBtn_Click" />
+            <TextBox Name="SearchBox"
+                     Watermark="搜索"
+                     MinWidth="150"
+                     IsVisible="False" />
+        </StackPanel>
+
+        <!-- 转换完成的文件列表 -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 完成的文件列表 -->
+            <ScrollViewer Grid.Row="0">
+                <StackPanel Name="CompletedFileListContainer" Spacing="8" Margin="0,5">
+                    <!-- 完成的文件项将动态添加到这里 -->
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 底部统计信息 -->
+            <Border Grid.Row="1"
+                    Background="#f8f9fa"
+                    CornerRadius="8"
+                    Padding="12,8"
+                    Margin="0,10,0,0">
+                <TextBlock Name="CompletedStatsText" 
+                           Text="22 项，28.45 GB" 
+                           FontSize="14" 
+                           Foreground="#666" 
+                           HorizontalAlignment="Center" />
+            </Border>
+        </Grid>
+>>>>>>> 7da76723b16f649c8e4abde3199589642f4de608
     </Grid>
 </UserControl>
