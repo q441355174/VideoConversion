@@ -290,6 +290,32 @@ namespace VideoConversion_Client.Models
         public bool Success { get; set; }
         public string? Message { get; set; }
         public T? Data { get; set; }
+
+        /// <summary>
+        /// 创建成功响应
+        /// </summary>
+        public static ApiResponse<T> CreateSuccess(T data, string message = "操作成功")
+        {
+            return new ApiResponse<T>
+            {
+                Success = true,
+                Message = message,
+                Data = data
+            };
+        }
+
+        /// <summary>
+        /// 创建错误响应
+        /// </summary>
+        public static ApiResponse<T> CreateError(string message, T? data = default)
+        {
+            return new ApiResponse<T>
+            {
+                Success = false,
+                Message = message,
+                Data = data
+            };
+        }
     }
 
     /// <summary>

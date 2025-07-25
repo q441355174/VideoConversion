@@ -1,4 +1,5 @@
 using VideoConversion.Models;
+using VideoConversion.Utils;
 
 namespace VideoConversion.Services
 {
@@ -95,20 +96,9 @@ namespace VideoConversion.Services
                 }
 
                 // 生成唯一文件名
-                var fileName = customFileName ?? GenerateUniqueFileName(file.FileName);
+                var fileName = customFileName ?? FileNameHelper.GenerateUniqueFileName(file.FileName);
+                fileName = FileNameHelper.EnsureUniqueFileName(_uploadPath, fileName);
                 var filePath = Path.Combine(_uploadPath, fileName);
-
-                // 确保文件名唯一
-                var counter = 1;
-                var originalFilePath = filePath;
-                while (File.Exists(filePath))
-                {
-                    var nameWithoutExt = Path.GetFileNameWithoutExtension(originalFilePath);
-                    var extension = Path.GetExtension(originalFilePath);
-                    fileName = $"{nameWithoutExt}_{counter}{extension}";
-                    filePath = Path.Combine(_uploadPath, fileName);
-                    counter++;
-                }
 
                 // 保存文件
                 using (var stream = new FileStream(filePath, FileMode.Create))
@@ -144,20 +134,9 @@ namespace VideoConversion.Services
                 }
 
                 // 生成唯一文件名
-                var fileName = customFileName ?? GenerateUniqueFileName(file.FileName);
+                var fileName = customFileName ?? FileNameHelper.GenerateUniqueFileName(file.FileName);
+                fileName = FileNameHelper.EnsureUniqueFileName(_uploadPath, fileName);
                 var filePath = Path.Combine(_uploadPath, fileName);
-
-                // 确保文件名唯一
-                var counter = 1;
-                var originalFilePath = filePath;
-                while (File.Exists(filePath))
-                {
-                    var nameWithoutExt = Path.GetFileNameWithoutExtension(originalFilePath);
-                    var extension = Path.GetExtension(originalFilePath);
-                    fileName = $"{nameWithoutExt}_{counter}{extension}";
-                    filePath = Path.Combine(_uploadPath, fileName);
-                    counter++;
-                }
 
                 // 使用缓冲区保存文件并跟踪进度
                 var chunkSize = _configuration.GetValue<int>("VideoConversion:ChunkSize", 1024 * 1024); // 1MB chunks
@@ -220,29 +199,14 @@ namespace VideoConversion.Services
             }
         }
 
-        /// <summary>
-        /// 生成唯一文件名
-        /// </summary>
-        private string GenerateUniqueFileName(string originalFileName)
-        {
-            var extension = Path.GetExtension(originalFileName);
-            var nameWithoutExt = Path.GetFileNameWithoutExtension(originalFileName);
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var guid = Guid.NewGuid().ToString("N")[..8];
-            
-            return $"{nameWithoutExt}_{timestamp}_{guid}{extension}";
-        }
+
 
         /// <summary>
         /// 生成输出文件路径
         /// </summary>
         public string GenerateOutputFilePath(string originalFileName, string outputFormat, string? customName = null)
         {
-            var nameWithoutExt = customName ?? Path.GetFileNameWithoutExtension(originalFileName);
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            var fileName = $"{nameWithoutExt}_converted_{timestamp}.{outputFormat}";
-            
-            return Path.Combine(_outputPath, fileName);
+            return FileNameHelper.GenerateOutputFilePath(_outputPath, originalFileName, outputFormat, customName);
         }
 
         /// <summary>
@@ -366,6 +330,51 @@ namespace VideoConversion.Services
                 var contentType = GetContentType(filePath);
 
                 return Task.FromResult<(Stream?, string, string)>((stream, contentType, fileName));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取文件下载流失败: {FilePath}", filePath);
+                return Task.FromResult<(Stream?, string, string)>((null, string.Empty, string.Empty));
+            }
+        }
+
+        /// <summary>
+        /// 获取文件下载流（支持自定义下载文件名）
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <param name="originalFileName">原始文件名（用于生成用户友好的下载文件名）</param>
+        /// <param name="includeConvertedSuffix">是否包含"converted"后缀</param>
+        /// <returns>文件流、内容类型和用户友好的文件名</returns>
+        public Task<(Stream? Stream, string ContentType, string FileName)> GetFileDownloadStreamAsync(
+            string filePath,
+            string? originalFileName = null,
+            bool includeConvertedSuffix = false)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    return Task.FromResult<(Stream?, string, string)>((null, string.Empty, string.Empty));
+                }
+
+                var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                var contentType = GetContentType(filePath);
+
+                // 生成用户友好的下载文件名
+                string downloadFileName;
+                if (!string.IsNullOrEmpty(originalFileName))
+                {
+                    var outputFormat = Path.GetExtension(filePath).TrimStart('.');
+                    downloadFileName = FileNameHelper.GenerateDownloadFileName(originalFileName, outputFormat, includeConvertedSuffix);
+                }
+                else
+                {
+                    // 如果没有原始文件名，尝试从服务器文件名中提取
+                    var serverFileName = Path.GetFileName(filePath);
+                    downloadFileName = FileNameHelper.ExtractOriginalNameFromServerFileName(serverFileName);
+                }
+
+                return Task.FromResult<(Stream?, string, string)>((stream, contentType, downloadFileName));
             }
             catch (Exception ex)
             {

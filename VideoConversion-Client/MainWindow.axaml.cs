@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using VideoConversion_Client.Models;
 using VideoConversion_Client.ViewModels;
 using VideoConversion_Client.Views;
+using VideoConversion_Client.Views.SystemSetting;
+using VideoConversion_Client.Services;
 
 namespace VideoConversion_Client
 {
@@ -66,7 +68,7 @@ namespace VideoConversion_Client
         }
 
         // 切换按钮事件处理方法
-        private void ConvertingStatusBtn_Click(object? sender, RoutedEventArgs e)
+        public void ConvertingStatusBtn_Click(object? sender, RoutedEventArgs e)
         {
             SwitchToFileUploadView();
         }
@@ -74,6 +76,46 @@ namespace VideoConversion_Client
         private void CompletedStatusBtn_Click(object? sender, RoutedEventArgs e)
         {
             SwitchToCompletedView();
+        }
+
+        // 系统设置按钮点击事件
+        private async void SystemSettingsBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settingsWindow = new SystemSettingsWindow();
+                await settingsWindow.ShowDialog(this);
+
+                // 如果设置有变化，更新应用配置
+                if (settingsWindow.SettingsChanged)
+                {
+                    await ApplyNewSettings(settingsWindow.Settings);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"打开系统设置失败: {ex.Message}");
+                UpdateStatus($"❌ 打开设置失败: {ex.Message}");
+            }
+        }
+
+        // 应用新的设置
+        private async Task ApplyNewSettings(SystemSettingsModel newSettings)
+        {
+            try
+            {
+                // 通过ViewModel应用新设置，这会触发自动重连等逻辑
+                if (viewModel != null)
+                {
+                    viewModel.ApplySettings(newSettings);
+                    UpdateStatus("✅ 设置已保存并应用");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"应用新设置失败: {ex.Message}");
+                UpdateStatus($"❌ 应用设置失败: {ex.Message}");
+            }
         }
 
 
@@ -95,7 +137,7 @@ namespace VideoConversion_Client
 
 
         // 界面切换方法
-        private void SwitchToFileUploadView()
+        void SwitchToFileUploadView()
         {
             // 切换页面显示
             fileUploadView.IsVisible = true;

@@ -6,12 +6,13 @@ using VideoConversion_Client.Models;
 using VideoConversion_Client.Services;
 using VideoConversion_Client.Views;
 
+
 namespace VideoConversion_Client.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
         private readonly ApiService apiService;
-        private readonly SignalRService signalRService;
+        private SignalRService signalRService;
 
         private string _statusText = "就绪 - 请选择视频文件开始转换";
         private bool _isConnectedToServer = false;
@@ -20,11 +21,16 @@ namespace VideoConversion_Client.ViewModels
 
         public MainWindowViewModel()
         {
-            apiService = new ApiService();
+            // 使用系统设置服务获取服务器地址
+            var settingsService = Services.SystemSettingsService.Instance;
+            apiService = new ApiService { BaseUrl = settingsService.GetServerAddress() };
             signalRService = new SignalRService(apiService.BaseUrl);
-            
+
             ConversionTasks = new ObservableCollection<ConversionTask>();
-            
+
+            // 监听设置变化
+            settingsService.SettingsChanged += OnSystemSettingsChanged;
+
             InitializeServices();
         }
 
@@ -51,6 +57,18 @@ namespace VideoConversion_Client.ViewModels
 
         public string ServerUrl => apiService.BaseUrl.Replace("http://", "").Replace("https://", "");
 
+        /// <summary>
+        /// 获取并发状态信息
+        /// </summary>
+        public string ConcurrencyStatus
+        {
+            get
+            {
+                var concurrencyInfo = ConcurrencyManager.Instance.GetConcurrencyInfo();
+                return concurrencyInfo.GetSummary();
+            }
+        }
+
         // 初始化服务
         private async void InitializeServices()
         {
@@ -73,6 +91,9 @@ namespace VideoConversion_Client.ViewModels
                 signalRService.StatusUpdated += OnStatusUpdated;
                 signalRService.TaskCompleted += OnTaskCompleted;
                 signalRService.Error += OnSignalRError;
+
+                // 添加Web端兼容的事件处理
+                SetupWebCompatibleEvents();
 
                 // 尝试连接
                 await signalRService.ConnectAsync();
@@ -138,14 +159,24 @@ namespace VideoConversion_Client.ViewModels
 
             if (CurrentTaskId == taskId)
             {
-                StatusText = success ? 
-                    $"✅ 转换完成: {Path.GetFileName(outputPath ?? "")}" : 
+                StatusText = success ?
+                    $"✅ 转换完成: {Path.GetFileName(outputPath ?? "")}" :
                     $"❌ 转换失败: {status}";
-                
+
                 if (success)
                 {
                     CurrentTaskId = null;
                     _currentTaskStartTime = null;
+
+                    // 显示转换完成通知
+                    var fileName = Path.GetFileName(outputPath ?? task?.TaskName ?? "未知文件");
+                    ShowNotification("转换完成", $"文件 '{fileName}' 转换成功");
+                }
+                else
+                {
+                    // 显示转换失败通知
+                    var fileName = task?.TaskName ?? "未知文件";
+                    ShowNotification("转换失败", $"文件 '{fileName}' 转换失败: {status}");
                 }
             }
         }
@@ -246,6 +277,14 @@ namespace VideoConversion_Client.ViewModels
                     };
 
                     ConversionTasks.Insert(0, newTask);
+
+                    // 检查是否需要显示通知
+                    var settingsService = Services.SystemSettingsService.Instance;
+                    if (settingsService.ShouldShowNotifications())
+                    {
+                        ShowNotification("转换开始", $"任务 '{response.Data.TaskName}' 已开始转换");
+                    }
+
                     return true;
                 }
                 else
@@ -320,16 +359,173 @@ namespace VideoConversion_Client.ViewModels
             return null;
         }
 
+        /// <summary>
+        /// 设置与Web端兼容的SignalR事件处理
+        /// </summary>
+        private void SetupWebCompatibleEvents()
+        {
+            // 注册Web端的上传相关事件
+            signalRService.RegisterHandler("UploadStarted", (data) =>
+            {
+                StatusText = $"📤 开始上传文件";
+            });
+
+            signalRService.RegisterHandler("UploadProgress", (data) =>
+            {
+                StatusText = $"📤 文件上传中...";
+            });
+
+            signalRService.RegisterHandler("UploadCompleted", (data) =>
+            {
+                StatusText = $"✅ 文件上传完成";
+            });
+
+            signalRService.RegisterHandler("UploadFailed", (data) =>
+            {
+                StatusText = $"❌ 文件上传失败";
+            });
+        }
+
+        /// <summary>
+        /// 开始文件转换
+        /// </summary>
+        public async Task<bool> StartFileConversionAsync(string filePath, Models.StartConversionRequest request)
+        {
+            try
+            {
+                StatusText = $"📤 准备转换: {Path.GetFileName(filePath)}";
+
+                var result = await apiService.StartConversionAsync(filePath, request);
+
+                if (result.Success && result.Data != null)
+                {
+                    CurrentTaskId = result.Data.TaskId;
+                    StatusText = $"🎬 转换已启动: {result.Data.TaskName}";
+                    return true;
+                }
+                else
+                {
+                    StatusText = $"❌ 转换启动失败: {result.Message}";
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"❌ 转换启动异常: {ex.Message}";
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 处理系统设置变化
+        /// </summary>
+        private async void OnSystemSettingsChanged(object? sender, Services.SystemSettingsChangedEventArgs e)
+        {
+            try
+            {
+                // 如果服务器地址发生变化，需要重新连接
+                if (e.ServerAddressChanged)
+                {
+                    StatusText = "🔄 服务器地址已更改，正在重新连接...";
+
+                    // 更新API服务的基础URL
+                    apiService.BaseUrl = e.NewSettings.ServerAddress;
+
+                    // 重新连接SignalR
+                    await signalRService.DisconnectAsync();
+                    signalRService = new SignalRService(e.NewSettings.ServerAddress);
+                    SetupWebCompatibleEvents();
+                    await signalRService.ConnectAsync();
+
+                    StatusText = $"✅ 已重新连接到服务器: {e.NewSettings.ServerAddress}";
+                }
+
+                // 如果并发设置发生变化，可以在这里处理
+                if (e.ConcurrencySettingsChanged)
+                {
+                    StatusText = $"⚙️ 并发设置已更新 - 上传:{e.NewSettings.MaxConcurrentUploads}, 下载:{e.NewSettings.MaxConcurrentDownloads}";
+                }
+
+                // 如果其他设置发生变化
+                if (e.OtherSettingsChanged)
+                {
+                    StatusText = "⚙️ 应用设置已更新";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"❌ 应用新设置失败: {ex.Message}";
+                System.Diagnostics.Debug.WriteLine($"应用系统设置变化失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 获取当前系统设置
+        /// </summary>
+        public Models.SystemSettingsModel GetCurrentSettings()
+        {
+            return Services.SystemSettingsService.Instance.CurrentSettings;
+        }
+
+        /// <summary>
+        /// 应用新的系统设置
+        /// </summary>
+        public void ApplySettings(Models.SystemSettingsModel newSettings)
+        {
+            Services.SystemSettingsService.Instance.UpdateSettings(newSettings);
+        }
+
         // 清理资源
         public async Task CleanupAsync()
         {
             try
             {
+                // 取消设置变化监听
+                Services.SystemSettingsService.Instance.SettingsChanged -= OnSystemSettingsChanged;
+
                 await signalRService.DisconnectAsync();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"清理资源失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 显示通知
+        /// </summary>
+        private void ShowNotification(string title, string message)
+        {
+            try
+            {
+                var settingsService = Services.SystemSettingsService.Instance;
+                if (!settingsService.ShouldShowNotifications())
+                    return;
+
+                // 简单的调试输出通知，实际项目中可以使用系统通知
+                System.Diagnostics.Debug.WriteLine($"📢 通知: {title} - {message}");
+
+                // 可以在这里集成真正的通知系统，比如：
+                // - Windows Toast 通知
+                // - 应用内通知栏
+                // - 系统托盘通知
+
+                // 暂时在状态栏显示通知信息
+                var originalStatus = StatusText;
+                StatusText = $"📢 {title}: {message}";
+
+                // 3秒后恢复原状态
+                Task.Delay(3000).ContinueWith(_ =>
+                {
+                    if (StatusText.StartsWith("📢"))
+                    {
+                        StatusText = originalStatus;
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"显示通知失败: {ex.Message}");
             }
         }
     }

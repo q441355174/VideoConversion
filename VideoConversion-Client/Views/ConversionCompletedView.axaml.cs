@@ -96,11 +96,6 @@ namespace VideoConversion_Client.Views
             }
         }
 
-        private void OpenFolderBtn_Click(object? sender, RoutedEventArgs e)
-        {
-            // 打开输出文件夹
-            // System.Diagnostics.Process.Start("explorer.exe", outputFolderPath);
-        }
 
         private void LoadCompletedFiles()
         {
@@ -378,10 +373,10 @@ namespace VideoConversion_Client.Views
         {
             // 切换到文件上传视图
             // 这里需要与主窗口通信，切换到上传文件的标签页
-            if (Parent?.Parent?.Parent is MainWindow mainWindow)
+            if (Parent?.Parent is MainWindow mainWindow)
             {
                 // 假设主窗口有切换到上传页面的方法
-                // mainWindow.SwitchToUploadView();
+                 mainWindow.ConvertingStatusBtn_Click(sender,e);
             }
         }
 

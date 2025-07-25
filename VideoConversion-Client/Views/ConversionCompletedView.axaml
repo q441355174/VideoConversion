@@ -103,23 +103,6 @@
                                     </Style>
                                 </Button.Styles>
                             </Button>
-
-                            <!-- 打开文件夹按钮 -->
-                            <Button Content="📁"
-                                    Background="Transparent"
-                                    Foreground="#666"
-                                    BorderThickness="0"
-                                    Padding="8,6"
-                                    CornerRadius="4"
-                                    FontSize="14"
-                                    ToolTip.Tip="打开输出文件夹"
-                                    Click="OpenFolderBtn_Click">
-                                <Button.Styles>
-                                    <Style Selector="Button:pointerover">
-                                        <Setter Property="Background" Value="#e9ecef" />
-                                    </Style>
-                                </Button.Styles>
-                            </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -214,7 +197,7 @@
                                     Click="ClearListBtn_Click"
                                     IsVisible="False"
                                     Name="ClearListButton" />
-                            <Button Content="打开输出文件夹"
+                            <Button Content="打开下载文件夹"
                                     Background="#9b59b6"
                                     Foreground="White"
                                     BorderThickness="0"

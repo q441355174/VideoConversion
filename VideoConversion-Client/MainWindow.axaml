@@ -17,14 +17,53 @@
 
         <!-- 顶部标题栏 -->
         <Border Grid.Row="0" Background="#2c3e50" Padding="20,12">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="🎬" FontSize="20" Margin="0,0,8,0" />
-                <TextBlock Text="视频转换工具"
-                           FontSize="18"
-                           FontWeight="Bold"
-                           Foreground="White"
-                           VerticalAlignment="Center" /> 
-            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- 标题居中 -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="2"
+                           Orientation="Horizontal"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center">
+                    <TextBlock Text="🎬" FontSize="20" Margin="0,0,8,0" />
+                    <TextBlock Text="视频转换工具"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- 系统设置按钮 -->
+                <Button Grid.Column="1"
+                        Name="SystemSettingsBtn"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="12,8"
+                        CornerRadius="6"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                        ToolTip.Tip="系统设置"
+                        Click="SystemSettingsBtn_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="⚙️" FontSize="16" VerticalAlignment="Center" />
+                        <TextBlock Text="设置"
+                                   FontSize="12"
+                                   Foreground="White"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Background" Value="#34495e" />
+                        </Style>
+                        <Style Selector="Button:pressed">
+                            <Setter Property="Background" Value="#1abc9c" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
+            </Grid>
         </Border>
 
         <!-- 主要内容区域 -->

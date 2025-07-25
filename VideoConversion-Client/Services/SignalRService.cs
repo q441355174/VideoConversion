@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using VideoConversion_Client.Models;
 
 namespace VideoConversion_Client.Services
 {
@@ -12,6 +13,7 @@ namespace VideoConversion_Client.Services
     {
         private HubConnection? _connection;
         private readonly string _baseUrl;
+        private readonly Dictionary<string, List<Action<System.Text.Json.JsonElement>>> _dynamicHandlers = new();
 
         public bool IsConnected => _connection?.State == HubConnectionState.Connected;
 
@@ -352,6 +354,57 @@ namespace VideoConversion_Client.Services
                     await _connection.DisposeAsync();
                 }
             });
+        }
+
+        /// <summary>
+        /// 注册动态事件处理器
+        /// </summary>
+        public void RegisterHandler(string eventName, Action<System.Text.Json.JsonElement> handler)
+        {
+            if (!_dynamicHandlers.ContainsKey(eventName))
+            {
+                _dynamicHandlers[eventName] = new List<Action<System.Text.Json.JsonElement>>();
+
+                // 在SignalR连接上注册事件
+                if (_connection != null)
+                {
+                    _connection.On<System.Text.Json.JsonElement>(eventName, (data) =>
+                    {
+                        if (_dynamicHandlers.ContainsKey(eventName))
+                        {
+                            foreach (var h in _dynamicHandlers[eventName])
+                            {
+                                try
+                                {
+                                    h.Invoke(data);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Error?.Invoke($"处理事件 {eventName} 时出错: {ex.Message}");
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            _dynamicHandlers[eventName].Add(handler);
+        }
+
+        /// <summary>
+        /// 移除动态事件处理器
+        /// </summary>
+        public void UnregisterHandler(string eventName, Action<System.Text.Json.JsonElement> handler)
+        {
+            if (_dynamicHandlers.ContainsKey(eventName))
+            {
+                _dynamicHandlers[eventName].Remove(handler);
+
+                if (_dynamicHandlers[eventName].Count == 0)
+                {
+                    _dynamicHandlers.Remove(eventName);
+                }
+            }
         }
     }
 

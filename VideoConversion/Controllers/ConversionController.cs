@@ -419,7 +419,12 @@ namespace VideoConversion.Controllers
                     return BadRequest(ApiResponse<object>.CreateError("文件尚未准备好下载"));
                 }
 
-                var downloadResult = await _fileService.GetFileDownloadStreamAsync(task.OutputFilePath);
+                // 使用原始文件名生成用户友好的下载文件名
+                var downloadResult = await _fileService.GetFileDownloadStreamAsync(
+                    task.OutputFilePath,
+                    task.OriginalFileName,
+                    includeConvertedSuffix: true);
+
                 if (downloadResult.Stream == null)
                 {
                     Logger.LogWarning("下载文件不存在: {TaskId}, Path: {Path}", taskId, task.OutputFilePath);
@@ -428,7 +433,8 @@ namespace VideoConversion.Controllers
 
                 // 记录下载日志
                 _loggingService.LogFileDownloaded(taskId, downloadResult.FileName, GetClientIpAddress());
-                Logger.LogInformation("文件下载成功: {TaskId}, FileName: {FileName}", taskId, downloadResult.FileName);
+                Logger.LogInformation("文件下载成功: {TaskId}, OriginalFileName: {OriginalFileName}, DownloadFileName: {DownloadFileName}",
+                    taskId, task.OriginalFileName, downloadResult.FileName);
 
                 return File(downloadResult.Stream, downloadResult.ContentType, downloadResult.FileName);
             }
