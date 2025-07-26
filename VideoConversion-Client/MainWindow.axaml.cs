@@ -22,7 +22,7 @@ namespace VideoConversion_Client
         // View组件
         private FileUploadView fileUploadView;
         private ConversionCompletedView conversionCompletedView;
-        public MainWindow() 
+        public MainWindow()
         {
             InitializeComponent();
 
@@ -35,6 +35,9 @@ namespace VideoConversion_Client
 
             // 设置事件处理
             SetupEventHandlers();
+
+            // 预加载转换设置
+            InitializeConversionSettings();
 
             // 初始化界面状态
             InitializeViewState();
@@ -59,6 +62,31 @@ namespace VideoConversion_Client
         {
             // ViewModel属性变化事件
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+            // 转换设置变化事件
+            Services.ConversionSettingsService.Instance.SettingsChanged += OnConversionSettingsChanged;
+        }
+
+        private void InitializeConversionSettings()
+        {
+            try
+            {
+                // 显式初始化转换设置服务，确保在程序运行期间始终存在
+                Services.ConversionSettingsService.Initialize();
+
+                var settingsService = Services.ConversionSettingsService.Instance;
+
+                // 记录初始化状态
+                System.Diagnostics.Debug.WriteLine($"转换设置服务已初始化并将在程序运行期间持续存在");
+                System.Diagnostics.Debug.WriteLine($"当前设置: {settingsService.CurrentSettings.VideoCodec}, {settingsService.CurrentSettings.Resolution}");
+
+                UpdateStatus($"⚙️ 转换设置已加载: {settingsService.GetFormattedResolution()}, {settingsService.CurrentSettings.VideoCodec}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"初始化转换设置服务失败: {ex.Message}");
+                UpdateStatus($"❌ 加载转换设置失败: {ex.Message}");
+            }
         }
 
         private void InitializeViewState()
@@ -131,6 +159,24 @@ namespace VideoConversion_Client
                 case nameof(MainWindowViewModel.IsConnectedToServer):
                     UpdateConnectionIndicator(viewModel.IsConnectedToServer);
                     break;
+            }
+        }
+
+        private void OnConversionSettingsChanged(object? sender, Services.ConversionSettingsChangedEventArgs e)
+        {
+            try
+            {
+                // 通知文件上传视图更新转换后的预估值
+                fileUploadView?.UpdateTargetInfoFromSettings();
+
+                // 更新状态显示
+                UpdateStatus($"⚙️ 转换设置已更新: {e.NewSettings.Resolution}, {e.NewSettings.VideoCodec}");
+
+                System.Diagnostics.Debug.WriteLine($"转换设置已变化: {e.NewSettings.VideoCodec}, {e.NewSettings.Resolution}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"处理转换设置变化失败: {ex.Message}");
             }
         }
 
@@ -227,7 +273,13 @@ namespace VideoConversion_Client
         {
             try
             {
+                // 清理ViewModel
                 await viewModel.CleanupAsync();
+
+                // 清理转换设置服务
+                Services.ConversionSettingsService.Instance.Cleanup();
+
+                System.Diagnostics.Debug.WriteLine("程序关闭，所有服务已清理");
             }
             catch (Exception ex)
             {

@@ -14,6 +14,8 @@ namespace VideoConversion_Client.Models
         private string _duration = "分析中...";
         private string _targetFormat = "MP4";
         private string _targetResolution = "1920×1080";
+        private string _estimatedFileSize = "预估中...";
+        private string _estimatedDuration = "预估中...";
         private FileItemStatus _status = FileItemStatus.Pending;
         private double _progress = 0;
         private string _statusText = "等待处理";
@@ -65,6 +67,18 @@ namespace VideoConversion_Client.Models
         {
             get => _targetResolution;
             set => SetProperty(ref _targetResolution, value);
+        }
+
+        public string EstimatedFileSize
+        {
+            get => _estimatedFileSize;
+            set => SetProperty(ref _estimatedFileSize, value);
+        }
+
+        public string EstimatedDuration
+        {
+            get => _estimatedDuration;
+            set => SetProperty(ref _estimatedDuration, value);
         }
 
         public FileItemStatus Status

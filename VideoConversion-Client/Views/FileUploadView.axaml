@@ -89,6 +89,23 @@
                                 Content="合并全部文件"
                                 FontSize="14"
                                 Foreground="#6c757d" />
+
+                        <!-- 转码设置按钮 -->
+                        <Button Name="ConversionSettingsBtn"
+                                Content="⚙️ 转码设置"
+                                Background="#6c757d"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Padding="12,8"
+                                CornerRadius="6"
+                                FontSize="13"
+                                Click="ConversionSettingsBtn_Click">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover">
+                                    <Setter Property="Background" Value="#5a6268" />
+                                </Style>
+                            </Button.Styles>
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -113,7 +130,7 @@
                                 Spacing="12"
                                 VerticalAlignment="Center">
                         <Button Name="QuickSelectBtn"
-                                Content="� 选择文件"
+                                Content="📄 选择文件"
                                 Background="#007bff"
                                 Foreground="White"
                                 BorderThickness="0"
@@ -183,8 +200,6 @@
                     </Button>
                 </Grid>
             </Border>
-
-
 
             <!-- 中间文件拖拽区域 - 填充剩余空间 -->
             <Border Grid.Row="0"
@@ -261,7 +276,7 @@
             </Border>
 
             <!-- 状态2：文件列表状态 -->
-            <Grid Grid.Row="0" Name="FileListView" IsVisible="True">
+            <Grid Grid.Row="0" Name="FileListView">
                 <!-- 文件列表容器 -->
                 <Border DragDrop.AllowDrop="True"
                         Background="Transparent"
@@ -270,233 +285,200 @@
                         CornerRadius="12,12,0,0"
                         Margin="0">
                     <!-- 文件列表内容 -->
-                    <ScrollViewer
-                                    VerticalScrollBarVisibility="Auto"
-                                    HorizontalScrollBarVisibility="Disabled">
-                            <ItemsControl Name="FileListContainer" Margin="16,12,16,12">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Spacing="8" Margin="0,0,0,8" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl Name="FileListContainer"
+                                      Margin="16,12,16,12">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="8" Margin="0,0,0,8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
 
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="models:FileItemViewModel">
-                                    <!-- 文件项模板 -->
+                                    <!-- 完整的文件项模板 -->
                                     <Border Background="White"
-                                            BorderBrush="#e9ecef"
+                                            BorderBrush="#e5e7eb"
                                             BorderThickness="1"
-                                            CornerRadius="8"
+                                            CornerRadius="12"
                                             Padding="16"
-                                            Margin="0"
-                                            Tag="{Binding StatusTag}">
+                                            Margin="0,0,0,8">
                                         <!-- 添加阴影效果 -->
                                         <Border.Effect>
                                             <DropShadowEffect Color="#000000"
-                                                            Opacity="0.08"
-                                                            BlurRadius="8"
+                                                            Opacity="0.05"
+                                                            BlurRadius="10"
                                                             OffsetX="0"
-                                                            OffsetY="2" />
+                                                            OffsetY="1" />
                                         </Border.Effect>
-                                        <Border.Styles>
-                                            <!-- 正在转换状态的特殊样式 -->
-                                            <Style Selector="Border[Tag=Converting]">
-                                                <Setter Property="BorderBrush" Value="#9b59b6" />
-                                                <Setter Property="BorderThickness" Value="2" />
-                                                <Setter Property="Background">
-                                                    <Setter.Value>
-                                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                                            <GradientStop Color="#ffffff" Offset="0" />
-                                                            <GradientStop Color="#f8f5ff" Offset="1" />
-                                                        </LinearGradientBrush>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-
-                                            <!-- 转换完成状态的样式 -->
-                                            <Style Selector="Border[Tag=Completed]">
-                                                <Setter Property="BorderBrush" Value="#27ae60" />
-                                                <Setter Property="BorderThickness" Value="2" />
-                                                <Setter Property="Background">
-                                                    <Setter.Value>
-                                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                                            <GradientStop Color="#ffffff" Offset="0" />
-                                                            <GradientStop Color="#f0fff4" Offset="1" />
-                                                        </LinearGradientBrush>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-
-                                            <!-- 转换失败状态的样式 -->
-                                            <Style Selector="Border[Tag=Failed]">
-                                                <Setter Property="BorderBrush" Value="#e74c3c" />
-                                                <Setter Property="BorderThickness" Value="2" />
-                                                <Setter Property="Background">
-                                                    <Setter.Value>
-                                                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                                            <GradientStop Color="#ffffff" Offset="0" />
-                                                            <GradientStop Color="#fff5f5" Offset="1" />
-                                                        </LinearGradientBrush>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </Border.Styles>
 
                                         <Grid>
                                             <!-- 主内容网格 -->
                                             <Grid Name="ContentGrid">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="120" />
+                                                    <ColumnDefinition Width="80" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
                                                 <!-- 缩略图 -->
                                                 <Border Grid.Column="0"
-                                                        Background="#f0f0f0"
-                                                        CornerRadius="6"
-                                                        Width="100"
-                                                        Height="70">
+                                                        Background="#f9fafb"
+                                                        BorderBrush="#e5e7eb"
+                                                        BorderThickness="1"
+                                                        CornerRadius="8"
+                                                        Width="64"
+                                                        Height="64">
                                                     <Image Source="{Binding Thumbnail}"
                                                         Stretch="UniformToFill" />
                                                 </Border>
 
                                                 <!-- 文件信息 -->
                                                 <StackPanel Grid.Column="1"
-                                                            Margin="15,0"
+                                                            Margin="16,0"
                                                             VerticalAlignment="Center">
 
                                                     <!-- 文件名 -->
                                                     <TextBlock Text="{Binding FileName}"
-                                                            FontSize="15"
+                                                            FontSize="16"
                                                             FontWeight="SemiBold"
-                                                            Foreground="#333"
+                                                            Foreground="#111827"
                                                             TextTrimming="CharacterEllipsis"
-                                                            MaxWidth="400"
-                                                            TextWrapping="NoWrap" />
+                                                            MaxWidth="500"
+                                                            TextWrapping="NoWrap"
+                                                            Margin="0,0,0,8" />
 
-                                                    <!-- 主要对比行：原文件信息 → 转换后信息 -->
-                                                    <StackPanel Orientation="Horizontal"
-                                                                Spacing="15"
-                                                                VerticalAlignment="Center"
-                                                                Margin="0,8,0,0">
+                                                    <!-- 三列布局：原视频信息 | 箭头 | 转换后信息 -->
+                                                    <Grid Margin="0,0,0,8">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
 
-                                                        <!-- 原文件信息区域 -->
-                                                        <StackPanel Orientation="Horizontal"
-                                                                    Spacing="12"
-                                                                    VerticalAlignment="Center">
+                                                        <!-- 左侧：原视频信息 -->
+                                                        <StackPanel Grid.Column="0"
+                                                                    HorizontalAlignment="Center"
+                                                                    Spacing="6">
+                                                            <!-- 第一行：格式和分辨率 -->
+                                                            <StackPanel Orientation="Horizontal"
+                                                                        HorizontalAlignment="Center"
+                                                                        Spacing="8">
+                                                                <!-- 源格式 -->
+                                                                <Border Background="#f3f4f6"
+                                                                        CornerRadius="4"
+                                                                        Padding="6,3">
+                                                                    <TextBlock Text="{Binding SourceFormat}"
+                                                                            FontSize="12"
+                                                                            Foreground="#374151"
+                                                                            FontWeight="Medium" />
+                                                                </Border>
 
-                                                            <!-- 源格式 -->
-                                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                                <TextBlock Text="📄" FontSize="13" VerticalAlignment="Center" />
-                                                                <TextBlock Text="{Binding SourceFormat}"
-                                                                        FontSize="13"
-                                                                        Foreground="#555"
-                                                                        FontWeight="Medium"
-                                                                        VerticalAlignment="Center" />
-                                                            </StackPanel>
-
-                                                            <!-- 源分辨率 -->
-                                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                                <TextBlock Text="📐" FontSize="13" VerticalAlignment="Center" />
+                                                                <!-- 源分辨率 -->
                                                                 <TextBlock Text="{Binding SourceResolution}"
-                                                                        FontSize="13"
-                                                                        Foreground="#555"
-                                                                        FontWeight="Medium"
+                                                                        FontSize="12"
+                                                                        Foreground="#6b7280"
                                                                         VerticalAlignment="Center" />
+                                                            </StackPanel>
+
+                                                            <!-- 第二行：文件大小和时长 -->
+                                                            <StackPanel Orientation="Horizontal"
+                                                                        HorizontalAlignment="Center"
+                                                                        Spacing="8">
+                                                                <!-- 源文件大小 -->
+                                                                <TextBlock Text="{Binding FileSize}"
+                                                                        FontSize="12"
+                                                                        Foreground="#6b7280" />
+
+                                                                <!-- 分隔符 -->
+                                                                <TextBlock Text="•"
+                                                                        FontSize="12"
+                                                                        Foreground="#d1d5db" />
+
+                                                                <!-- 源时长 -->
+                                                                <TextBlock Text="{Binding Duration}"
+                                                                        FontSize="12"
+                                                                        Foreground="#6b7280" />
                                                             </StackPanel>
                                                         </StackPanel>
 
-                                                        <!-- 转换箭头 -->
-                                                        <TextBlock Text="→"
-                                                                FontSize="18"
-                                                                FontWeight="Bold"
-                                                                Foreground="#9b59b6"
+                                                        <!-- 中间：转换箭头 -->
+                                                        <TextBlock Grid.Column="1"
+                                                                Text="→"
+                                                                FontSize="16"
+                                                                Foreground="#8b5cf6"
                                                                 VerticalAlignment="Center"
-                                                                Margin="8,0" />
+                                                                HorizontalAlignment="Center"
+                                                                Margin="16,0" />
 
-                                                        <!-- 转换后信息区域 -->
-                                                        <StackPanel Orientation="Horizontal"
-                                                                    Spacing="12"
-                                                                    VerticalAlignment="Center">
+                                                        <!-- 右侧：转换后信息 -->
+                                                        <StackPanel Grid.Column="2"
+                                                                    HorizontalAlignment="Center"
+                                                                    Spacing="6">
+                                                            <!-- 第一行：格式和分辨率 -->
+                                                            <StackPanel Orientation="Horizontal"
+                                                                        HorizontalAlignment="Center"
+                                                                        Spacing="8">
+                                                                <!-- 目标格式 -->
+                                                                <Border Background="#ede9fe"
+                                                                        CornerRadius="4"
+                                                                        Padding="6,3">
+                                                                    <TextBlock Text="{Binding TargetFormat}"
+                                                                            FontSize="12"
+                                                                            Foreground="#7c3aed"
+                                                                            FontWeight="Medium" />
+                                                                </Border>
 
-                                                            <!-- 目标格式 -->
-                                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                                <TextBlock Text="🎯" FontSize="13" VerticalAlignment="Center" />
-                                                                <TextBlock Text="{Binding TargetFormat}"
-                                                                        FontSize="13"
-                                                                        Foreground="#555"
-                                                                        FontWeight="Medium"
-                                                                        VerticalAlignment="Center" />
-                                                            </StackPanel>
-
-                                                            <!-- 目标分辨率 -->
-                                                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                                <TextBlock Text="📐" FontSize="13" VerticalAlignment="Center" />
+                                                                <!-- 目标分辨率 -->
                                                                 <TextBlock Text="{Binding TargetResolution}"
-                                                                        FontSize="13"
-                                                                        Foreground="#555"
-                                                                        FontWeight="Medium"
+                                                                        FontSize="12"
+                                                                        Foreground="#6b7280"
                                                                         VerticalAlignment="Center" />
                                                             </StackPanel>
-                                                        </StackPanel>
-                                                    </StackPanel>
 
-                                                    <!-- 次要信息行（文件大小和时长） -->
-                                                    <StackPanel Orientation="Horizontal"
-                                                                Spacing="15"
-                                                                Margin="0,5,0,0">
+                                                            <!-- 第二行：预估文件大小和时长 -->
+                                                            <StackPanel Orientation="Horizontal"
+                                                                        HorizontalAlignment="Center"
+                                                                        Spacing="8">
+                                                                <!-- 预估文件大小 -->
+                                                                <TextBlock Text="{Binding EstimatedFileSize}"
+                                                                        FontSize="12"
+                                                                        Foreground="#6b7280" />
 
-                                                        <!-- 文件大小 -->
-                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                            <TextBlock Text="💾" FontSize="13" VerticalAlignment="Center" />
-                                                            <TextBlock Text="{Binding FileSize}"
-                                                                    FontSize="13"
-                                                                    Foreground="#555"
-                                                                    FontWeight="Medium"
-                                                                    VerticalAlignment="Center" />
-                                                        </StackPanel>
+                                                                <!-- 分隔符 -->
+                                                                <TextBlock Text="•"
+                                                                        FontSize="12"
+                                                                        Foreground="#d1d5db" />
 
-                                                        <!-- 时长 -->
-                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                            <TextBlock Text="⏱️" FontSize="13" VerticalAlignment="Center" />
-                                                            <TextBlock Text="{Binding Duration}"
-                                                                    FontSize="13"
-                                                                    Foreground="#555"
-                                                                    FontWeight="Medium"
-                                                                    VerticalAlignment="Center" />
+                                                                <!-- 预估时长 -->
+                                                                <TextBlock Text="{Binding EstimatedDuration}"
+                                                                        FontSize="12"
+                                                                        Foreground="#6b7280" />
+                                                            </StackPanel>
                                                         </StackPanel>
-                                                    </StackPanel>
+                                                    </Grid>
 
                                                     <!-- 进度信息 -->
-                                                    <StackPanel Margin="0,8,0,0">
+                                                    <StackPanel>
                                                         <!-- 状态文本和进度百分比 -->
-                                                        <Grid Margin="0,0,0,4">
+                                                        <Grid Margin="0,0,0,6">
                                                             <Grid.ColumnDefinitions>
                                                                 <ColumnDefinition Width="*" />
                                                                 <ColumnDefinition Width="Auto" />
                                                             </Grid.ColumnDefinitions>
 
-                                                            <StackPanel Grid.Column="0"
-                                                                        Orientation="Horizontal"
-                                                                        Spacing="6"
-                                                                        VerticalAlignment="Center">
-                                                                <!-- 状态图标 -->
-                                                                <TextBlock Text="⏳"
-                                                                        FontSize="12"
-                                                                        VerticalAlignment="Center"
-                                                                        Name="StatusIcon" />
+                                                            <!-- 状态文本 -->
+                                                            <TextBlock Grid.Column="0"
+                                                                    Text="{Binding StatusText}"
+                                                                    FontSize="12"
+                                                                    Foreground="#6b7280"
+                                                                    VerticalAlignment="Center" />
 
-                                                                <!-- 状态文本 -->
-                                                                <TextBlock Text="{Binding StatusText}"
-                                                                        FontSize="12"
-                                                                        Foreground="#666"
-                                                                        VerticalAlignment="Center" />
-                                                            </StackPanel>
-
+                                                            <!-- 进度百分比 -->
                                                             <TextBlock Grid.Column="1"
                                                                     FontSize="12"
-                                                                    Foreground="#9b59b6"
+                                                                    Foreground="#8b5cf6"
                                                                     FontWeight="Medium"
                                                                     VerticalAlignment="Center">
                                                                 <TextBlock.Text>
@@ -510,24 +492,13 @@
                                                         <!-- 进度条 -->
                                                         <ProgressBar Value="{Binding Progress}"
                                                                     Maximum="100"
-                                                                    Height="8"
-                                                                    Background="#f0f0f0"
-                                                                    Foreground="#9b59b6"
-                                                                    CornerRadius="4">
+                                                                    Height="6"
+                                                                    Background="#f3f4f6"
+                                                                    Foreground="#8b5cf6"
+                                                                    CornerRadius="3">
                                                             <ProgressBar.Styles>
                                                                 <Style Selector="ProgressBar">
                                                                     <Setter Property="BorderThickness" Value="0" />
-                                                                </Style>
-                                                                <Style Selector="ProgressBar:indeterminate /template/ Border#PART_Indicator">
-                                                                    <Setter Property="Background">
-                                                                        <Setter.Value>
-                                                                            <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
-                                                                                <GradientStop Color="#9b59b6" Offset="0" />
-                                                                                <GradientStop Color="#8e44ad" Offset="0.5" />
-                                                                                <GradientStop Color="#9b59b6" Offset="1" />
-                                                                            </LinearGradientBrush>
-                                                                        </Setter.Value>
-                                                                    </Setter>
                                                                 </Style>
                                                             </ProgressBar.Styles>
                                                         </ProgressBar>
@@ -537,39 +508,24 @@
                                                 <!-- 转换按钮 -->
                                                 <StackPanel Grid.Column="2"
                                                             VerticalAlignment="Center"
-                                                            Margin="15,0,0,0">
-                                                    <Button Background="#9b59b6"
+                                                            Margin="16,0,0,0">
+                                                    <Button Background="#8b5cf6"
                                                             Foreground="White"
-                                                            Padding="20,8"
-                                                            CornerRadius="20"
-                                                            FontSize="12"
+                                                            Padding="16,8"
+                                                            CornerRadius="8"
+                                                            FontSize="13"
                                                             FontWeight="Medium"
                                                             Click="ConvertFile_Click"
-                                                            Name="ConvertButton">
+                                                            Name="ConvertButton"
+                                                            BorderThickness="0">
                                                         <Button.Content>
-                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                <TextBlock Text="🔄" FontSize="12" VerticalAlignment="Center" Name="ConvertIcon" />
-                                                                <TextBlock Text="转换" VerticalAlignment="Center" Name="ConvertText" />
-                                                            </StackPanel>
+                                                            <TextBlock Text="转换" VerticalAlignment="Center" />
                                                         </Button.Content>
 
                                                         <Button.Styles>
-                                                            <!-- 正在转换状态 -->
-                                                            <Style Selector="Button[Tag=Converting]">
-                                                                <Setter Property="Background" Value="#f39c12" />
-                                                                <Setter Property="IsEnabled" Value="False" />
-                                                            </Style>
-
-                                                            <!-- 转换完成状态 -->
-                                                            <Style Selector="Button[Tag=Completed]">
-                                                                <Setter Property="Background" Value="#27ae60" />
-                                                                <Setter Property="IsEnabled" Value="False" />
-                                                            </Style>
-
-                                                            <!-- 转换失败状态 -->
-                                                            <Style Selector="Button[Tag=Failed]">
-                                                                <Setter Property="Background" Value="#e74c3c" />
-                                                                <Setter Property="IsEnabled" Value="True" />
+                                                            <!-- 默认悬停效果 -->
+                                                            <Style Selector="Button:pointerover">
+                                                                <Setter Property="Background" Value="#7c3aed" />
                                                             </Style>
                                                         </Button.Styles>
                                                     </Button>
@@ -579,28 +535,22 @@
                                             <!-- 删除按钮（右上角） -->
                                             <Button Content="✕"
                                                     Background="Transparent"
-                                                    Foreground="#999"
+                                                    Foreground="#9ca3af"
                                                     BorderThickness="0"
                                                     Padding="0"
-                                                    FontSize="16"
+                                                    FontSize="14"
                                                     FontWeight="Bold"
                                                     HorizontalAlignment="Right"
                                                     VerticalAlignment="Top"
-                                                    Margin="5,5,5,0"
-                                                    Width="24"
-                                                    Height="24"
-                                                    CornerRadius="12"
-                                                    Cursor="Hand"
-                                                    ToolTip.Tip="删除文件"
+                                                    Margin="0,-2,0,0"
+                                                    Width="20"
+                                                    Height="20"
+                                                    CornerRadius="10"
                                                     Click="RemoveFile_Click">
                                                 <Button.Styles>
                                                     <Style Selector="Button:pointerover">
-                                                        <Setter Property="Background" Value="#ffebee" />
-                                                        <Setter Property="Foreground" Value="#d32f2f" />
-                                                    </Style>
-                                                    <Style Selector="Button:pressed">
-                                                        <Setter Property="Background" Value="#ffcdd2" />
-                                                        <Setter Property="Foreground" Value="#b71c1c" />
+                                                        <Setter Property="Background" Value="#fef2f2" />
+                                                        <Setter Property="Foreground" Value="#ef4444" />
                                                     </Style>
                                                 </Button.Styles>
                                             </Button>
@@ -608,7 +558,7 @@
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                        </ItemsControl>
                     </ScrollViewer>
                 </Border>
             </Grid>

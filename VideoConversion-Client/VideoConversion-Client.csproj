@@ -24,6 +24,7 @@
 
     <!-- MVVM 支持 -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="MediaInfo.Core.Native" Version="21.9.1" />
 
     <!-- HTTP 客户端 -->
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.7" />
@@ -37,6 +38,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
+    <PackageReference Include="NReco.VideoInfo" Version="1.2.1" />
     <PackageReference Include="SqlSugarCore" Version="5.1.4.198" />
 
     <!-- JSON 序列化 -->

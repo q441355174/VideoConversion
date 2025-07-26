@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VideoConversion_Client.Models;
@@ -6,25 +7,33 @@ namespace VideoConversion_Client.Views
 {
     public partial class ConversionSettingsWindow : Window
     {
-        public ConversionSettings? Settings { get; private set; }
-        public bool DialogResult { get; private set; } = false;
+        private readonly Services.ConversionSettingsService _settingsService;
+        public bool SettingsChanged { get; private set; } = false;
 
         public ConversionSettingsWindow()
         {
             InitializeComponent();
+
+            // 获取全局转换设置服务实例
+            _settingsService = Services.ConversionSettingsService.Instance;
+
+            // 加载当前设置
             LoadCurrentSettings();
         }
 
         public ConversionSettingsWindow(ConversionSettings currentSettings) : this()
         {
-            LoadSettings(currentSettings);
+            // 由于我们直接使用全局设置服务，这里不需要额外操作
+            // currentSettings 参数保留是为了兼容性
         }
 
         private void LoadCurrentSettings()
         {
-            // 加载默认设置
-            var defaultSettings = new ConversionSettings();
-            LoadSettings(defaultSettings);
+            // 从全局设置服务加载当前设置
+            var currentSettings = _settingsService.CurrentSettings;
+            LoadSettings(currentSettings);
+
+            System.Diagnostics.Debug.WriteLine($"转码设置窗口已加载当前设置: {currentSettings.VideoCodec}, {currentSettings.Resolution}");
         }
 
         private void LoadSettings(ConversionSettings settings)
@@ -95,14 +104,29 @@ namespace VideoConversion_Client.Views
 
         private void ApplyButton_Click(object? sender, RoutedEventArgs e)
         {
-            Settings = GetCurrentSettings();
-            DialogResult = true;
-            Close();
+            try
+            {
+                // 获取当前UI中的设置
+                var newSettings = GetCurrentSettings();
+
+                // 直接更新全局设置服务
+                _settingsService.UpdateSettings(newSettings);
+
+                SettingsChanged = true;
+
+                System.Diagnostics.Debug.WriteLine($"转码设置已应用到全局服务: {newSettings.VideoCodec}, {newSettings.Resolution}");
+
+                Close();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"应用转码设置失败: {ex.Message}");
+            }
         }
 
         private void CancelButton_Click(object? sender, RoutedEventArgs e)
         {
-            DialogResult = false;
+            SettingsChanged = false;
             Close();
         }
     }

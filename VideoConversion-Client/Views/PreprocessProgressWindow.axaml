@@ -1,0 +1,95 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="VideoConversion_Client.Views.PreprocessProgressWindow"
+        Title="处理文件"
+        Width="400"
+        Height="200"
+        MinWidth="350"
+        MinHeight="150"
+        WindowStartupLocation="CenterOwner"
+        CanResize="false"
+        ShowInTaskbar="false"
+        Background="White">
+
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0"
+                   Text="正在处理文件..."
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Foreground="#2c3e50"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,20" />
+
+        <!-- 进度信息 -->
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Name="StatusText"
+                       Text="准备开始..."
+                       FontSize="13"
+                       Foreground="#495057" />
+
+            <TextBlock Grid.Column="1"
+                       Name="ProgressText"
+                       Text="0/0"
+                       FontSize="13"
+                       FontWeight="Medium"
+                       Foreground="#8b5cf6" />
+        </Grid>
+
+        <!-- 进度条 -->
+        <ProgressBar Grid.Row="2"
+                     Name="ProgressBar"
+                     Height="6"
+                     Background="#e9ecef"
+                     Foreground="#8b5cf6"
+                     CornerRadius="3"
+                     Minimum="0"
+                     Maximum="100"
+                     Value="0"
+                     Margin="0,0,0,15" />
+
+        <!-- 当前文件 -->
+        <TextBlock Grid.Row="3"
+                   Name="CurrentFileText"
+                   Text=""
+                   FontSize="12"
+                   Foreground="#6c757d"
+                   TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center" />
+
+        <!-- 按钮 -->
+        <Button Grid.Row="4"
+                Name="CancelButton"
+                Content="取消"
+                Background="Transparent"
+                Foreground="#6c757d"
+                BorderBrush="#dee2e6"
+                BorderThickness="1"
+                Padding="20,8"
+                CornerRadius="6"
+                FontSize="13"
+                HorizontalAlignment="Center"
+                Click="CancelButton_Click">
+            <Button.Styles>
+                <Style Selector="Button:pointerover">
+                    <Setter Property="Background" Value="#f8f9fa" />
+                </Style>
+            </Button.Styles>
+        </Button>
+    </Grid>
+</Window>
