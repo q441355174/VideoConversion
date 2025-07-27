@@ -12,6 +12,11 @@ namespace VideoConversion.Services
         private readonly ILogger<DatabaseService> _logger;
         private readonly NotificationService? _notificationService;
 
+        /// <summary>
+        /// 获取数据库实例
+        /// </summary>
+        public SqlSugarScope GetDatabaseAsync() => _db;
+
         public DatabaseService(
             ILogger<DatabaseService> logger,
             IConfiguration configuration,
@@ -23,6 +28,9 @@ namespace VideoConversion.Services
             // 获取数据库连接字符串
             var connectionString = configuration.GetConnectionString("DefaultConnection") 
                 ?? "Data Source=videoconversion.db";
+
+            // 确保连接字符串格式正确
+            _logger.LogDebug("原始连接字符串: {ConnectionString}", connectionString);
 
             _db = new SqlSugarScope(new ConnectionConfig()
             {
@@ -42,8 +50,25 @@ namespace VideoConversion.Services
                     // 禁用查询缓存
                     IsAutoRemoveDataCache = true,
                     // 设置命令超时
-                    SqlServerCodeFirstNvarchar = true
+                    SqlServerCodeFirstNvarchar = true,
+                    // 设置SQLite特定选项
+                    SqliteCodeFirstEnableDefaultValue = true,
+                    // 启用连接池
+                    IsWithNoLockQuery = true
                 }
+            }, db =>
+            {
+                // 配置日志
+                db.Aop.OnLogExecuting = (sql, pars) =>
+                {
+                    _logger.LogDebug("SQL: {Sql}", sql);
+                };
+
+                // 配置错误处理
+                db.Aop.OnError = (exp) =>
+                {
+                    _logger.LogError(exp, "数据库操作错误: {Message}", exp.Message);
+                };
             });
 
             // 初始化数据库
@@ -57,8 +82,25 @@ namespace VideoConversion.Services
         {
             try
             {
+                // 设置SQLite WAL模式以支持并发访问
+                try
+                {
+                    _db.Ado.ExecuteCommand("PRAGMA journal_mode=WAL;");
+                    _db.Ado.ExecuteCommand("PRAGMA synchronous=NORMAL;");
+                    _db.Ado.ExecuteCommand("PRAGMA cache_size=10000;");
+                    _db.Ado.ExecuteCommand("PRAGMA temp_store=memory;");
+                }
+                catch (Exception pragmaEx)
+                {
+                    _logger.LogWarning(pragmaEx, "设置SQLite PRAGMA失败，继续使用默认设置");
+                }
+
                 // 创建表
                 _db.CodeFirst.InitTables<ConversionTask>();
+
+                // 创建磁盘空间相关表
+                _db.CodeFirst.InitTables<Models.DiskSpaceConfig>();
+                _db.CodeFirst.InitTables<Models.SpaceUsage>();
 
                 // // 检查是否需要创建示例数据
                 // var taskCount = _db.Queryable<ConversionTask>().Count();

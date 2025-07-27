@@ -290,6 +290,7 @@ namespace VideoConversion_Client.Models
         public bool Success { get; set; }
         public string? Message { get; set; }
         public T? Data { get; set; }
+        public string? ErrorType { get; set; }
 
         /// <summary>
         /// 创建成功响应
@@ -319,49 +320,179 @@ namespace VideoConversion_Client.Models
     }
 
     /// <summary>
-    /// 开始转换请求模型
+    /// 开始转换请求模型（与服务器端ConversionTask对应）
     /// </summary>
     public class StartConversionRequest
     {
+        // 基本信息
         public string? TaskName { get; set; }
         public string Preset { get; set; } = "Fast 1080p30";
+
+        // 基本设置
         public string? OutputFormat { get; set; }
         public string? Resolution { get; set; }
+        public int? CustomWidth { get; set; }
+        public int? CustomHeight { get; set; }
+        public string? AspectRatio { get; set; }
+
+        // 视频设置
         public string? VideoCodec { get; set; }
-        public string? AudioCodec { get; set; }
-        public string? VideoQuality { get; set; }
-        public string? AudioQuality { get; set; }
         public string? FrameRate { get; set; }
+        public string? QualityMode { get; set; } = "crf";
+        public string? VideoQuality { get; set; }
+        public int? VideoBitrate { get; set; }
+        public string? EncodingPreset { get; set; }
+        public string? Profile { get; set; }
+
+        // 音频设置
+        public string? AudioCodec { get; set; }
+        public string? AudioChannels { get; set; }
+        public string? AudioQualityMode { get; set; } = "bitrate";
+        public string? AudioQuality { get; set; }
+        public string? AudioBitrate { get; set; }
+        public int? CustomAudioBitrateValue { get; set; }
+        public int? AudioQualityValue { get; set; }
+        public string? SampleRate { get; set; }
+        public string? AudioVolume { get; set; }
+
+        // 高级选项
+        public string? StartTime { get; set; }
+        public double? EndTime { get; set; }
+        public string? Duration { get; set; }
+        public double? DurationLimit { get; set; }
+        public bool Deinterlace { get; set; } = false;
+        public string? Denoise { get; set; }
+        public string? ColorSpace { get; set; }
+        public string? PixelFormat { get; set; }
+        public string? CustomParams { get; set; }
+        public string? CustomParameters { get; set; }
+        public string? HardwareAcceleration { get; set; }
+        public string? VideoFilters { get; set; }
+        public string? AudioFilters { get; set; }
+
+        // 任务设置
+        public int Priority { get; set; } = 0;
+        public int MaxRetries { get; set; } = 3;
+        public string? Tags { get; set; }
+        public string? Notes { get; set; }
+
+        // 编码选项
+        public bool TwoPass { get; set; } = false;
+        public bool FastStart { get; set; } = true;
+        public bool CopyTimestamps { get; set; } = true;
     }
 
     /// <summary>
-    /// 转换设置模型
+    /// 转换设置模型（与服务器端ConversionTask完全对应）
     /// </summary>
     public class ConversionSettings
     {
-        public string VideoCodec { get; set; } = "H.264";
+        // 基本设置
+        public string? OutputFormat { get; set; } = "MP4";
         public string Resolution { get; set; } = "1920x1080";
+
+        // 视频设置
+        public string VideoCodec { get; set; } = "H.264";
         public string FrameRate { get; set; } = "30";
-        public string Bitrate { get; set; } = "5000k";
+        public string? QualityMode { get; set; } = "crf";
+        public string? VideoQuality { get; set; } = "23";
+        public string? EncodingPreset { get; set; } = "medium";
+        public string? Profile { get; set; }
+
+        // 音频设置
         public string AudioCodec { get; set; } = "AAC";
+        public string? AudioChannels { get; set; } = "2";
+        public string? AudioQualityMode { get; set; } = "bitrate";
         public string AudioQuality { get; set; } = "128k";
-        public string HardwareAcceleration { get; set; } = "自动";
-        public string Threads { get; set; } = "自动";
+        public string? SampleRate { get; set; } = "48000";
+        public string? AudioVolume { get; set; } = "0";
+
+        // 高级选项
+        public string? StartTime { get; set; }
+        public double? EndTime { get; set; }
+        public double? DurationLimit { get; set; }
+        public bool Deinterlace { get; set; } = false;
+        public string? Denoise { get; set; }
+        public string? ColorSpace { get; set; } = "bt709";
+        public string? PixelFormat { get; set; } = "yuv420p";
+        public string? CustomParams { get; set; }
+        public string? CustomParameters { get; set; }
+        public string HardwareAcceleration { get; set; } = "auto";
+        public string? VideoFilters { get; set; }
+        public string? AudioFilters { get; set; }
+
+        // 任务设置
+        public int Priority { get; set; } = 0;
+        public int MaxRetries { get; set; } = 3;
+        public string? Tags { get; set; }
+        public string? Notes { get; set; }
+
+        // 编码选项
+        public bool TwoPass { get; set; } = false;
+        public bool FastStart { get; set; } = true;
+        public bool CopyTimestamps { get; set; } = true;
     }
 
     /// <summary>
-    /// 转换开始事件参数
+    /// 转换开始事件参数（与StartConversionRequest对应）
     /// </summary>
     public class ConversionStartEventArgs : EventArgs
     {
+        // 基本信息
+        public string? TaskName { get; set; }
         public string Preset { get; set; } = "Fast 1080p30";
+
+        // 基本设置
         public string? OutputFormat { get; set; }
         public string? Resolution { get; set; }
+        public int? CustomWidth { get; set; }
+        public int? CustomHeight { get; set; }
+        public string? AspectRatio { get; set; }
+
+        // 视频设置
         public string? VideoCodec { get; set; }
-        public string? AudioCodec { get; set; }
-        public string? VideoQuality { get; set; }
-        public string? AudioQuality { get; set; }
         public string? FrameRate { get; set; }
-        public string? TaskName { get; set; }
+        public string? QualityMode { get; set; } = "crf";
+        public string? VideoQuality { get; set; }
+        public int? VideoBitrate { get; set; }
+        public string? EncodingPreset { get; set; }
+        public string? Profile { get; set; }
+
+        // 音频设置
+        public string? AudioCodec { get; set; }
+        public string? AudioChannels { get; set; }
+        public string? AudioQualityMode { get; set; } = "bitrate";
+        public string? AudioQuality { get; set; }
+        public string? AudioBitrate { get; set; }
+        public int? CustomAudioBitrateValue { get; set; }
+        public int? AudioQualityValue { get; set; }
+        public string? SampleRate { get; set; }
+        public string? AudioVolume { get; set; }
+
+        // 高级选项
+        public string? StartTime { get; set; }
+        public double? EndTime { get; set; }
+        public string? Duration { get; set; }
+        public double? DurationLimit { get; set; }
+        public bool Deinterlace { get; set; } = false;
+        public string? Denoise { get; set; }
+        public string? ColorSpace { get; set; }
+        public string? PixelFormat { get; set; }
+        public string? CustomParams { get; set; }
+        public string? CustomParameters { get; set; }
+        public string? HardwareAcceleration { get; set; }
+        public string? VideoFilters { get; set; }
+        public string? AudioFilters { get; set; }
+
+        // 任务设置
+        public int Priority { get; set; } = 0;
+        public int MaxRetries { get; set; } = 3;
+        public string? Tags { get; set; }
+        public string? Notes { get; set; }
+
+        // 编码选项
+        public bool TwoPass { get; set; } = false;
+        public bool FastStart { get; set; } = true;
+        public bool CopyTimestamps { get; set; } = true;
     }
 }

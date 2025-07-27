@@ -1,0 +1,145 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="VideoConversion_Client.Views.DiskSpaceConfigDialog"
+        Title="磁盘空间配置"
+        Width="500"
+        Height="400"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Icon="/Assets/icon.ico">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0" Text="磁盘空间配置" FontSize="18" FontWeight="Bold" 
+                   Foreground="#2c3e50" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+
+        <!-- 配置内容 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="20">
+
+                <!-- 当前使用情况 -->
+                <Border Background="#f8f9fa" CornerRadius="8" Padding="15" BorderBrush="#dee2e6" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="📊 当前使用情况" FontWeight="Bold" FontSize="14" Foreground="#2c3e50"/>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="已使用:" FontSize="12" Foreground="#6c757d" VerticalAlignment="Center"/>
+                            <TextBlock Name="CurrentUsedText" Text="0 GB" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="/" FontSize="12" Foreground="#6c757d"/>
+                            <TextBlock Name="CurrentTotalText" Text="100 GB" FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Text="(" FontSize="12" Foreground="#6c757d"/>
+                            <TextBlock Name="CurrentUsagePercentText" Text="0%" FontSize="12" Foreground="#007bff" FontWeight="SemiBold"/>
+                            <TextBlock Text=")" FontSize="12" Foreground="#6c757d"/>
+                        </StackPanel>
+                        
+                        <ProgressBar Name="CurrentUsageBar" Height="8" Background="#e9ecef" 
+                                   Foreground="#007bff" CornerRadius="4" Value="0" Maximum="100"/>
+                        
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="可用:" FontSize="11" Foreground="#6c757d"/>
+                            <TextBlock Name="CurrentAvailableText" Text="100 GB" FontSize="11" Foreground="#28a745" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 空间配置 -->
+                <Border Background="White" CornerRadius="8" Padding="15" BorderBrush="#dee2e6" BorderThickness="1">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="⚙️ 空间配置" FontWeight="Bold" FontSize="14" Foreground="#2c3e50"/>
+                        
+                        <!-- 启用/禁用空间限制 -->
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <CheckBox Name="EnableSpaceLimitCheckBox" Content="启用磁盘空间限制" 
+                                      FontSize="12" IsChecked="True"/>
+                        </StackPanel>
+                        
+                        <!-- 最大总空间 -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="最大总空间:" FontSize="12" Foreground="#495057" VerticalAlignment="Center"/>
+                                <TextBlock Name="MaxSpaceValueText" Text="100 GB" FontSize="12" FontWeight="SemiBold" 
+                                           Foreground="#007bff" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Slider Name="MaxSpaceSlider" Minimum="10" Maximum="1000" Value="100" 
+                                    TickFrequency="10" IsSnapToTickEnabled="True"/>
+                            <StackPanel Orientation="Horizontal" Spacing="20">
+                                <TextBlock Text="10 GB" FontSize="10" Foreground="#6c757d"/>
+                                <TextBlock Text="1000 GB" FontSize="10" Foreground="#6c757d" HorizontalAlignment="Right"/>
+                            </StackPanel>
+                        </StackPanel>
+                        
+                        <!-- 保留空间 -->
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="保留空间:" FontSize="12" Foreground="#495057" VerticalAlignment="Center"/>
+                                <TextBlock Name="ReservedSpaceValueText" Text="5 GB" FontSize="12" FontWeight="SemiBold" 
+                                           Foreground="#28a745" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Slider Name="ReservedSpaceSlider" Minimum="1" Maximum="50" Value="5" 
+                                    TickFrequency="1" IsSnapToTickEnabled="True"/>
+                            <StackPanel Orientation="Horizontal" Spacing="20">
+                                <TextBlock Text="1 GB" FontSize="10" Foreground="#6c757d"/>
+                                <TextBlock Text="50 GB" FontSize="10" Foreground="#6c757d" HorizontalAlignment="Right"/>
+                            </StackPanel>
+                        </StackPanel>
+                        
+                        <!-- 可用空间预览 -->
+                        <Border Background="#e7f3ff" CornerRadius="4" Padding="10" BorderBrush="#b3d9ff" BorderThickness="1">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="📋 配置预览" FontSize="11" FontWeight="SemiBold" Foreground="#0056b3"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="实际可用空间:" FontSize="11" Foreground="#495057"/>
+                                    <TextBlock Name="EffectiveSpaceText" Text="95 GB" FontSize="11" FontWeight="SemiBold" Foreground="#0056b3"/>
+                                </StackPanel>
+                                <TextBlock Name="ConfigWarningText" Text="" FontSize="10" Foreground="#dc3545" 
+                                           TextWrapping="Wrap" IsVisible="False"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 清理选项 -->
+                <Border Background="White" CornerRadius="8" Padding="15" BorderBrush="#dee2e6" BorderThickness="1">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="🧹 清理选项" FontWeight="Bold" FontSize="14" Foreground="#2c3e50"/>
+                        
+                        <StackPanel Spacing="8">
+                            <CheckBox Name="AutoCleanupCheckBox" Content="转换完成后自动删除原文件" 
+                                      FontSize="12" IsChecked="True"/>
+                            <CheckBox Name="CleanupDownloadedCheckBox" Content="下载完成24小时后删除转换文件" 
+                                      FontSize="12" IsChecked="True"/>
+                            <CheckBox Name="CleanupTempCheckBox" Content="定期清理临时文件" 
+                                      FontSize="12" IsChecked="True"/>
+                        </StackPanel>
+                        
+                        <Button Name="ManualCleanupBtn" Content="立即清理临时文件" 
+                                Background="#ffc107" Foreground="White" 
+                                CornerRadius="4" Padding="10,6" FontSize="11"
+                                HorizontalAlignment="Left" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 按钮区域 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+            <Button Name="RefreshBtn" Content="刷新" 
+                    Background="#6c757d" Foreground="White" 
+                    CornerRadius="4" Padding="15,8" FontSize="12"/>
+            <Button Name="CancelBtn" Content="取消" 
+                    Background="#6c757d" Foreground="White" 
+                    CornerRadius="4" Padding="15,8" FontSize="12"/>
+            <Button Name="SaveBtn" Content="保存配置" 
+                    Background="#007bff" Foreground="White" 
+                    CornerRadius="4" Padding="15,8" FontSize="12"/>
+        </StackPanel>
+
+    </Grid>
+</Window>

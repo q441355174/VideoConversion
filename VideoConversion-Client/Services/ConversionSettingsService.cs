@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using VideoConversion_Client.Models;
 
@@ -95,14 +97,42 @@ namespace VideoConversion_Client.Services
                 // 如果数据库中没有设置，返回默认设置
                 var defaultSettings = new ConversionSettings
                 {
-                    VideoCodec = "H.264",
-                    Resolution = "1920x1080",
-                    FrameRate = "30",
-                    Bitrate = "5000k",
-                    AudioCodec = "AAC",
-                    AudioQuality = "128k",
-                    HardwareAcceleration = "自动",
-                    Threads = "自动"
+                    // 基本设置
+                    OutputFormat = "mp4",
+                    Resolution = "原始",
+
+                    // 视频设置
+                    VideoCodec = "libx264",
+                    FrameRate = "原始",
+                    QualityMode = "CRF",
+                    VideoQuality = "23",
+                    EncodingPreset = "medium",
+                    Profile = "auto",
+
+                    // 音频设置
+                    AudioCodec = "aac",
+                    AudioChannels = "原始",
+                    AudioQualityMode = "bitrate",
+                    AudioQuality = "192",
+                    SampleRate = "48000",
+                    AudioVolume = "0",
+
+                    // 高级设置
+                    HardwareAcceleration = "auto",
+                    PixelFormat = "auto",
+                    ColorSpace = "auto",
+                    FastStart = true,
+                    Deinterlace = false,
+                    TwoPass = false,
+
+                    // 滤镜设置
+                    Denoise = "none",
+                    VideoFilters = "",
+                    AudioFilters = "",
+
+                    // 任务设置
+                    Priority = 0,
+                    MaxRetries = 3
                 };
 
                 // 保存默认设置到数据库
@@ -248,26 +278,17 @@ namespace VideoConversion_Client.Services
         {
             try
             {
-                var bitrate = CurrentSettings.Bitrate;
-                if (bitrate.EndsWith("k", StringComparison.OrdinalIgnoreCase))
+                // 使用VideoQuality作为比特率参考，如果是CRF模式则返回估算值
+                var qualityMode = CurrentSettings.QualityMode;
+                if (qualityMode?.Contains("CRF") == true)
                 {
-                    var value = bitrate.Substring(0, bitrate.Length - 1);
-                    if (double.TryParse(value, out var kbps))
+                    // CRF模式，返回估算的比特率（基于CRF值）
+                    if (int.TryParse(CurrentSettings.VideoQuality, out int crfValue))
                     {
-                        return (long)(kbps * 1000);
+                        // CRF值越低，质量越高，比特率越高
+                        // 这是一个粗略的估算公式：CRF 18 ≈ 8Mbps, CRF 23 ≈ 5Mbps, CRF 28 ≈ 2Mbps
+                        return (long)((51 - crfValue) * 200 * 1000); // 200k per CRF point
                     }
-                }
-                else if (bitrate.EndsWith("M", StringComparison.OrdinalIgnoreCase))
-                {
-                    var value = bitrate.Substring(0, bitrate.Length - 1);
-                    if (double.TryParse(value, out var mbps))
-                    {
-                        return (long)(mbps * 1000000);
-                    }
-                }
-                else if (long.TryParse(bitrate, out var bps))
-                {
-                    return bps;
                 }
 
                 // 默认5Mbps
@@ -335,6 +356,124 @@ namespace VideoConversion_Client.Services
         }
 
         /// <summary>
+        /// 获取支持的输出格式列表
+        /// </summary>
+        public static List<FormatOption> GetSupportedFormats()
+        {
+            return new List<FormatOption>
+            {
+                // 推荐格式
+                new FormatOption("mp4", "MP4 (推荐)", "最佳兼容性，通用格式", true),
+                new FormatOption("mkv", "MKV (高质量)", "开源容器，支持多轨道", true),
+                new FormatOption("webm", "WebM (Web优化)", "Web播放优化，文件较小", true),
+
+                // 通用格式
+                new FormatOption("avi", "AVI (兼容性)", "传统格式，广泛支持", false),
+                new FormatOption("mov", "MOV (Apple)", "Apple QuickTime格式", false),
+                new FormatOption("m4v", "M4V (iTunes)", "iTunes视频格式", false),
+
+                // 移动设备格式
+                new FormatOption("3gp", "3GP (移动设备)", "移动设备兼容格式", false),
+
+                // 传统格式
+                new FormatOption("wmv", "WMV (Windows)", "Windows Media格式", false),
+                new FormatOption("flv", "FLV (Flash)", "Flash视频格式", false),
+
+                // 广播格式
+                new FormatOption("mpg", "MPEG (标准)", "标准MPEG格式", false),
+                new FormatOption("ts", "TS (传输流)", "传输流格式", false),
+                new FormatOption("mts", "MTS (AVCHD)", "AVCHD摄像机格式", false),
+                new FormatOption("m2ts", "M2TS (蓝光)", "蓝光光盘格式", false),
+
+                // 特殊格式
+                new FormatOption("vob", "VOB (DVD)", "DVD视频格式", false),
+                new FormatOption("asf", "ASF (Windows Media)", "Windows Media格式", false),
+
+                // 智能选项
+                new FormatOption("keep_original", "保持原格式", "与源文件相同格式", false),
+                new FormatOption("auto_best", "自动选择最佳格式", "根据内容自动选择", false)
+            };
+        }
+
+        /// <summary>
+        /// 验证输出格式是否支持
+        /// </summary>
+        public static bool IsFormatSupported(string format)
+        {
+            var supportedFormats = GetSupportedFormats();
+            return supportedFormats.Any(f => f.Value.Equals(format, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// 获取格式的显示名称
+        /// </summary>
+        public static string GetFormatDisplayName(string format)
+        {
+            var formatOption = GetSupportedFormats()
+                .FirstOrDefault(f => f.Value.Equals(format, StringComparison.OrdinalIgnoreCase));
+            return formatOption?.DisplayName ?? format.ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// 获取格式建议
+        /// </summary>
+        public static string GetFormatRecommendation(string format)
+        {
+            var formatOption = GetSupportedFormats()
+                .FirstOrDefault(f => f.Value.Equals(format, StringComparison.OrdinalIgnoreCase));
+            return formatOption?.Description ?? "标准视频格式";
+        }
+
+        /// <summary>
+        /// 处理智能格式选择
+        /// </summary>
+        public static string ResolveSmartFormat(string selectedFormat, string originalFilePath)
+        {
+            return selectedFormat switch
+            {
+                "keep_original" => GetOriginalFormat(originalFilePath),
+                "auto_best" => GetBestFormatForFile(originalFilePath),
+                _ => selectedFormat
+            };
+        }
+
+        /// <summary>
+        /// 获取原始文件格式
+        /// </summary>
+        private static string GetOriginalFormat(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return "mp4";
+
+            var extension = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
+            return IsFormatSupported(extension) ? extension : "mp4";
+        }
+
+        /// <summary>
+        /// 为文件选择最佳格式
+        /// </summary>
+        private static string GetBestFormatForFile(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return "mp4";
+
+            var extension = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
+
+            // 根据原始格式推荐最佳输出格式
+            return extension switch
+            {
+                "avi" or "wmv" or "flv" => "mp4",  // 传统格式转为MP4
+                "mov" or "m4v" => "mp4",           // Apple格式转为MP4
+                "ts" or "mts" or "m2ts" => "mkv",  // 广播格式转为MKV
+                "vob" => "mp4",                    // DVD格式转为MP4
+                "rm" or "rmvb" => "mp4",           // 专有格式转为MP4
+                "webm" => "webm",                  // WebM保持WebM
+                "mkv" => "mkv",                    // MKV保持MKV
+                _ => "mp4"                         // 默认MP4
+            };
+        }
+
+        /// <summary>
         /// 格式化分辨率显示
         /// </summary>
         public string GetFormattedResolution()
@@ -376,6 +515,25 @@ namespace VideoConversion_Client.Services
         public ConversionSettingsChangedEventArgs(ConversionSettings newSettings)
         {
             NewSettings = newSettings;
+        }
+    }
+
+    /// <summary>
+    /// 格式选项数据模型
+    /// </summary>
+    public class FormatOption
+    {
+        public string Value { get; set; }
+        public string DisplayName { get; set; }
+        public string Description { get; set; }
+        public bool IsRecommended { get; set; }
+
+        public FormatOption(string value, string displayName, string description, bool isRecommended = false)
+        {
+            Value = value;
+            DisplayName = displayName;
+            Description = description;
+            IsRecommended = isRecommended;
         }
     }
 }

@@ -19,6 +19,9 @@ namespace VideoConversion.Services
         private readonly ILogger<VideoConversionService> _logger;
         private readonly FFmpegConfigurationService _ffmpegConfig;
         private readonly NotificationService _notificationService;
+        private readonly DiskSpaceService _diskSpaceService;
+        private readonly BatchTaskSpaceControlService _batchTaskService;
+        private readonly AdvancedFileCleanupService _advancedCleanupService;
         private readonly SemaphoreSlim _conversionSemaphore;
 
         // 进程跟踪：任务ID -> FFmpeg进程
@@ -33,7 +36,10 @@ namespace VideoConversion.Services
             LoggingService loggingService,
             ILogger<VideoConversionService> logger,
             FFmpegConfigurationService ffmpegConfig,
-            NotificationService notificationService)
+            NotificationService notificationService,
+            DiskSpaceService diskSpaceService,
+            BatchTaskSpaceControlService batchTaskService,
+            AdvancedFileCleanupService advancedCleanupService)
         {
             _databaseService = databaseService;
             _hubContext = hubContext;
@@ -41,6 +47,9 @@ namespace VideoConversion.Services
             _logger = logger;
             _ffmpegConfig = ffmpegConfig;
             _notificationService = notificationService;
+            _diskSpaceService = diskSpaceService;
+            _batchTaskService = batchTaskService;
+            _advancedCleanupService = advancedCleanupService;
             _conversionSemaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
 
             _logger.LogInformation("VideoConversionService 初始化完成，FFmpeg配置状态: {IsInitialized}",
@@ -153,6 +162,34 @@ namespace VideoConversion.Services
                     var duration = DateTime.Now - taskStartTime;
                     _logger.LogInformation("视频转换完成: {TaskId}, 耗时: {Duration}", task.Id, duration);
                     _loggingService.LogConversionCompleted(task.Id, task.TaskName, duration, task.OutputFileSize);
+
+                    // 转换完成后清理原文件和临时文件
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // 立即清理原文件和临时文件以释放空间
+                            await CleanupAfterConversionAsync(task);
+                            _logger.LogInformation("✅ 转换完成后清理完成: {TaskId}", task.Id);
+                        }
+                        catch (Exception cleanupEx)
+                        {
+                            _logger.LogError(cleanupEx, "转换完成后清理失败: {TaskId}", task.Id);
+                        }
+                    });
+
+                    // 通知批量任务管理服务任务完成
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _batchTaskService.UpdateTaskCompletionAsync(task.Id);
+                        }
+                        catch (Exception batchEx)
+                        {
+                            _logger.LogError(batchEx, "更新批量任务完成状态失败: {TaskId}", task.Id);
+                        }
+                    });
                 }
                 else
                 {
@@ -959,5 +996,93 @@ namespace VideoConversion.Services
                 _logger.LogInformation("🎯 应用VAAPI优化参数");
             }
         }
+
+        /// <summary>
+        /// 转换完成后清理文件
+        /// </summary>
+        private async Task CleanupAfterConversionAsync(ConversionTask task)
+        {
+            try
+            {
+                var cleanedSize = 0L;
+
+                // 1. 清理原文件
+                if (!string.IsNullOrEmpty(task.OriginalFilePath) && File.Exists(task.OriginalFilePath))
+                {
+                    var originalSize = new FileInfo(task.OriginalFilePath).Length;
+                    File.Delete(task.OriginalFilePath);
+                    cleanedSize += originalSize;
+
+                    _logger.LogInformation("🗑️ 转换完成，删除原文件: {FilePath} ({SizeMB:F2}MB)",
+                        task.OriginalFilePath, originalSize / 1024.0 / 1024);
+                }
+
+                // 2. 清理分片临时文件（基于任务ID）
+                var chunkCleanedSize = await CleanupChunkFilesAsync(task.Id);
+                cleanedSize += chunkCleanedSize;
+
+                // 3. 更新空间统计
+                if (cleanedSize > 0)
+                {
+                    await _diskSpaceService.UpdateSpaceUsage(-cleanedSize, SpaceCategory.OriginalFiles);
+
+                    // 通知空间释放
+                    await _hubContext.Clients.All.SendAsync("SpaceReleased", new
+                    {
+                        ReleasedBytes = cleanedSize,
+                        ReleasedMB = Math.Round(cleanedSize / 1024.0 / 1024, 2),
+                        Reason = "转换完成清理",
+                        Timestamp = DateTime.Now
+                    });
+                }
+
+                _logger.LogInformation("✅ 转换完成清理完成: TaskId={TaskId}, 释放空间={SizeMB:F2}MB",
+                    task.Id, cleanedSize / 1024.0 / 1024);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "转换完成清理失败: {TaskId}", task.Id);
+            }
+        }
+
+        /// <summary>
+        /// 清理分片文件
+        /// </summary>
+        private async Task<long> CleanupChunkFilesAsync(string taskId)
+        {
+            var cleanedSize = 0L;
+            var chunkDir = Path.Combine("uploads", "chunks", taskId);
+
+            if (Directory.Exists(chunkDir))
+            {
+                var files = Directory.GetFiles(chunkDir, "*", SearchOption.AllDirectories);
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        var fileInfo = new FileInfo(file);
+                        cleanedSize += fileInfo.Length;
+                        File.Delete(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "删除分片文件失败: {FilePath}", file);
+                    }
+                }
+
+                try
+                {
+                    Directory.Delete(chunkDir, true);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "删除分片目录失败: {DirPath}", chunkDir);
+                }
+            }
+
+            return cleanedSize;
+        }
+
+
     }
 }

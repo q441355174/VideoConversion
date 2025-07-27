@@ -45,8 +45,16 @@ namespace VideoConversion.Hubs
         /// </summary>
         public async Task JoinTaskGroup(string taskId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"task_{taskId}");
-            _logger.LogInformation("📡 客户端 {ConnectionId} 加入任务组: {TaskId}", Context.ConnectionId, taskId);
+            try
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"task_{taskId}");
+                _logger.LogInformation("📡 客户端 {ConnectionId} 成功加入任务组: task_{TaskId}", Context.ConnectionId, taskId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ 客户端 {ConnectionId} 加入任务组失败: task_{TaskId}", Context.ConnectionId, taskId);
+                throw;
+            }
         }
 
         /// <summary>
@@ -57,6 +65,108 @@ namespace VideoConversion.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"task_{taskId}");
             _logger.LogDebug("客户端 {ConnectionId} 离开任务组: {TaskId}", Context.ConnectionId, taskId);
         }
+
+        /// <summary>
+        /// 加入空间监控组
+        /// </summary>
+        public async Task JoinSpaceMonitoring()
+        {
+            try
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, "space_monitoring");
+                _logger.LogInformation("📊 客户端 {ConnectionId} 加入空间监控组", Context.ConnectionId);
+
+                // 立即发送当前空间状态
+                var diskSpaceService = Context.GetHttpContext()?.RequestServices.GetService<DiskSpaceService>();
+                if (diskSpaceService != null)
+                {
+                    var spaceStatus = await diskSpaceService.GetCurrentSpaceStatusAsync();
+                    await Clients.Caller.SendAsync("DiskSpaceUpdate", spaceStatus);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ 客户端 {ConnectionId} 加入空间监控组失败", Context.ConnectionId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 离开空间监控组
+        /// </summary>
+        public async Task LeaveSpaceMonitoring()
+        {
+            try
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, "space_monitoring");
+                _logger.LogDebug("客户端 {ConnectionId} 离开空间监控组", Context.ConnectionId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ 客户端 {ConnectionId} 离开空间监控组失败", Context.ConnectionId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 加入批量任务组
+        /// </summary>
+        public async Task JoinBatchTaskGroup(string batchId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(batchId))
+                {
+                    _logger.LogWarning("批量任务ID为空，无法加入组: {ConnectionId}", Context.ConnectionId);
+                    return;
+                }
+
+                var groupName = $"batch_{batchId}";
+                await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+
+                _logger.LogInformation("📦 客户端 {ConnectionId} 加入批量任务组: {GroupName}", Context.ConnectionId, groupName);
+
+                // 立即发送当前批量任务状态（如果有的话）
+                var batchTaskService = Context.GetHttpContext()?.RequestServices.GetService<BatchTaskSpaceControlService>();
+                if (batchTaskService != null)
+                {
+                    // TODO: 发送当前批量任务状态
+                    _logger.LogDebug("📊 向客户端发送批量任务状态: {BatchId}", batchId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ 客户端 {ConnectionId} 加入批量任务组失败: {BatchId}", Context.ConnectionId, batchId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 离开批量任务组
+        /// </summary>
+        public async Task LeaveBatchTaskGroup(string batchId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(batchId))
+                {
+                    _logger.LogWarning("批量任务ID为空，无法离开组: {ConnectionId}", Context.ConnectionId);
+                    return;
+                }
+
+                var groupName = $"batch_{batchId}";
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+
+                _logger.LogDebug("客户端 {ConnectionId} 离开批量任务组: {GroupName}", Context.ConnectionId, groupName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ 客户端 {ConnectionId} 离开批量任务组失败: {BatchId}", Context.ConnectionId, batchId);
+                throw;
+            }
+        }
+
+
 
         /// <summary>
         /// 获取任务状态

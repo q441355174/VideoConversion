@@ -356,6 +356,11 @@ namespace VideoConversion.Models
         /// <summary>
         /// 已取消
         /// </summary>
-        Cancelled = 4
+        Cancelled = 4,
+
+        /// <summary>
+        /// 已暂停
+        /// </summary>
+        Paused = 5
     }
 }

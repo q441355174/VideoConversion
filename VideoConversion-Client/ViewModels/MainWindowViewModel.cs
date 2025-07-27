@@ -14,6 +14,9 @@ namespace VideoConversion_Client.ViewModels
         private readonly ApiService apiService;
         private SignalRService signalRService;
 
+        // 转换进度更新事件
+        public event Action<string, int, double?, double?>? ConversionProgressUpdated;
+
         private string _statusText = "就绪 - 请选择视频文件开始转换";
         private bool _isConnectedToServer = false;
         private string? _currentTaskId = null; 
@@ -113,9 +116,9 @@ namespace VideoConversion_Client.ViewModels
             if (CurrentTaskId == taskId)
             {
                 var speedText = speed.HasValue ? $" - {speed.Value:F1}x" : "";
-                var timeText = remainingSeconds.HasValue ? 
+                var timeText = remainingSeconds.HasValue ?
                     $" - 剩余: {TimeSpan.FromSeconds(remainingSeconds.Value):hh\\:mm\\:ss}" : "";
-                
+
                 StatusText = $"📊 转换进度: {progress}%{speedText}{timeText}";
             }
 
@@ -127,6 +130,9 @@ namespace VideoConversion_Client.ViewModels
                 task.ConversionSpeed = speed;
                 task.EstimatedTimeRemaining = remainingSeconds;
             }
+
+            // 转发转换进度到FileUploadView
+            ConversionProgressUpdated?.Invoke(taskId, progress, speed, remainingSeconds.HasValue ? remainingSeconds.Value : (double?)null);
         }
 
         private void OnStatusUpdated(string taskId, string status, string? message)
@@ -233,18 +239,65 @@ namespace VideoConversion_Client.ViewModels
                     return false;
                 }
 
-                // 准备转换请求
+                // 准备转换请求（与ConversionTask模型对应）
                 var request = new StartConversionRequest
                 {
+                    // 基本信息
                     TaskName = settings.TaskName,
                     Preset = settings.Preset,
+
+                    // 基本设置
                     OutputFormat = settings.OutputFormat,
                     Resolution = settings.Resolution,
-                    VideoCodec = preset.VideoCodec,
-                    AudioCodec = preset.AudioCodec,
-                    VideoQuality = settings.VideoQuality,
-                    AudioQuality = preset.AudioQuality,
-                    FrameRate = preset.FrameRate
+                    CustomWidth = settings.CustomWidth,
+                    CustomHeight = settings.CustomHeight,
+                    AspectRatio = settings.AspectRatio,
+
+                    // 视频设置
+                    VideoCodec = settings.VideoCodec ?? preset.VideoCodec,
+                    FrameRate = settings.FrameRate ?? preset.FrameRate,
+                    QualityMode = settings.QualityMode ?? "crf",
+                    VideoQuality = settings.VideoQuality ?? preset.VideoQuality,
+                    VideoBitrate = settings.VideoBitrate,
+                    EncodingPreset = settings.EncodingPreset ?? "medium",
+                    Profile = settings.Profile,
+
+                    // 音频设置
+                    AudioCodec = settings.AudioCodec ?? preset.AudioCodec,
+                    AudioChannels = settings.AudioChannels ?? "2",
+                    AudioQualityMode = settings.AudioQualityMode ?? "bitrate",
+                    AudioQuality = settings.AudioQuality ?? preset.AudioQuality,
+                    AudioBitrate = settings.AudioBitrate,
+                    CustomAudioBitrateValue = settings.CustomAudioBitrateValue,
+                    AudioQualityValue = settings.AudioQualityValue,
+                    SampleRate = settings.SampleRate ?? "48000",
+                    AudioVolume = settings.AudioVolume,
+
+                    // 高级选项
+                    StartTime = settings.StartTime,
+                    EndTime = settings.EndTime,
+                    Duration = settings.Duration,
+                    DurationLimit = settings.DurationLimit,
+                    Deinterlace = settings.Deinterlace,
+                    Denoise = settings.Denoise,
+                    ColorSpace = settings.ColorSpace ?? "bt709",
+                    PixelFormat = settings.PixelFormat ?? "yuv420p",
+                    CustomParams = settings.CustomParams,
+                    CustomParameters = settings.CustomParameters,
+                    HardwareAcceleration = settings.HardwareAcceleration ?? "auto",
+                    VideoFilters = settings.VideoFilters,
+                    AudioFilters = settings.AudioFilters,
+
+                    // 任务设置
+                    Priority = settings.Priority,
+                    MaxRetries = settings.MaxRetries,
+                    Tags = settings.Tags,
+                    Notes = settings.Notes,
+
+                    // 编码选项
+                    TwoPass = settings.TwoPass,
+                    FastStart = settings.FastStart,
+                    CopyTimestamps = settings.CopyTimestamps
                 };
 
                 _currentTaskStartTime = DateTime.Now;
@@ -357,6 +410,22 @@ namespace VideoConversion_Client.ViewModels
                     return task;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 加入SignalR任务组
+        /// </summary>
+        public async Task JoinTaskGroupAsync(string taskId)
+        {
+            try
+            {
+                Utils.Logger.Info("MainWindowViewModel", $"🔗 加入SignalR任务组: {taskId}");
+                await signalRService.JoinTaskGroupAsync(taskId);
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Info("MainWindowViewModel", $"❌ 加入SignalR任务组失败: {ex.Message}");
+            }
         }
 
         /// <summary>

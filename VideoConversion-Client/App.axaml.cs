@@ -22,6 +22,10 @@ namespace VideoConversion_Client
             // 清理30天前的旧日志
             Utils.Logger.CleanupOldLogs(30);
 
+            // 初始化转码设置服务
+            Services.ConversionSettingsService.Initialize();
+            Utils.Logger.Info("App", "转码设置服务已初始化");
+
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 desktop.MainWindow = new MainWindow();

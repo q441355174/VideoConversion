@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
@@ -18,10 +19,44 @@ namespace VideoConversion_Client
     {
         // ViewModel
         private MainWindowViewModel viewModel;
+        private ServerStatusViewModel serverStatusViewModel;
 
         // View组件
         private FileUploadView fileUploadView;
         private ConversionCompletedView conversionCompletedView;
+
+        // 服务器状态面板控件
+        private Ellipse? serverStatusIndicator;
+        private TextBlock? serverStatusText;
+        private Ellipse? signalRStatusIndicator;
+        private TextBlock? signalRStatusText;
+        private TextBlock? usedSpaceText;
+        private TextBlock? totalSpaceText;
+        private TextBlock? availableSpaceText;
+        private ProgressBar? diskUsageProgressBar;
+        private Border? spaceWarningPanel;
+        private TextBlock? spaceWarningText;
+        private StackPanel? noTaskPanel;
+        private StackPanel? activeTaskPanel;
+        private TextBlock? currentTaskNameText;
+        private TextBlock? currentFileNameText;
+        private TextBlock? taskProgressText;
+        private TextBlock? taskSpeedText;
+        private TextBlock? taskETAText;
+        private ProgressBar? taskProgressBar;
+        private Border? batchTaskPanel;
+        private TextBlock? batchProgressText;
+        private ProgressBar? batchProgressBar;
+        private Border? batchPausedPanel;
+        private TextBlock? batchPausedText;
+        private TextBlock? serverVersionText;
+        private TextBlock? ffmpegVersionText;
+        private TextBlock? hardwareAccelText;
+        private TextBlock? uptimeText;
+        private Button? refreshSpaceBtn;
+        private Button? configSpaceBtn;
+        private Button? cleanupFilesBtn;
+        private Button? viewLogsBtn;
         public MainWindow()
         {
             InitializeComponent();
@@ -35,6 +70,9 @@ namespace VideoConversion_Client
 
             // 设置事件处理
             SetupEventHandlers();
+
+            // 初始化服务器状态面板
+            InitializeServerStatusPanel();
 
             // 预加载转换设置
             InitializeConversionSettings();
@@ -56,6 +94,211 @@ namespace VideoConversion_Client
             // 获取View组件引用
             fileUploadView = this.FindControl<FileUploadView>("FileUploadView")!;
             conversionCompletedView = this.FindControl<ConversionCompletedView>("ConversionCompletedView")!;
+
+            // 获取服务器状态面板控件引用
+            serverStatusIndicator = this.FindControl<Ellipse>("ServerStatusIndicator");
+            serverStatusText = this.FindControl<TextBlock>("ServerStatusText");
+            signalRStatusIndicator = this.FindControl<Ellipse>("SignalRStatusIndicator");
+            signalRStatusText = this.FindControl<TextBlock>("SignalRStatusText");
+            usedSpaceText = this.FindControl<TextBlock>("UsedSpaceText");
+            totalSpaceText = this.FindControl<TextBlock>("TotalSpaceText");
+            availableSpaceText = this.FindControl<TextBlock>("AvailableSpaceText");
+            diskUsageProgressBar = this.FindControl<ProgressBar>("DiskUsageProgressBar");
+            spaceWarningPanel = this.FindControl<Border>("SpaceWarningPanel");
+            spaceWarningText = this.FindControl<TextBlock>("SpaceWarningText");
+            noTaskPanel = this.FindControl<StackPanel>("NoTaskPanel");
+            activeTaskPanel = this.FindControl<StackPanel>("ActiveTaskPanel");
+            currentTaskNameText = this.FindControl<TextBlock>("CurrentTaskNameText");
+            currentFileNameText = this.FindControl<TextBlock>("CurrentFileNameText");
+            taskProgressText = this.FindControl<TextBlock>("TaskProgressText");
+            taskSpeedText = this.FindControl<TextBlock>("TaskSpeedText");
+            taskETAText = this.FindControl<TextBlock>("TaskETAText");
+            taskProgressBar = this.FindControl<ProgressBar>("TaskProgressBar");
+            batchTaskPanel = this.FindControl<Border>("BatchTaskPanel");
+            batchProgressText = this.FindControl<TextBlock>("BatchProgressText");
+            batchProgressBar = this.FindControl<ProgressBar>("BatchProgressBar");
+            batchPausedPanel = this.FindControl<Border>("BatchPausedPanel");
+            batchPausedText = this.FindControl<TextBlock>("BatchPausedText");
+            serverVersionText = this.FindControl<TextBlock>("ServerVersionText");
+            ffmpegVersionText = this.FindControl<TextBlock>("FFmpegVersionText");
+            hardwareAccelText = this.FindControl<TextBlock>("HardwareAccelText");
+            uptimeText = this.FindControl<TextBlock>("UptimeText");
+            refreshSpaceBtn = this.FindControl<Button>("RefreshSpaceBtn");
+            configSpaceBtn = this.FindControl<Button>("ConfigSpaceBtn");
+            cleanupFilesBtn = this.FindControl<Button>("CleanupFilesBtn");
+            viewLogsBtn = this.FindControl<Button>("ViewLogsBtn");
+
+            // 连接转换进度事件
+            viewModel.ConversionProgressUpdated += OnConversionProgressUpdated;
+        }
+
+        private void OnConversionProgressUpdated(string taskId, int progress, double? speed, double? eta)
+        {
+            // 转发转换进度到FileUploadView
+            fileUploadView?.UpdateConversionProgress(taskId, progress, speed, eta);
+        }
+
+        private void InitializeServerStatusPanel()
+        {
+            // 创建服务器状态ViewModel
+            var settingsService = Services.SystemSettingsService.Instance;
+            var apiService = new Services.ApiService { BaseUrl = settingsService.GetServerAddress() };
+            var signalRService = new Services.SignalRService(apiService.BaseUrl);
+
+            serverStatusViewModel = new ServerStatusViewModel(apiService, signalRService);
+
+            // 绑定事件
+            SetupServerStatusEvents();
+
+            // 设置按钮事件
+            SetupServerStatusButtonEvents();
+
+            // 开始监控
+            _ = Task.Run(async () =>
+            {
+                await serverStatusViewModel.StartMonitoring();
+
+                // 启动SignalR空间监控
+                try
+                {
+                    await signalRService.JoinSpaceMonitoringAsync();
+                    Utils.Logger.Info("MainWindow", "✅ 已加入SignalR空间监控组");
+                }
+                catch (Exception ex)
+                {
+                    Utils.Logger.Info("MainWindow", $"❌ 加入SignalR空间监控组失败: {ex.Message}");
+                }
+            });
+        }
+
+        private void SetupServerStatusEvents()
+        {
+            if (serverStatusViewModel == null) return;
+
+            // 监听属性变化
+            serverStatusViewModel.PropertyChanged += (s, e) =>
+            {
+                Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    UpdateServerStatusUI();
+                });
+            };
+        }
+
+        private void SetupServerStatusButtonEvents()
+        {
+            if (refreshSpaceBtn != null)
+                refreshSpaceBtn.Click += async (s, e) => await serverStatusViewModel?.RefreshServerStatus()!;
+
+            if (configSpaceBtn != null)
+                configSpaceBtn.Click += ConfigSpaceBtn_Click;
+
+            if (cleanupFilesBtn != null)
+                cleanupFilesBtn.Click += CleanupFilesBtn_Click;
+
+            if (viewLogsBtn != null)
+                viewLogsBtn.Click += ViewLogsBtn_Click;
+        }
+
+        private void UpdateServerStatusUI()
+        {
+            if (serverStatusViewModel == null) return;
+
+            // 更新服务器连接状态
+            if (serverStatusIndicator != null)
+                serverStatusIndicator.Fill = serverStatusViewModel.IsServerConnected ?
+                    Avalonia.Media.Brushes.Green : Avalonia.Media.Brushes.Red;
+
+            if (serverStatusText != null)
+                serverStatusText.Text = serverStatusViewModel.ServerStatusText;
+
+            // 更新SignalR连接状态
+            if (signalRStatusIndicator != null)
+                signalRStatusIndicator.Fill = serverStatusViewModel.IsSignalRConnected ?
+                    Avalonia.Media.Brushes.Green : Avalonia.Media.Brushes.Red;
+
+            if (signalRStatusText != null)
+                signalRStatusText.Text = serverStatusViewModel.SignalRStatusText;
+
+            // 更新磁盘空间信息
+            if (usedSpaceText != null)
+                usedSpaceText.Text = serverStatusViewModel.UsedSpaceText;
+
+            if (totalSpaceText != null)
+                totalSpaceText.Text = serverStatusViewModel.TotalSpaceText;
+
+            if (availableSpaceText != null)
+                availableSpaceText.Text = serverStatusViewModel.AvailableSpaceText;
+
+            if (diskUsageProgressBar != null)
+                diskUsageProgressBar.Value = serverStatusViewModel.DiskUsagePercentage;
+
+            // 更新空间警告
+            if (spaceWarningPanel != null)
+                spaceWarningPanel.IsVisible = serverStatusViewModel.IsSpaceWarningVisible;
+
+            if (spaceWarningText != null)
+                spaceWarningText.Text = serverStatusViewModel.SpaceWarningText;
+
+            // 更新当前任务状态
+            if (noTaskPanel != null)
+                noTaskPanel.IsVisible = !serverStatusViewModel.HasActiveTask;
+
+            if (activeTaskPanel != null)
+                activeTaskPanel.IsVisible = serverStatusViewModel.HasActiveTask;
+
+            if (serverStatusViewModel.HasActiveTask)
+            {
+                if (currentTaskNameText != null)
+                    currentTaskNameText.Text = serverStatusViewModel.CurrentTaskName;
+
+                if (currentFileNameText != null)
+                    currentFileNameText.Text = serverStatusViewModel.CurrentFileName;
+
+                if (taskProgressText != null)
+                    taskProgressText.Text = serverStatusViewModel.TaskProgressText;
+
+                if (taskSpeedText != null)
+                    taskSpeedText.Text = serverStatusViewModel.TaskSpeedText;
+
+                if (taskETAText != null)
+                    taskETAText.Text = serverStatusViewModel.TaskETAText;
+
+                if (taskProgressBar != null)
+                    taskProgressBar.Value = serverStatusViewModel.TaskProgress;
+            }
+
+            // 更新批量任务状态
+            if (batchTaskPanel != null)
+                batchTaskPanel.IsVisible = serverStatusViewModel.HasBatchTask;
+
+            if (serverStatusViewModel.HasBatchTask)
+            {
+                if (batchProgressText != null)
+                    batchProgressText.Text = serverStatusViewModel.BatchProgressText;
+
+                if (batchProgressBar != null)
+                    batchProgressBar.Value = serverStatusViewModel.BatchProgress;
+
+                if (batchPausedPanel != null)
+                    batchPausedPanel.IsVisible = serverStatusViewModel.IsBatchPaused;
+
+                if (batchPausedText != null)
+                    batchPausedText.Text = serverStatusViewModel.BatchPausedText;
+            }
+
+            // 更新系统信息
+            if (serverVersionText != null)
+                serverVersionText.Text = serverStatusViewModel.ServerVersion;
+
+            if (ffmpegVersionText != null)
+                ffmpegVersionText.Text = serverStatusViewModel.FFmpegVersion;
+
+            if (hardwareAccelText != null)
+                hardwareAccelText.Text = serverStatusViewModel.HardwareAcceleration;
+
+            if (uptimeText != null)
+                uptimeText.Text = serverStatusViewModel.Uptime;
         }
 
         private void SetupEventHandlers()
@@ -276,6 +519,12 @@ namespace VideoConversion_Client
                 // 清理ViewModel
                 await viewModel.CleanupAsync();
 
+                // 清理服务器状态监控
+                if (serverStatusViewModel != null)
+                {
+                    serverStatusViewModel.StopMonitoring();
+                }
+
                 // 清理转换设置服务
                 Services.ConversionSettingsService.Instance.Cleanup();
 
@@ -286,6 +535,73 @@ namespace VideoConversion_Client
                 System.Diagnostics.Debug.WriteLine($"清理资源失败: {ex.Message}");
             }
         }
+
+        #region 服务器状态面板按钮事件
+
+        private async void ConfigSpaceBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                UpdateStatus("🔧 打开磁盘空间配置...");
+
+                var settingsService = Services.SystemSettingsService.Instance;
+                var baseUrl = settingsService.GetServerAddress();
+                var configDialog = new Views.DiskSpaceConfigDialog(baseUrl);
+
+                // 设置对话框的所有者为当前窗口
+                var result = await configDialog.ShowDialog<bool?>(this);
+
+                if (configDialog.ConfigSaved)
+                {
+                    UpdateStatus("✅ 磁盘空间配置已保存");
+
+                    // 刷新服务器状态
+                    if (serverStatusViewModel != null)
+                    {
+                        await serverStatusViewModel.RefreshServerStatus();
+                    }
+
+                    Utils.Logger.Info("MainWindow", "磁盘空间配置已更新，服务器状态已刷新");
+                }
+                else
+                {
+                    UpdateStatus("📋 磁盘空间配置已取消");
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"❌ 打开空间配置失败: {ex.Message}");
+                Utils.Logger.Info("MainWindow", $"打开磁盘空间配置对话框失败: {ex.Message}");
+            }
+        }
+
+        private async void CleanupFilesBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // TODO: 执行文件清理
+                UpdateStatus("🗑️ 文件清理功能开发中...");
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"❌ 文件清理失败: {ex.Message}");
+            }
+        }
+
+        private async void ViewLogsBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // TODO: 打开日志查看器
+                UpdateStatus("📋 日志查看功能开发中...");
+            }
+            catch (Exception ex)
+            {
+                UpdateStatus($"❌ 打开日志失败: {ex.Message}");
+            }
+        }
+
+        #endregion
     }
 }
           

@@ -26,6 +26,11 @@ namespace VideoConversion.Models
         public string? ErrorCode { get; set; }
 
         /// <summary>
+        /// 错误类型（可选）
+        /// </summary>
+        public string? ErrorType { get; set; }
+
+        /// <summary>
         /// 创建成功响应
         /// </summary>
         public static ApiResponse CreateSuccess(string message = "操作成功")

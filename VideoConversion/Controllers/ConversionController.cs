@@ -15,6 +15,9 @@ namespace VideoConversion.Controllers
         private readonly FileService _fileService;
         private readonly VideoConversionService _conversionService;
         private readonly LoggingService _loggingService;
+        private readonly FFmpegFormatDetectionService _formatDetectionService;
+        private readonly BatchTaskSpaceControlService _batchTaskService;
+        private readonly DownloadTrackingService _downloadTrackingService;
         private readonly ILogger<ConversionController> _logger;
         private readonly IHubContext<ConversionHub> _hubContext;
 
@@ -23,6 +26,9 @@ namespace VideoConversion.Controllers
             FileService fileService,
             VideoConversionService conversionService,
             LoggingService loggingService,
+            FFmpegFormatDetectionService formatDetectionService,
+            BatchTaskSpaceControlService batchTaskService,
+            DownloadTrackingService downloadTrackingService,
             ILogger<ConversionController> logger,
             IHubContext<ConversionHub> hubContext) : base(logger)
         {
@@ -30,6 +36,9 @@ namespace VideoConversion.Controllers
             _fileService = fileService;
             _conversionService = conversionService;
             _loggingService = loggingService;
+            _formatDetectionService = formatDetectionService;
+            _batchTaskService = batchTaskService;
+            _downloadTrackingService = downloadTrackingService;
             _logger = logger;
             _hubContext = hubContext;
         }
@@ -295,6 +304,19 @@ namespace VideoConversion.Controllers
                     _logger.LogError(ex, "发送新任务创建通知失败");
                 }
 
+                // 注册到批量任务管理（单个任务也作为批量任务处理）
+                try
+                {
+                    var clientId = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    var batchId = await _batchTaskService.RegisterBatchTaskAsync(new List<string> { task.Id }, clientId);
+                    _logger.LogInformation("📦 任务已注册到批量任务管理: TaskId={TaskId}, BatchId={BatchId}", task.Id, batchId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "注册批量任务失败: {TaskId}", task.Id);
+                    // 不影响主流程，继续执行
+                }
+
                 _logger.LogInformation("=== 转换请求处理完成 ===");
 
                 return Ok(response);
@@ -435,6 +457,21 @@ namespace VideoConversion.Controllers
                 _loggingService.LogFileDownloaded(taskId, downloadResult.FileName, GetClientIpAddress());
                 Logger.LogInformation("文件下载成功: {TaskId}, OriginalFileName: {OriginalFileName}, DownloadFileName: {DownloadFileName}",
                     taskId, task.OriginalFileName, downloadResult.FileName);
+
+                // 跟踪下载（异步执行，不阻塞下载）
+                var clientIp = GetClientIpAddress();
+                var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _downloadTrackingService.TrackDownloadAsync(taskId, clientIp, userAgent);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "跟踪下载失败: {TaskId}", taskId);
+                    }
+                });
 
                 return File(downloadResult.Stream, downloadResult.ContentType, downloadResult.FileName);
             }
@@ -704,6 +741,133 @@ namespace VideoConversion.Controllers
             {
                 preset.AudioQuality = request.AudioQualityValue.ToString();
             }
+        }
+
+        /// <summary>
+        /// 获取支持的格式列表
+        /// </summary>
+        [HttpGet("formats")]
+        public async Task<IActionResult> GetSupportedFormats()
+        {
+            try
+            {
+                var inputFormats = await _formatDetectionService.GetSupportedInputFormatsAsync();
+                var outputFormats = await _formatDetectionService.GetSupportedOutputFormatsAsync();
+                var extendedSupport = await _formatDetectionService.GetExtendedFormatSupportAsync();
+
+                var result = new
+                {
+                    InputFormats = inputFormats,
+                    OutputFormats = outputFormats,
+                    ExtendedSupport = extendedSupport,
+                    SupportedExtensions = new[]
+                    {
+                        "mp4", "avi", "mov", "mkv", "wmv", "flv", "webm", "m4v", "3gp",
+                        "mpg", "mpeg", "ts", "mts", "m2ts", "vob", "asf", "rm", "rmvb"
+                    }
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "获取支持格式列表失败");
+                return StatusCode(500, new { message = "获取支持格式列表失败", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// 检查格式转换支持
+        /// </summary>
+        [HttpGet("formats/check")]
+        public async Task<IActionResult> CheckFormatConversion([FromQuery] string inputFormat, [FromQuery] string outputFormat)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(inputFormat) || string.IsNullOrWhiteSpace(outputFormat))
+                {
+                    return BadRequest(new { message = "输入格式和输出格式不能为空" });
+                }
+
+                var isSupported = await _formatDetectionService.IsFormatConversionSupportedAsync(inputFormat, outputFormat);
+                var formatInfo = await _formatDetectionService.GetFormatInfoAsync(outputFormat);
+
+                var result = new
+                {
+                    InputFormat = inputFormat,
+                    OutputFormat = outputFormat,
+                    IsSupported = isSupported,
+                    FormatInfo = formatInfo,
+                    Recommendation = GetFormatRecommendation(inputFormat, outputFormat)
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "检查格式转换支持失败: {InputFormat} -> {OutputFormat}", inputFormat, outputFormat);
+                return StatusCode(500, new { message = "检查格式转换支持失败", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// 获取格式转换建议
+        /// </summary>
+        private object GetFormatRecommendation(string inputFormat, string outputFormat)
+        {
+            var recommendations = new List<string>();
+
+            // 相同格式转换
+            if (string.Equals(inputFormat, outputFormat, StringComparison.OrdinalIgnoreCase))
+            {
+                recommendations.Add("相同格式转换，适用于重新编码、压缩或修复文件");
+            }
+
+            // 格式特定建议
+            var formatAdvice = outputFormat.ToLowerInvariant() switch
+            {
+                "mp4" => "MP4格式具有最佳兼容性，推荐用于通用播放",
+                "mkv" => "MKV格式支持多轨道，适合高质量存储",
+                "webm" => "WebM格式适合网页播放，文件较小",
+                "avi" => "AVI格式兼容性好，但文件较大",
+                _ => "标准格式转换"
+            };
+
+            recommendations.Add(formatAdvice);
+
+            return new
+            {
+                Recommendations = recommendations,
+                QualityNote = "建议使用CRF质量模式以获得最佳质量/大小平衡",
+                PerformanceNote = GetPerformanceNote(inputFormat, outputFormat)
+            };
+        }
+
+        /// <summary>
+        /// 获取性能提示
+        /// </summary>
+        private string GetPerformanceNote(string inputFormat, string outputFormat)
+        {
+            // 容器转换（无需重新编码）
+            var containerOnlyFormats = new[] { "mp4", "mkv", "mov" };
+            if (containerOnlyFormats.Contains(inputFormat.ToLowerInvariant()) &&
+                containerOnlyFormats.Contains(outputFormat.ToLowerInvariant()))
+            {
+                return "容器格式转换，速度较快";
+            }
+
+            // 特殊格式处理
+            if (inputFormat.ToLowerInvariant() is "rm" or "rmvb")
+            {
+                return "专有格式解码，转换速度较慢";
+            }
+
+            if (inputFormat.ToLowerInvariant() is "vob")
+            {
+                return "DVD格式处理，可能需要额外时间";
+            }
+
+            return "标准转换速度";
         }
     }
 

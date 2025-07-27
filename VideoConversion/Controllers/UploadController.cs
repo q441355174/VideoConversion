@@ -30,6 +30,196 @@ namespace VideoConversion.Controllers
         }
 
         /// <summary>
+        /// 统一文件上传接口 - 支持所有文件大小，自动优化处理
+        /// </summary>
+        [HttpPost("unified")]
+        [RequestSizeLimit(32212254720)] // 30GB
+        [RequestFormLimits(MultipartBodyLengthLimit = 32212254720)]
+        public async Task<IActionResult> UploadUnifiedFileAndCreateTask()
+        {
+            var uploadId = Guid.NewGuid().ToString();
+            IFormCollection? form = null;
+
+            try
+            {
+                Logger.LogInformation("开始处理统一文件上传请求: UploadId={UploadId}, ClientIP={ClientIP}",
+                    uploadId, GetClientIpAddress());
+
+                // 设置更长的超时时间用于读取表单数据
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
+                form = await Request.ReadFormAsync(cts.Token);
+
+                var file = form.Files.FirstOrDefault();
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(new { success = false, message = "未找到有效的文件" });
+                }
+
+                // 获取重试信息
+                var retryAttempt = int.TryParse(form["RetryAttempt"], out var attempt) ? attempt : 1;
+                var maxRetries = int.TryParse(form["MaxRetries"], out var max) ? max : 1;
+
+                Logger.LogInformation("文件上传信息: FileName={FileName}, Size={Size}, Attempt={Attempt}/{MaxRetries}",
+                    file.FileName, file.Length, retryAttempt, maxRetries);
+
+                // 初始化上传进度
+                var progress = new UploadProgress
+                {
+                    UploadId = uploadId,
+                    FileName = file.FileName,
+                    TotalBytes = file.Length,
+                    BytesUploaded = 0,
+                    Status = "uploading",
+                    StartedAt = DateTime.Now,
+                    RetryAttempt = retryAttempt,
+                    MaxRetries = maxRetries
+                };
+                _uploadProgress[uploadId] = progress;
+
+                // 通知客户端上传开始
+                await _hubContext.Clients.All.SendAsync("UploadStarted", new
+                {
+                    UploadId = uploadId,
+                    FileName = file.FileName,
+                    TotalBytes = file.Length,
+                    RetryAttempt = retryAttempt,
+                    Timestamp = DateTime.Now
+                });
+
+                // 保存文件
+                var saveResult = await _fileService.SaveUploadedFileAsync(file, uploadId);
+
+                if (!saveResult.Success)
+                {
+                    return BadRequest(new { success = false, message = saveResult.ErrorMessage });
+                }
+
+                // 更新进度为文件保存完成
+                progress.BytesUploaded = file.Length;
+                progress.Status = "processing";
+
+                await _hubContext.Clients.All.SendAsync("UploadProgress", new
+                {
+                    UploadId = uploadId,
+                    BytesUploaded = file.Length,
+                    TotalBytes = file.Length,
+                    Percentage = 100.0,
+                    Status = "processing",
+                    Timestamp = DateTime.Now
+                });
+
+                // 创建转换任务
+                var taskResult = await CreateConversionTaskFromUpload(file, saveResult.FilePath, form);
+
+                if (taskResult.Success)
+                {
+                    progress.Status = "completed";
+                    progress.CompletedAt = DateTime.Now;
+                    progress.TaskId = taskResult.TaskId;
+
+                    await _hubContext.Clients.All.SendAsync("UploadCompleted", new
+                    {
+                        UploadId = uploadId,
+                        TaskId = taskResult.TaskId,
+                        FileName = file.FileName,
+                        Timestamp = DateTime.Now
+                    });
+
+                    Logger.LogInformation("统一文件上传成功: UploadId={UploadId}, TaskId={TaskId}, FileName={FileName}",
+                        uploadId, taskResult.TaskId, file.FileName);
+
+                    return Ok(new
+                    {
+                        success = true,
+                        taskId = taskResult.TaskId,
+                        taskName = taskResult.TaskName,
+                        message = "文件上传并创建转换任务成功"
+                    });
+                }
+                else
+                {
+                    progress.Status = "failed";
+                    progress.ErrorMessage = taskResult.ErrorMessage;
+                    progress.CompletedAt = DateTime.Now;
+
+                    return BadRequest(new { success = false, message = taskResult.ErrorMessage });
+                }
+            }
+            catch (OperationCanceledException ex)
+            {
+                Logger.LogWarning(ex, "统一文件上传被取消: UploadId={UploadId}, FileName={FileName}, ClientIP={ClientIP}",
+                    uploadId, form?.Files?.FirstOrDefault()?.FileName ?? "Unknown", GetClientIpAddress());
+
+                if (_uploadProgress.TryGetValue(uploadId, out var progress))
+                {
+                    progress.Status = "cancelled";
+                    progress.ErrorMessage = "上传被取消";
+                    progress.CompletedAt = DateTime.Now;
+                }
+
+                await _hubContext.Clients.All.SendAsync("UploadFailed", new
+                {
+                    UploadId = uploadId,
+                    ErrorMessage = "上传被取消",
+                    ErrorType = "Cancelled",
+                    Timestamp = DateTime.Now
+                });
+
+                return BadRequest(new { success = false, message = "上传被取消" });
+            }
+            catch (Microsoft.AspNetCore.Http.BadHttpRequestException ex) when (ex.Message.Contains("Unexpected end of request content"))
+            {
+                Logger.LogWarning(ex, "统一文件上传连接中断: UploadId={UploadId}, FileName={FileName}, ClientIP={ClientIP}",
+                    uploadId, form?.Files?.FirstOrDefault()?.FileName ?? "Unknown", GetClientIpAddress());
+
+                if (_uploadProgress.TryGetValue(uploadId, out var progress))
+                {
+                    progress.Status = "failed";
+                    progress.ErrorMessage = "网络连接中断，请检查网络连接后重试";
+                    progress.CompletedAt = DateTime.Now;
+                }
+
+                await _hubContext.Clients.All.SendAsync("UploadFailed", new
+                {
+                    UploadId = uploadId,
+                    ErrorMessage = "网络连接中断，请检查网络连接后重试",
+                    ErrorType = "NetworkInterruption",
+                    CanRetry = true,
+                    Timestamp = DateTime.Now
+                });
+
+                return BadRequest(new {
+                    success = false,
+                    message = "网络连接中断，请检查网络连接后重试",
+                    errorType = "NetworkInterruption",
+                    canRetry = true
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "统一文件上传失败: UploadId={UploadId}, FileName={FileName}, ClientIP={ClientIP}",
+                    uploadId, form?.Files?.FirstOrDefault()?.FileName ?? "Unknown", GetClientIpAddress());
+
+                if (_uploadProgress.TryGetValue(uploadId, out var progress))
+                {
+                    progress.Status = "failed";
+                    progress.ErrorMessage = ex.Message;
+                    progress.CompletedAt = DateTime.Now;
+                }
+
+                await _hubContext.Clients.All.SendAsync("UploadFailed", new
+                {
+                    UploadId = uploadId,
+                    ErrorMessage = ex.Message,
+                    ErrorType = "General",
+                    Timestamp = DateTime.Now
+                });
+
+                return ServerError("上传过程中发生错误");
+            }
+        }
+
+        /// <summary>
         /// 大文件上传并创建转换任务接口 - 已优化（保持原有逻辑，增强验证和日志）
         /// 支持进度跟踪和 SignalR 实时通知
         /// </summary>
@@ -46,7 +236,9 @@ namespace VideoConversion.Controllers
                 Logger.LogInformation("开始处理大文件上传请求: UploadId={UploadId}, ClientIP={ClientIP}",
                     uploadId, GetClientIpAddress());
 
-                form = await Request.ReadFormAsync();
+                // 设置更长的超时时间用于读取表单数据
+                using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30));
+                form = await Request.ReadFormAsync(cts.Token);
                 var file = form.Files.FirstOrDefault();
 
                 // 记录表单数据用于调试
@@ -158,6 +350,56 @@ namespace VideoConversion.Controllers
                     return BadRequest(new { success = false, message = result.ErrorMessage });
                 }
             }
+            catch (OperationCanceledException ex)
+            {
+                Logger.LogWarning(ex, "大文件上传被取消: UploadId={UploadId}, FileName={FileName}, ClientIP={ClientIP}",
+                    uploadId, form?.Files?.FirstOrDefault()?.FileName ?? "Unknown", GetClientIpAddress());
+
+                if (_uploadProgress.TryGetValue(uploadId, out var progress))
+                {
+                    progress.Status = "cancelled";
+                    progress.ErrorMessage = "上传被取消";
+                    progress.CompletedAt = DateTime.Now;
+                }
+
+                await _hubContext.Clients.All.SendAsync("UploadFailed", new
+                {
+                    UploadId = uploadId,
+                    ErrorMessage = "上传被取消",
+                    ErrorType = "Cancelled",
+                    Timestamp = DateTime.Now
+                });
+
+                return BadRequest(new { success = false, message = "上传被取消" });
+            }
+            catch (Microsoft.AspNetCore.Http.BadHttpRequestException ex) when (ex.Message.Contains("Unexpected end of request content"))
+            {
+                Logger.LogWarning(ex, "大文件上传连接中断: UploadId={UploadId}, FileName={FileName}, ClientIP={ClientIP}",
+                    uploadId, form?.Files?.FirstOrDefault()?.FileName ?? "Unknown", GetClientIpAddress());
+
+                if (_uploadProgress.TryGetValue(uploadId, out var progress))
+                {
+                    progress.Status = "failed";
+                    progress.ErrorMessage = "网络连接中断，请检查网络连接后重试";
+                    progress.CompletedAt = DateTime.Now;
+                }
+
+                await _hubContext.Clients.All.SendAsync("UploadFailed", new
+                {
+                    UploadId = uploadId,
+                    ErrorMessage = "网络连接中断，请检查网络连接后重试",
+                    ErrorType = "NetworkInterruption",
+                    CanRetry = true,
+                    Timestamp = DateTime.Now
+                });
+
+                return BadRequest(new {
+                    success = false,
+                    message = "网络连接中断，请检查网络连接后重试",
+                    errorType = "NetworkInterruption",
+                    canRetry = true
+                });
+            }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "大文件上传失败: UploadId={UploadId}, FileName={FileName}, ClientIP={ClientIP}",
@@ -174,6 +416,7 @@ namespace VideoConversion.Controllers
                 {
                     UploadId = uploadId,
                     ErrorMessage = ex.Message,
+                    ErrorType = "General",
                     Timestamp = DateTime.Now
                 });
 
@@ -377,11 +620,33 @@ namespace VideoConversion.Controllers
     {
         public string UploadId { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
-        public long TotalSize { get; set; }
-        public long UploadedSize { get; set; }
-        public DateTime StartTime { get; set; }
+        public long TotalBytes { get; set; }
+        public long BytesUploaded { get; set; }
+        public DateTime StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
-        public string Status { get; set; } = string.Empty; // uploading, completed, failed
+        public string Status { get; set; } = string.Empty; // uploading, processing, completed, failed, cancelled
         public string ErrorMessage { get; set; } = string.Empty;
+        public string? TaskId { get; set; }
+        public int RetryAttempt { get; set; } = 1;
+        public int MaxRetries { get; set; } = 1;
+
+        // 兼容性属性
+        public long TotalSize
+        {
+            get => TotalBytes;
+            set => TotalBytes = value;
+        }
+
+        public long UploadedSize
+        {
+            get => BytesUploaded;
+            set => BytesUploaded = value;
+        }
+
+        public DateTime StartTime
+        {
+            get => StartedAt;
+            set => StartedAt = value;
+        }
     }
 }

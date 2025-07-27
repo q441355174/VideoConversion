@@ -27,7 +27,7 @@ namespace VideoConversion.Services
         {
             try
             {
-                await _hubContext.Clients.Group($"task_{taskId}").SendAsync("ProgressUpdate", new 
+                var progressData = new
                 {
                     TaskId = taskId,
                     Progress = progress,
@@ -35,11 +35,18 @@ namespace VideoConversion.Services
                     Speed = speed,
                     RemainingSeconds = remainingSeconds,
                     Timestamp = DateTime.Now
-                });
+                };
+
+                _logger.LogInformation("📡 发送进度更新: TaskId={TaskId}, Progress={Progress}%, Group=task_{TaskId}",
+                    taskId, progress, taskId);
+
+                await _hubContext.Clients.Group($"task_{taskId}").SendAsync("ProgressUpdate", progressData);
+
+                _logger.LogDebug("✅ 进度更新已发送: TaskId={TaskId}, Progress={Progress}%", taskId, progress);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "发送进度更新通知失败: {TaskId} - {Progress}%", taskId, progress);
+                _logger.LogError(ex, "❌ 发送进度更新通知失败: {TaskId} - {Progress}%", taskId, progress);
             }
         }
 
