@@ -5,8 +5,7 @@
         Width="500"
         Height="400"
         WindowStartupLocation="CenterOwner"
-        CanResize="False"
-        Icon="/Assets/icon.ico">
+        CanResize="False">
 
     <Grid Margin="20">
         <Grid.RowDefinitions>

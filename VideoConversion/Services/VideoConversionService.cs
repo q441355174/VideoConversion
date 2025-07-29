@@ -52,8 +52,7 @@ namespace VideoConversion.Services
             _advancedCleanupService = advancedCleanupService;
             _conversionSemaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
 
-            _logger.LogInformation("VideoConversionService 初始化完成，FFmpeg配置状态: {IsInitialized}",
-                _ffmpegConfig.IsInitialized);
+            //_logger.LogInformation("VideoConversionService 初始化完成，FFmpeg配置状态: {IsInitialized}", _ffmpegConfig.IsInitialized);
         }
 
 

@@ -220,6 +220,137 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 系统信息 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="ℹ️ 系统信息"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 左列 -->
+                            <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,10,0">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="服务器版本:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="ServerVersionText" Text="v1.0.0" FontSize="11" FontWeight="Medium" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="FFmpeg版本:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="FFmpegVersionText" Text="6.0" FontSize="11" FontWeight="Medium" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- 右列 -->
+                            <StackPanel Grid.Column="1" Spacing="8" Margin="10,0,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="硬件加速:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="HardwareAccelText" Text="NVIDIA CUDA" FontSize="11" FontWeight="Medium" Foreground="#28a745" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="运行时间:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="UptimeText" Text="2天 5小时" FontSize="11" FontWeight="Medium" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 刷新按钮 -->
+                        <Button Name="RefreshSystemInfoBtn"
+                                Content="🔄 刷新系统信息"
+                                Background="#17a2b8"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Padding="15,8"
+                                CornerRadius="4"
+                                HorizontalAlignment="Left"
+                                Click="RefreshSystemInfoBtn_Click">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover">
+                                    <Setter Property="Background" Value="#138496" />
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- 系统管理 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="🔧 系统管理"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0"
+                                    Name="ConfigSpaceBtn"
+                                    Content="💾 配置磁盘空间"
+                                    Background="#007bff"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Margin="0,0,5,0"
+                                    Click="ConfigSpaceBtn_Click">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#0056b3" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+
+                            <Button Grid.Column="1"
+                                    Name="CleanupFilesBtn"
+                                    Content="🗑️ 清理临时文件"
+                                    Background="#28a745"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Margin="5,0"
+                                    Click="CleanupFilesBtn_Click">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#218838" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+
+                            <Button Grid.Column="2"
+                                    Name="ViewLogsBtn"
+                                    Content="📋 查看系统日志"
+                                    Background="#6c757d"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Margin="5,0,0,0"
+                                    Click="ViewLogsBtn_Click">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#5a6268" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- 数据库信息 -->
                 <Border Background="#f8f9fa"
                         CornerRadius="8"

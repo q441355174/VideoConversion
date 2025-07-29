@@ -86,6 +86,24 @@
                                      IsVisible="False"
                                      TextChanged="SearchBox_TextChanged" />
 
+                            <!-- 刷新按钮 -->
+                            <Button Name="RefreshBtn"
+                                    Content="🔄"
+                                    Background="Transparent"
+                                    Foreground="#666"
+                                    BorderThickness="0"
+                                    Padding="8,6"
+                                    CornerRadius="4"
+                                    FontSize="14"
+                                    ToolTip.Tip="刷新列表"
+                                    Click="RefreshBtn_Click">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#e9ecef" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+
                             <!-- 搜索按钮 -->
                             <Button Name="SearchToggleBtn"
                                     Content="🔍"
@@ -109,6 +127,28 @@
 
                 <!-- 文件列表内容区域 -->
                 <Grid Grid.Row="1">
+                    <!-- 加载状态指示器 -->
+                    <StackPanel Name="LoadingPanel"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Spacing="16"
+                                IsVisible="False">
+                        <Border Background="#f0f0f0"
+                                CornerRadius="50"
+                                Width="60"
+                                Height="60"
+                                HorizontalAlignment="Center">
+                            <TextBlock Text="⏳"
+                                       FontSize="24"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="正在加载已完成的文件..."
+                                   FontSize="14"
+                                   Foreground="#666"
+                                   HorizontalAlignment="Center" />
+                    </StackPanel>
+
                     <!-- 完成的文件列表 -->
                     <ScrollViewer Name="FileListScrollViewer">
                         <StackPanel Name="CompletedFileListContainer"

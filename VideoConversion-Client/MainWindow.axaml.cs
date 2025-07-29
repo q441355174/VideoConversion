@@ -17,6 +17,7 @@ namespace VideoConversion_Client
 {
     public partial class MainWindow : Window
     {
+        #region 变量
         // ViewModel
         private MainWindowViewModel viewModel;
         private ServerStatusViewModel serverStatusViewModel;
@@ -29,7 +30,7 @@ namespace VideoConversion_Client
         private Ellipse? serverStatusIndicator;
         private TextBlock? serverStatusText;
         private Ellipse? signalRStatusIndicator;
-        private TextBlock? signalRStatusText;
+        // private TextBlock? signalRStatusText;
         private TextBlock? usedSpaceText;
         private TextBlock? totalSpaceText;
         private TextBlock? availableSpaceText;
@@ -49,14 +50,9 @@ namespace VideoConversion_Client
         private ProgressBar? batchProgressBar;
         private Border? batchPausedPanel;
         private TextBlock? batchPausedText;
-        private TextBlock? serverVersionText;
-        private TextBlock? ffmpegVersionText;
-        private TextBlock? hardwareAccelText;
-        private TextBlock? uptimeText;
         private Button? refreshSpaceBtn;
-        private Button? configSpaceBtn;
-        private Button? cleanupFilesBtn;
-        private Button? viewLogsBtn;
+        private Button? serverSettingsBtn;
+        #endregion
         public MainWindow()
         {
             InitializeComponent();
@@ -95,11 +91,14 @@ namespace VideoConversion_Client
             fileUploadView = this.FindControl<FileUploadView>("FileUploadView")!;
             conversionCompletedView = this.FindControl<ConversionCompletedView>("ConversionCompletedView")!;
 
+            // 订阅ConversionCompletedView的导航事件
+            conversionCompletedView.NavigateToUploadRequested += OnNavigateToUploadRequested;;
+
             // 获取服务器状态面板控件引用
             serverStatusIndicator = this.FindControl<Ellipse>("ServerStatusIndicator");
             serverStatusText = this.FindControl<TextBlock>("ServerStatusText");
             signalRStatusIndicator = this.FindControl<Ellipse>("SignalRStatusIndicator");
-            signalRStatusText = this.FindControl<TextBlock>("SignalRStatusText");
+            // signalRStatusText = this.FindControl<TextBlock>("SignalRStatusText");
             usedSpaceText = this.FindControl<TextBlock>("UsedSpaceText");
             totalSpaceText = this.FindControl<TextBlock>("TotalSpaceText");
             availableSpaceText = this.FindControl<TextBlock>("AvailableSpaceText");
@@ -119,14 +118,8 @@ namespace VideoConversion_Client
             batchProgressBar = this.FindControl<ProgressBar>("BatchProgressBar");
             batchPausedPanel = this.FindControl<Border>("BatchPausedPanel");
             batchPausedText = this.FindControl<TextBlock>("BatchPausedText");
-            serverVersionText = this.FindControl<TextBlock>("ServerVersionText");
-            ffmpegVersionText = this.FindControl<TextBlock>("FFmpegVersionText");
-            hardwareAccelText = this.FindControl<TextBlock>("HardwareAccelText");
-            uptimeText = this.FindControl<TextBlock>("UptimeText");
             refreshSpaceBtn = this.FindControl<Button>("RefreshSpaceBtn");
-            configSpaceBtn = this.FindControl<Button>("ConfigSpaceBtn");
-            cleanupFilesBtn = this.FindControl<Button>("CleanupFilesBtn");
-            viewLogsBtn = this.FindControl<Button>("ViewLogsBtn");
+            serverSettingsBtn = this.FindControl<Button>("ServerSettingsBtn");
 
             // 连接转换进度事件
             viewModel.ConversionProgressUpdated += OnConversionProgressUpdated;
@@ -190,14 +183,8 @@ namespace VideoConversion_Client
             if (refreshSpaceBtn != null)
                 refreshSpaceBtn.Click += async (s, e) => await serverStatusViewModel?.RefreshServerStatus()!;
 
-            if (configSpaceBtn != null)
-                configSpaceBtn.Click += ConfigSpaceBtn_Click;
-
-            if (cleanupFilesBtn != null)
-                cleanupFilesBtn.Click += CleanupFilesBtn_Click;
-
-            if (viewLogsBtn != null)
-                viewLogsBtn.Click += ViewLogsBtn_Click;
+            if (serverSettingsBtn != null)
+                serverSettingsBtn.Click += SystemSettingsBtn_Click;
         }
 
         private void UpdateServerStatusUI()
@@ -217,8 +204,8 @@ namespace VideoConversion_Client
                 signalRStatusIndicator.Fill = serverStatusViewModel.IsSignalRConnected ?
                     Avalonia.Media.Brushes.Green : Avalonia.Media.Brushes.Red;
 
-            if (signalRStatusText != null)
-                signalRStatusText.Text = serverStatusViewModel.SignalRStatusText;
+            // if (signalRStatusText != null)
+            //     signalRStatusText.Text = serverStatusViewModel.SignalRStatusText;
 
             // 更新磁盘空间信息
             if (usedSpaceText != null)
@@ -286,19 +273,6 @@ namespace VideoConversion_Client
                 if (batchPausedText != null)
                     batchPausedText.Text = serverStatusViewModel.BatchPausedText;
             }
-
-            // 更新系统信息
-            if (serverVersionText != null)
-                serverVersionText.Text = serverStatusViewModel.ServerVersion;
-
-            if (ffmpegVersionText != null)
-                ffmpegVersionText.Text = serverStatusViewModel.FFmpegVersion;
-
-            if (hardwareAccelText != null)
-                hardwareAccelText.Text = serverStatusViewModel.HardwareAcceleration;
-
-            if (uptimeText != null)
-                uptimeText.Text = serverStatusViewModel.Uptime;
         }
 
         private void SetupEventHandlers()
@@ -448,6 +422,15 @@ namespace VideoConversion_Client
             UpdateButtonStates(false);
 
             UpdateStatus("✅ 转换完成界面");
+        }
+
+        /// <summary>
+        /// 处理从ConversionCompletedView请求导航到上传页面的事件
+        /// </summary>
+        private void OnNavigateToUploadRequested(object? sender, EventArgs e)
+        {
+            // 切换到上传页面
+            ConvertingStatusBtn_Click(null, new RoutedEventArgs());
         }
 
         // 更新切换按钮的状态

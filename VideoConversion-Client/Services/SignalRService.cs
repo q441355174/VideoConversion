@@ -21,6 +21,7 @@ namespace VideoConversion_Client.Services
         public event Action<string, int, string, double?, int?>? ProgressUpdated;
         public event Action<string, string, string?>? StatusUpdated;
         public event Action<string, string, bool, string?>? TaskCompleted;
+        public event Action<string>? TaskDeleted;
         public event Action<string, string>? SystemNotification;
         public event Action<string>? TaskNotFound;
         public event Action<string>? Error;
@@ -324,6 +325,12 @@ namespace VideoConversion_Client.Services
                 {
                     Error?.Invoke($"处理系统通知失败: {ex.Message}");
                 }
+            });
+
+            // 任务删除
+            _connection.On<string>("TaskDeleted", (taskId) =>
+            {
+                TaskDeleted?.Invoke(taskId);
             });
 
             // 任务未找到

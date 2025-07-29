@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using VideoConversion_Client.Services;
 using VideoConversion_Client.Models;
@@ -423,7 +424,179 @@ namespace VideoConversion_Client.Views.SystemSetting
             }
         }
 
+        #region 系统管理按钮事件
 
+        private async void RefreshSystemInfoBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_apiService == null)
+                {
+                    var settingsService = Services.SystemSettingsService.Instance;
+                    _apiService = new Services.ApiService { BaseUrl = settingsService.GetServerAddress() };
+                }
+
+                // 从服务器获取系统信息
+                var response = await _apiService.GetSystemStatusAsync();
+
+                if (response.Success && response.Data != null)
+                {
+                    // 更新UI显示
+                    var serverVersionText = this.FindControl<TextBlock>("ServerVersionText");
+                    var ffmpegVersionText = this.FindControl<TextBlock>("FFmpegVersionText");
+                    var hardwareAccelText = this.FindControl<TextBlock>("HardwareAccelText");
+                    var uptimeText = this.FindControl<TextBlock>("UptimeText");
+
+                    if (serverVersionText != null)
+                        serverVersionText.Text = response.Data.ServerVersion;
+
+                    if (ffmpegVersionText != null)
+                        ffmpegVersionText.Text = response.Data.FFmpegVersion;
+
+                    if (hardwareAccelText != null)
+                        hardwareAccelText.Text = response.Data.HardwareAcceleration;
+
+                    if (uptimeText != null)
+                        uptimeText.Text = FormatUptime(response.Data.Uptime);
+
+                    await MessageBoxService.ShowSuccessAsync("系统信息已刷新", this);
+                }
+                else
+                {
+                    await MessageBoxService.ShowErrorAsync($"获取系统信息失败: {response.Message}", this);
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxService.ShowErrorAsync($"刷新系统信息失败: {ex.Message}", this);
+            }
+        }
+
+        private async void ConfigSpaceBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var settingsService = Services.SystemSettingsService.Instance;
+                var baseUrl = settingsService.GetServerAddress();
+                var configDialog = new Views.DiskSpaceConfigDialog(baseUrl);
+
+                await configDialog.ShowDialog(this);
+
+                if (configDialog.ConfigSaved)
+                {
+                    await MessageBoxService.ShowSuccessAsync("磁盘空间配置已保存", this);
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxService.ShowErrorAsync($"打开空间配置失败: {ex.Message}", this);
+            }
+        }
+
+        private async void CleanupFilesBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                // 确认对话框
+                var result = await MessageBoxService.ShowConfirmAsync(
+                    "确定要清理临时文件吗？\n\n这将删除所有临时文件和缓存，释放磁盘空间。",
+                    this);
+
+                if (!result) return;
+
+                if (_apiService == null)
+                {
+                    var settingsService = Services.SystemSettingsService.Instance;
+                    _apiService = new Services.ApiService { BaseUrl = settingsService.GetServerAddress() };
+                }
+
+                // 执行文件清理
+                var response = await _apiService.CleanupFilesAsync("temp");
+
+                if (response.Success && response.Data != null)
+                {
+                    var message = $"清理完成！\n\n" +
+                                 $"删除文件数: {response.Data.DeletedFiles}\n" +
+                                 $"释放空间: {FormatBytes(response.Data.FreedSpace)}";
+
+                    await MessageBoxService.ShowSuccessAsync(message, this);
+                }
+                else
+                {
+                    await MessageBoxService.ShowErrorAsync($"文件清理失败: {response.Message}", this);
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxService.ShowErrorAsync($"文件清理失败: {ex.Message}", this);
+            }
+        }
+
+        private async void ViewLogsBtn_Click(object? sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_apiService == null)
+                {
+                    var settingsService = Services.SystemSettingsService.Instance;
+                    _apiService = new Services.ApiService { BaseUrl = settingsService.GetServerAddress() };
+                }
+
+                // 获取系统诊断信息
+                var response = await _apiService.GetSystemDiagnosticsAsync();
+
+                if (response.Success && response.Data != null)
+                {
+                    var diagnosticsText = string.Join("\n",
+                        response.Data.Select(d => $"[{d.Level.ToUpper()}] {d.Name}: {d.Status}"));
+
+                    await MessageBoxService.ShowInfoAsync($"系统诊断信息:\n\n{diagnosticsText}", this);
+                }
+                else
+                {
+                    await MessageBoxService.ShowErrorAsync($"获取系统诊断信息失败: {response.Message}", this);
+                }
+            }
+            catch (Exception ex)
+            {
+                await MessageBoxService.ShowErrorAsync($"获取系统诊断信息失败: {ex.Message}", this);
+            }
+        }
+
+        #endregion
+
+        #region 辅助方法
+
+        /// <summary>
+        /// 格式化运行时间
+        /// </summary>
+        private string FormatUptime(TimeSpan uptime)
+        {
+            if (uptime.TotalDays >= 1)
+                return $"{(int)uptime.TotalDays}天 {uptime.Hours}小时";
+            else if (uptime.TotalHours >= 1)
+                return $"{uptime.Hours}小时 {uptime.Minutes}分钟";
+            else
+                return $"{uptime.Minutes}分钟";
+        }
+
+        /// <summary>
+        /// 格式化字节大小
+        /// </summary>
+        private string FormatBytes(long bytes)
+        {
+            string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+            double len = bytes;
+            int order = 0;
+            while (len >= 1024 && order < sizes.Length - 1)
+            {
+                order++;
+                len = len / 1024;
+            }
+            return $"{len:0.##} {sizes[order]}";
+        }
+
+        #endregion
 
         protected override void OnClosed(EventArgs e)
         {

@@ -38,14 +38,24 @@ namespace VideoConversion_Client.Views
 
         public bool ConfigSaved { get; private set; } = false;
 
+        // 无参数构造函数，用于XAML设计器
+        public DiskSpaceConfigDialog()
+        {
+            InitializeComponent();
+            _diskSpaceApiService = new DiskSpaceApiService("http://localhost:5065");
+
+            InitializeControls();
+            SetupEventHandlers();
+        }
+
         public DiskSpaceConfigDialog(string baseUrl)
         {
             InitializeComponent();
             _diskSpaceApiService = new DiskSpaceApiService(baseUrl);
-            
+
             InitializeControls();
             SetupEventHandlers();
-            
+
             _ = Task.Run(LoadCurrentConfigAsync);
         }
 

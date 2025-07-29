@@ -1,6 +1,7 @@
 using VideoConversion.Models;
 using Microsoft.AspNetCore.SignalR;
 using VideoConversion.Hubs;
+using SqlSugar;
 
 namespace VideoConversion.Services
 {
@@ -33,7 +34,7 @@ namespace VideoConversion.Services
             _spaceMonitorTimer = new Timer(async _ => await MonitorDiskSpace(),
                 null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30));
 
-            _logger.LogInformation("DiskSpaceService 初始化完成");
+           // _logger.LogInformation("DiskSpaceService 初始化完成");
         }
 
         #region 配置管理
@@ -46,8 +47,21 @@ namespace VideoConversion.Services
             await _databaseAccessSemaphore.WaitAsync();
             try
             {
-                var sql = "SELECT * FROM DiskSpaceConfig ORDER BY Id DESC LIMIT 1";
-                var config = await _databaseService.GetDatabaseAsync().Ado.SqlQuerySingleAsync<DiskSpaceConfig>(sql);
+                var config = await Task.Run(() =>
+                {
+                    try
+                    {
+                        var db = _databaseService.GetDatabaseAsync();
+                        return db.Queryable<DiskSpaceConfig>()
+                            .OrderBy(c => c.Id, OrderByType.Desc)
+                            .First();
+                    }
+                    catch (Exception queryEx)
+                    {
+                        _logger.LogWarning(queryEx, "查询磁盘空间配置失败，将创建默认配置");
+                        return null;
+                    }
+                });
 
                 if (config == null)
                 {
@@ -112,20 +126,23 @@ namespace VideoConversion.Services
                     return false;
                 }
 
-                // 删除旧配置
-                await _databaseService.GetDatabaseAsync().Ado.ExecuteCommandAsync("DELETE FROM DiskSpaceConfig");
-
-                // 插入新配置
-                var sql = @"INSERT INTO DiskSpaceConfig (MaxTotalSpace, ReservedSpace, IsEnabled, UpdatedAt, UpdatedBy)
-                           VALUES (@MaxTotalSpace, @ReservedSpace, @IsEnabled, @UpdatedAt, @UpdatedBy)";
-
-                var result = await _databaseService.GetDatabaseAsync().Ado.ExecuteCommandAsync(sql, new
+                var result = await Task.Run(() =>
                 {
-                    MaxTotalSpace = config.MaxTotalSpace,
-                    ReservedSpace = config.ReservedSpace,
-                    IsEnabled = config.IsEnabled,
-                    UpdatedAt = config.UpdatedAt,
-                    UpdatedBy = config.UpdatedBy
+                    try
+                    {
+                        var db = _databaseService.GetDatabaseAsync();
+
+                        // 删除旧配置
+                        db.Deleteable<DiskSpaceConfig>().ExecuteCommand();
+
+                        // 插入新配置
+                        return db.Insertable(config).ExecuteCommand();
+                    }
+                    catch (Exception dbEx)
+                    {
+                        _logger.LogWarning(dbEx, "数据库操作失败");
+                        return 0;
+                    }
                 });
                 
                 if (result > 0)
@@ -245,19 +262,23 @@ namespace VideoConversion.Services
             await _databaseAccessSemaphore.WaitAsync();
             try
             {
-                // 删除旧记录
-                await _databaseService.GetDatabaseAsync().Ado.ExecuteCommandAsync("DELETE FROM SpaceUsage");
-
-                // 插入新记录
-                var sql = @"INSERT INTO SpaceUsage (UploadedFilesSize, ConvertedFilesSize, TempFilesSize, LastCalculatedAt)
-                           VALUES (@UploadedFilesSize, @ConvertedFilesSize, @TempFilesSize, @LastCalculatedAt)";
-
-                await _databaseService.GetDatabaseAsync().Ado.ExecuteCommandAsync(sql, new
+                await Task.Run(() =>
                 {
-                    UploadedFilesSize = usage.UploadedFilesSize,
-                    ConvertedFilesSize = usage.ConvertedFilesSize,
-                    TempFilesSize = usage.TempFilesSize,
-                    LastCalculatedAt = usage.LastCalculatedAt
+                    try
+                    {
+                        var db = _databaseService.GetDatabaseAsync();
+
+                        // 删除旧记录
+                        db.Deleteable<SpaceUsage>().ExecuteCommand();
+
+                        // 插入新记录
+                        db.Insertable(usage).ExecuteCommand();
+                    }
+                    catch (Exception dbEx)
+                    {
+                        _logger.LogWarning(dbEx, "数据库操作失败");
+                        throw;
+                    }
                 });
             }
             catch (Exception ex)

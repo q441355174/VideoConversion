@@ -2,6 +2,8 @@ using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using VideoConversion_Client.Services;
 using VideoConversion_Client.Utils;
 
@@ -34,7 +36,7 @@ namespace VideoConversion_Client.ViewModels
             set => SetProperty(ref _isSignalRConnected, value);
         }
 
-        private string _serverStatusText = "未连接";
+        private string _serverStatusText = "检测中...";
         public string ServerStatusText
         {
             get => _serverStatusText;
@@ -246,6 +248,9 @@ namespace VideoConversion_Client.ViewModels
             _signalRService.SpaceReleased += OnSpaceReleased;
             _signalRService.SpaceWarning += OnSpaceWarning;
             _signalRService.SpaceConfigChanged += OnSpaceConfigChanged;
+
+            // 监听活动任务响应
+            _signalRService.RegisterHandler("ActiveTasks", (data) => OnActiveTasksReceived(data));
         }
 
         private void OnProgressUpdated(string taskId, int progress, string message, double? speed, int? remainingSeconds)
@@ -284,18 +289,32 @@ namespace VideoConversion_Client.ViewModels
         {
             try
             {
+                // 显示检测状态
+                ServerStatusText = "检测中...";
+                Utils.Logger.Info("ServerStatus", "开始检测服务器连接状态");
+
                 // 测试服务器连接
                 var connected = await _apiService.TestConnectionAsync();
                 IsServerConnected = connected;
-                ServerStatusText = connected ? "已连接" : "未连接";
 
                 if (connected)
                 {
+                    ServerStatusText = "已连接";
+                    Utils.Logger.Info("ServerStatus", "✅ 服务器连接成功");
+
                     // 获取磁盘空间信息
                     await RefreshDiskSpaceInfo();
-                    
+
                     // 获取系统信息
                     await RefreshSystemInfo();
+                }
+                else
+                {
+                    ServerStatusText = "未连接";
+                    Utils.Logger.Info("ServerStatus", "❌ 服务器连接失败");
+
+                    // 重置相关状态
+                    ResetServerDependentStates();
                 }
             }
             catch (Exception ex)
@@ -303,7 +322,35 @@ namespace VideoConversion_Client.ViewModels
                 Utils.Logger.Info("ServerStatus", $"刷新服务器状态失败: {ex.Message}");
                 IsServerConnected = false;
                 ServerStatusText = "连接失败";
+                ResetServerDependentStates();
             }
+        }
+
+        /// <summary>
+        /// 重置依赖服务器的状态
+        /// </summary>
+        private void ResetServerDependentStates()
+        {
+            // 重置磁盘空间信息
+            UsedSpace = 0;
+            TotalSpace = 100L * 1024 * 1024 * 1024; // 默认100GB
+            AvailableSpace = 100L * 1024 * 1024 * 1024;
+            IsSpaceWarningVisible = false;
+            SpaceWarningText = "";
+
+            // 重置任务状态
+            HasActiveTask = false;
+            HasBatchTask = false;
+            CurrentTaskName = "";
+            CurrentFileName = "";
+            TaskProgress = 0;
+            TaskProgressText = "";
+            TaskSpeedText = "";
+            TaskETAText = "";
+            BatchProgressText = "";
+            BatchProgress = 0;
+            IsBatchPaused = false;
+            BatchPausedText = "";
         }
 
         private async Task RefreshDiskSpaceInfo()
@@ -346,12 +393,49 @@ namespace VideoConversion_Client.ViewModels
 
         private async Task RefreshSystemInfo()
         {
-            // TODO: 实现系统信息API调用
-            // var systemInfo = await _apiService.GetSystemInfoAsync();
-            // ServerVersion = systemInfo.Version;
-            // FFmpegVersion = systemInfo.FFmpegVersion;
-            // HardwareAcceleration = systemInfo.HardwareAcceleration;
-            // Uptime = systemInfo.Uptime;
+            try
+            {
+                // 获取活动任务状态
+                await RefreshActiveTasksInfo();
+
+                // 获取系统信息
+                var response = await _apiService.GetSystemStatusAsync();
+                if (response.Success && response.Data != null)
+                {
+                    ServerVersion = response.Data.ServerVersion;
+                    FFmpegVersion = response.Data.FFmpegVersion;
+                    HardwareAcceleration = response.Data.HardwareAcceleration;
+                    Uptime = FormatUptime(response.Data.Uptime);
+
+                    Utils.Logger.Info("ServerStatus", "系统信息已更新");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Info("ServerStatus", $"刷新系统信息失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 刷新活动任务信息
+        /// </summary>
+        private async Task RefreshActiveTasksInfo()
+        {
+            try
+            {
+                // 通过SignalR获取活动任务
+                if (_signalRService.IsConnected)
+                {
+                    await _signalRService.GetActiveTasksAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Info("ServerStatus", $"获取活动任务失败: {ex.Message}");
+                // 如果获取失败，重置任务状态
+                HasActiveTask = false;
+                HasBatchTask = false;
+            }
         }
 
         private string FormatBytes(long bytes)
@@ -488,11 +572,151 @@ namespace VideoConversion_Client.ViewModels
 
         #endregion
 
+        #region 活动任务处理
+
+        /// <summary>
+        /// 处理活动任务响应
+        /// </summary>
+        private void OnActiveTasksReceived(System.Text.Json.JsonElement data)
+        {
+            try
+            {
+                var json = data.GetRawText();
+                var tasks = System.Text.Json.JsonSerializer.Deserialize<List<ActiveTaskInfo>>(json, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (tasks != null && tasks.Any())
+                {
+                    UpdateTaskStatusFromActiveTasks(tasks);
+                }
+                else
+                {
+                    // 没有活动任务
+                    HasActiveTask = false;
+                    HasBatchTask = false;
+                    CurrentTaskName = "";
+                    CurrentFileName = "";
+                    TaskProgress = 0;
+                    TaskProgressText = "";
+                    TaskSpeedText = "";
+                    TaskETAText = "";
+                    BatchProgressText = "";
+                    BatchProgress = 0;
+                    IsBatchPaused = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Info("ServerStatus", $"处理活动任务响应失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 根据活动任务更新状态
+        /// </summary>
+        private void UpdateTaskStatusFromActiveTasks(List<ActiveTaskInfo> tasks)
+        {
+            // 统计任务状态
+            var convertingTasks = tasks.Where(t => t.Status == "Converting").ToList();
+            var pendingTasks = tasks.Where(t => t.Status == "Pending").ToList();
+            var allTasks = tasks.ToList();
+
+            // 更新当前任务状态
+            if (convertingTasks.Any())
+            {
+                var currentTask = convertingTasks.First();
+                HasActiveTask = true;
+                CurrentTaskName = currentTask.TaskName ?? "转换任务";
+                CurrentFileName = currentTask.OriginalFileName ?? "";
+                TaskProgress = currentTask.Progress;
+                TaskProgressText = $"正在转换 {currentTask.Progress}%";
+
+                // 如果有速度和时间信息，更新它们
+                if (currentTask.ConversionSpeed.HasValue)
+                {
+                    TaskSpeedText = $"{currentTask.ConversionSpeed.Value:F1}x";
+                }
+                if (currentTask.EstimatedTimeRemaining.HasValue)
+                {
+                    TaskETAText = $"预计剩余: {FormatTime(currentTask.EstimatedTimeRemaining.Value)}";
+                }
+            }
+            else
+            {
+                HasActiveTask = false;
+                CurrentTaskName = "";
+                CurrentFileName = "";
+                TaskProgress = 0;
+                TaskProgressText = "";
+                TaskSpeedText = "";
+                TaskETAText = "";
+            }
+
+            // 更新批量任务状态
+            if (allTasks.Count > 1)
+            {
+                HasBatchTask = true;
+                var completedCount = tasks.Count(t => t.Status == "Completed");
+                var totalCount = allTasks.Count;
+                BatchProgress = totalCount > 0 ? (completedCount * 100 / totalCount) : 0;
+                BatchProgressText = $"{completedCount}/{totalCount} 文件完成";
+
+                // 检查是否有暂停的任务
+                IsBatchPaused = tasks.Any(t => t.Status == "Paused");
+                if (IsBatchPaused)
+                {
+                    BatchPausedText = "因空间不足暂停";
+                }
+            }
+            else
+            {
+                HasBatchTask = false;
+                BatchProgressText = "";
+                BatchProgress = 0;
+                IsBatchPaused = false;
+                BatchPausedText = "";
+            }
+        }
+
+        /// <summary>
+        /// 格式化运行时间
+        /// </summary>
+        private string FormatUptime(TimeSpan uptime)
+        {
+            if (uptime.TotalDays >= 1)
+                return $"{(int)uptime.TotalDays}天 {uptime.Hours}小时";
+            else if (uptime.TotalHours >= 1)
+                return $"{uptime.Hours}小时 {uptime.Minutes}分钟";
+            else
+                return $"{uptime.Minutes}分钟";
+        }
+
+        #endregion
+
         public void Dispose()
         {
             _refreshTimer?.Stop();
             _refreshTimer?.Dispose();
             _diskSpaceApiService?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// 活动任务信息
+    /// </summary>
+    public class ActiveTaskInfo
+    {
+        public string? TaskId { get; set; }
+        public string? TaskName { get; set; }
+        public string? OriginalFileName { get; set; }
+        public string? Status { get; set; }
+        public int Progress { get; set; }
+        public double? ConversionSpeed { get; set; }
+        public int? EstimatedTimeRemaining { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public string? InputFormat { get; set; }
+        public string? OutputFormat { get; set; }
     }
 }

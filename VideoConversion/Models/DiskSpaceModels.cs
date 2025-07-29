@@ -8,7 +8,7 @@ namespace VideoConversion.Models
     /// </summary>
     public class DiskSpaceConfig
     {
-        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true, ColumnName = "Id")]
         public int Id { get; set; }
         
         /// <summary>
@@ -29,6 +29,7 @@ namespace VideoConversion.Models
         /// <summary>
         /// 更新者
         /// </summary>
+        [SugarColumn(IsNullable = false, Length = 100)]
         public string UpdatedBy { get; set; } = "System";
         
         /// <summary>

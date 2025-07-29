@@ -289,6 +289,48 @@ namespace VideoConversion.Controllers
         }
 
         /// <summary>
+        /// 修复数据库表结构
+        /// </summary>
+        [HttpPost("repair-database")]
+        public async Task<IActionResult> RepairDatabase()
+        {
+            try
+            {
+                var success = await _databaseService.RecreateTablesAsync();
+
+                if (success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "数据库表结构修复成功",
+                        timestamp = DateTime.Now
+                    });
+                }
+                else
+                {
+                    return StatusCode(500, new
+                    {
+                        success = false,
+                        message = "数据库表结构修复失败",
+                        timestamp = DateTime.Now
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "修复数据库表结构失败");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "修复数据库表结构时发生异常",
+                    error = ex.Message,
+                    timestamp = DateTime.Now
+                });
+            }
+        }
+
+        /// <summary>
         /// 格式化字节数
         /// </summary>
         private static string FormatBytes(long bytes)

@@ -55,9 +55,6 @@ namespace VideoConversion_Client.Views
                 Utils.Logger.Error("FileUploadView", "未找到FileListContainer控件");
             }
 
-            // 检查初始状态
-            CheckItemsControlStatus("初始化完成");
-
             // 初始化磁盘空间API服务
             try
             {
@@ -73,48 +70,7 @@ namespace VideoConversion_Client.Views
 
             Utils.Logger.Info("FileUploadView", "初始化完成");
         }
-
-        /// <summary>
-        /// 检查ItemsControl的状态和数据绑定
-        /// </summary>
-        private void CheckItemsControlStatus(string context = "")
-        {
-            try
-            {
-                var fileListContainer = this.FindControl<ItemsControl>("FileListContainer");
-                if (fileListContainer != null)
-                {
-                    Utils.Logger.Info("FileUploadView", $"[{context}] ItemsControl状态检查:");
-                    Utils.Logger.Info("FileUploadView", $"  - ItemsSource为null: {fileListContainer.ItemsSource == null}");
-                    Utils.Logger.Info("FileUploadView", $"  - Items数量: {fileListContainer.Items?.Count ?? 0}");
-                    Utils.Logger.Info("FileUploadView", $"  - FileItems数量: {FileItems.Count}");
-                    Utils.Logger.Info("FileUploadView", $"  - IsVisible: {fileListContainer.IsVisible}");
-
-                    if (fileListContainer.ItemsSource != null)
-                    {
-                        Utils.Logger.Info("FileUploadView", $"  - ItemsSource类型: {fileListContainer.ItemsSource.GetType().Name}");
-                    }
-                }
-                else
-                {
-                    Utils.Logger.Error("FileUploadView", $"[{context}] 未找到ItemsControl");
-                }
-
-                // 检查视图状态
-                var emptyStateView = this.FindControl<Border>("EmptyStateView");
-                var fileListView = this.FindControl<Grid>("FileListView");
-                Utils.Logger.Info("FileUploadView", $"[{context}] 视图状态:");
-                Utils.Logger.Info("FileUploadView", $"  - EmptyStateView.IsVisible: {emptyStateView?.IsVisible}");
-                Utils.Logger.Info("FileUploadView", $"  - FileListView.IsVisible: {fileListView?.IsVisible}");
-                Utils.Logger.Info("FileUploadView", $"  - _hasFiles: {_hasFiles}");
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Error("FileUploadView", $"检查ItemsControl状态失败 [{context}]", ex);
-            }
-        }
-
-
+        
 
         private void InitializeComponent()
         {
@@ -377,9 +333,6 @@ namespace VideoConversion_Client.Views
                                 UpdateViewState();
                                 Utils.Logger.Info("FileUploadView", "文件对话框：已设置_hasFiles=true并更新视图状态");
                             }
-
-                            // 检查ItemsControl状态
-                            CheckItemsControlStatus("文件对话框处理完成");
                         });
 
                         // 显示处理结果
@@ -570,9 +523,6 @@ namespace VideoConversion_Client.Views
                         UpdateViewState();
                         Utils.Logger.Info("FileUploadView", "拖拽文件：已设置_hasFiles=true并更新视图状态");
                     }
-
-                    // 检查ItemsControl状态
-                    CheckItemsControlStatus("拖拽文件处理完成");
                 });
 
                 // 显示处理结果
@@ -700,16 +650,24 @@ namespace VideoConversion_Client.Views
                 });
 
                 var formattedSize = Utils.FileSizeFormatter.FormatBytesAuto(totalSize);
+
+                // 更新文件统计控件
+                var fileCountText = this.FindControl<TextBlock>("FileCountText");
+                var totalSizeText = this.FindControl<TextBlock>("TotalSizeText");
+
+                if (fileCountText != null)
+                {
+                    fileCountText.Text = fileCount == 0 ? "0 个文件" :
+                                        fileCount == 1 ? "1 个文件" : $"{fileCount} 个文件";
+                }
+
+                if (totalSizeText != null)
+                {
+                    totalSizeText.Text = formattedSize;
+                }
+
                 var displayText = $"已选择 {fileCount} 个文件 ({formattedSize})";
-
                 Utils.Logger.Info("FileCount", $"文件数量更新: {displayText}");
-
-                // 如果有文件计数显示控件，可以在这里更新
-                // var fileCountLabel = this.FindControl<TextBlock>("FileCountLabel");
-                // if (fileCountLabel != null)
-                // {
-                //     fileCountLabel.Text = displayText;
-                // }
             }
             catch (Exception ex)
             {
@@ -1334,7 +1292,7 @@ namespace VideoConversion_Client.Views
                                     Utils.Logger.Info("Upload", $"🔗 准备加入SignalR任务组: {taskResult.TaskId}");
 
                                     // 使用UI线程调度器执行SignalR操作
-                                    Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
+                                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(async () =>
                                     {
                                         try
                                         {

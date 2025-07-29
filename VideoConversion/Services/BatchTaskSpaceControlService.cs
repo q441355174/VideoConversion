@@ -39,7 +39,7 @@ namespace VideoConversion.Services
             _spaceMonitorTimer = new Timer(async _ => await MonitorSpaceAndControlTasks(), 
                 null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
 
-            _logger.LogInformation("BatchTaskSpaceControlService 初始化完成");
+            //_logger.LogInformation("BatchTaskSpaceControlService 初始化完成");
         }
 
         #region 批量任务注册和管理

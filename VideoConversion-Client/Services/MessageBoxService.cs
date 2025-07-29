@@ -75,6 +75,130 @@ namespace VideoConversion_Client.Services
         }
 
         /// <summary>
+        /// 显示确认对话框
+        /// </summary>
+        /// <param name="message">消息内容</param>
+        /// <param name="owner">父窗口</param>
+        /// <returns>用户是否点击了确定</returns>
+        public static async Task<bool> ShowConfirmAsync(string message, Window? owner = null)
+        {
+            return await ShowConfirmAsync(message, "确认", owner);
+        }
+
+        /// <summary>
+        /// 显示确认对话框
+        /// </summary>
+        /// <param name="message">消息内容</param>
+        /// <param name="title">标题</param>
+        /// <param name="owner">父窗口</param>
+        /// <returns>用户是否点击了确定</returns>
+        public static async Task<bool> ShowConfirmAsync(string message, string title, Window? owner = null)
+        {
+            var confirmBox = CreateConfirmBox(message, title);
+
+            if (owner != null)
+            {
+                var result = await confirmBox.ShowDialog<bool?>(owner);
+                return result == true;
+            }
+            else
+            {
+                confirmBox.Show();
+                return false; // 无法获取结果
+            }
+        }
+
+        /// <summary>
+        /// 创建确认对话框窗口
+        /// </summary>
+        private static Window CreateConfirmBox(string message, string title)
+        {
+            var confirmBox = new Window
+            {
+                Title = title,
+                Width = 400,
+                Height = 200,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                CanResize = false,
+                ShowInTaskbar = false
+            };
+
+            var panel = new StackPanel
+            {
+                Margin = new Avalonia.Thickness(20),
+                Spacing = 15
+            };
+
+            // 添加图标和消息
+            var headerPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 10
+            };
+
+            var icon = new TextBlock
+            {
+                FontSize = 24,
+                VerticalAlignment = VerticalAlignment.Center,
+                Text = "❓",
+                Foreground = new SolidColorBrush(Color.FromRgb(52, 152, 219))
+            };
+
+            var messageText = new TextBlock
+            {
+                Text = message,
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                FontSize = 14,
+                VerticalAlignment = VerticalAlignment.Center,
+                MaxWidth = 320
+            };
+
+            headerPanel.Children.Add(icon);
+            headerPanel.Children.Add(messageText);
+            panel.Children.Add(headerPanel);
+
+            // 添加按钮面板
+            var buttonPanel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 10
+            };
+
+            var okButton = new Button
+            {
+                Content = "确定",
+                Padding = new Avalonia.Thickness(20, 8),
+                Background = new SolidColorBrush(Color.FromRgb(39, 174, 96)),
+                Foreground = Brushes.White,
+                BorderThickness = new Avalonia.Thickness(0),
+                CornerRadius = new Avalonia.CornerRadius(4),
+                MinWidth = 80
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "取消",
+                Padding = new Avalonia.Thickness(20, 8),
+                Background = new SolidColorBrush(Color.FromRgb(149, 165, 166)),
+                Foreground = Brushes.White,
+                BorderThickness = new Avalonia.Thickness(0),
+                CornerRadius = new Avalonia.CornerRadius(4),
+                MinWidth = 80
+            };
+
+            okButton.Click += (s, e) => confirmBox.Close(true);
+            cancelButton.Click += (s, e) => confirmBox.Close(false);
+
+            buttonPanel.Children.Add(okButton);
+            buttonPanel.Children.Add(cancelButton);
+            panel.Children.Add(buttonPanel);
+
+            confirmBox.Content = panel;
+            return confirmBox;
+        }
+
+        /// <summary>
         /// 创建消息框窗口
         /// </summary>
         private static Window CreateMessageBox(string message, string title, MessageBoxType type)

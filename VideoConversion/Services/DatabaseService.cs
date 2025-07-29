@@ -76,6 +76,43 @@ namespace VideoConversion.Services
         }
 
         /// <summary>
+        /// 强制重新创建数据库表（用于修复表结构问题）
+        /// </summary>
+        public async Task<bool> RecreateTablesAsync()
+        {
+            try
+            {
+                _logger.LogInformation("开始重新创建数据库表...");
+
+                // 删除现有表
+                try
+                {
+                    await _db.Ado.ExecuteCommandAsync("DROP TABLE IF EXISTS ConversionTasks");
+                    await _db.Ado.ExecuteCommandAsync("DROP TABLE IF EXISTS DiskSpaceConfig");
+                    await _db.Ado.ExecuteCommandAsync("DROP TABLE IF EXISTS SpaceUsage");
+                    _logger.LogInformation("已删除现有表");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "删除现有表时出现警告，继续创建新表");
+                }
+
+                // 重新创建表
+                _db.CodeFirst.InitTables<ConversionTask>();
+                _db.CodeFirst.InitTables<Models.DiskSpaceConfig>();
+                _db.CodeFirst.InitTables<Models.SpaceUsage>();
+
+                _logger.LogInformation("数据库表重新创建完成");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "重新创建数据库表失败");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// 初始化数据库
         /// </summary>
         private void InitializeDatabase()

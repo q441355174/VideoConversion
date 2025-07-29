@@ -37,10 +37,10 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="180" />
-                        <ColumnDefinition Width="32" />
+                        <ColumnDefinition Width="auto" />
+                        <ColumnDefinition Width="20" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
@@ -55,6 +55,7 @@
                             Name="OutputFormatCombo"
                             SelectedIndex="0"
                             Height="32"
+							  Width="120"
                             CornerRadius="6"
                             BorderBrush="#ced4da">
                         <ComboBoxItem Content="MP4" />
@@ -74,6 +75,7 @@
                             Name="OutputFolderCombo"
                             SelectedIndex="0"
                             Height="32"
+							  Width="160"
                             CornerRadius="6"
                             BorderBrush="#ced4da">
                         <ComboBoxItem Content="与源文件相同目录" />
@@ -85,10 +87,6 @@
                                 Orientation="Horizontal"
                                 Spacing="12"
                                 VerticalAlignment="Center">
-                        <CheckBox Name="MergeAllFilesCheckBox"
-                                Content="合并全部文件"
-                                FontSize="14"
-                                Foreground="#6c757d" />
 
                         <!-- 转码设置按钮 -->
                         <Button Name="ConversionSettingsBtn"
@@ -110,7 +108,7 @@
                 </Grid>
             </Border>
 
-            <!-- 批量操作区域 -->
+            <!-- 文件管理操作区域 -->
             <Border Grid.Row="1"
                     Background="#f8f9fa"
                     BorderBrush="#e9ecef"
@@ -122,9 +120,10 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- 批量操作按钮 -->
+                    <!-- 文件操作按钮 -->
                     <StackPanel Grid.Column="0"
                                 Orientation="Horizontal"
                                 Spacing="12"
@@ -181,8 +180,20 @@
                         </Button>
                     </StackPanel>
 
+                    <!-- 文件统计信息 -->
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="8"
+                                VerticalAlignment="Center"
+                                Margin="0,0,16,0">
+                        <TextBlock Text="📊" FontSize="12" />
+                        <TextBlock Name="FileCountText" Text="0 个文件" FontSize="12" Foreground="#6c757d" />
+                        <TextBlock Text="•" FontSize="12" Foreground="#dee2e6" />
+                        <TextBlock Name="TotalSizeText" Text="0 MB" FontSize="12" Foreground="#6c757d" />
+                    </StackPanel>
+
                     <!-- 转换全部按钮 -->
-                    <Button Grid.Column="1"
+                    <Button Grid.Column="2"
                             Content="🚀 转换全部"
                             Background="#28a745"
                             Foreground="White"

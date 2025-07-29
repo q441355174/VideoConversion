@@ -1,6 +1,7 @@
 using VideoConversion.Models;
 using Microsoft.AspNetCore.SignalR;
 using VideoConversion.Hubs;
+using SqlSugar;
 
 namespace VideoConversion.Services
 {
@@ -46,7 +47,7 @@ namespace VideoConversion.Services
             _emergencyCleanupTimer = new Timer(async _ => await CheckEmergencyCleanupAsync(), 
                 null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5));
 
-            _logger.LogInformation("AdvancedFileCleanupService 初始化完成");
+            //_logger.LogInformation("AdvancedFileCleanupService 初始化完成");
         }
 
         #region 清理策略配置
@@ -810,11 +811,21 @@ namespace VideoConversion.Services
         {
             try
             {
-                var sql = "SELECT * FROM ConversionTask WHERE Status = @Status AND CompletedAt < @CutoffTime";
-                return await _databaseService.GetDatabaseAsync().Ado.SqlQueryAsync<ConversionTask>(sql, new 
-                { 
-                    Status = ConversionStatus.Completed.ToString(), 
-                    CutoffTime = cutoffTime 
+                // 使用更安全的数据库访问方式
+                return await Task.Run(() =>
+                {
+                    try
+                    {
+                        var db = _databaseService.GetDatabaseAsync();
+                        return db.Queryable<ConversionTask>()
+                            .Where(t => t.Status == ConversionStatus.Completed && t.CompletedAt < cutoffTime)
+                            .ToList();
+                    }
+                    catch (Exception innerEx)
+                    {
+                        _logger.LogWarning(innerEx, "数据库查询失败，返回空列表");
+                        return new List<ConversionTask>();
+                    }
                 });
             }
             catch (Exception ex)
@@ -830,11 +841,20 @@ namespace VideoConversion.Services
             {
                 // TODO: 实现下载记录跟踪
                 // 这里需要一个下载记录表来跟踪文件下载时间
-                var sql = "SELECT * FROM ConversionTask WHERE Status = @Status AND CompletedAt < @CutoffTime";
-                return await _databaseService.GetDatabaseAsync().Ado.SqlQueryAsync<ConversionTask>(sql, new 
-                { 
-                    Status = ConversionStatus.Completed.ToString(), 
-                    CutoffTime = cutoffTime 
+                return await Task.Run(() =>
+                {
+                    try
+                    {
+                        var db = _databaseService.GetDatabaseAsync();
+                        return db.Queryable<ConversionTask>()
+                            .Where(t => t.Status == ConversionStatus.Completed && t.CompletedAt < cutoffTime)
+                            .ToList();
+                    }
+                    catch (Exception innerEx)
+                    {
+                        _logger.LogWarning(innerEx, "数据库查询失败，返回空列表");
+                        return new List<ConversionTask>();
+                    }
                 });
             }
             catch (Exception ex)
@@ -848,11 +868,20 @@ namespace VideoConversion.Services
         {
             try
             {
-                var sql = "SELECT * FROM ConversionTask WHERE Status = @Status AND CreatedAt < @CutoffTime";
-                return await _databaseService.GetDatabaseAsync().Ado.SqlQueryAsync<ConversionTask>(sql, new 
-                { 
-                    Status = ConversionStatus.Failed.ToString(), 
-                    CutoffTime = cutoffTime 
+                return await Task.Run(() =>
+                {
+                    try
+                    {
+                        var db = _databaseService.GetDatabaseAsync();
+                        return db.Queryable<ConversionTask>()
+                            .Where(t => t.Status == ConversionStatus.Failed && t.CreatedAt < cutoffTime)
+                            .ToList();
+                    }
+                    catch (Exception innerEx)
+                    {
+                        _logger.LogWarning(innerEx, "数据库查询失败，返回空列表");
+                        return new List<ConversionTask>();
+                    }
                 });
             }
             catch (Exception ex)
@@ -866,8 +895,19 @@ namespace VideoConversion.Services
         {
             try
             {
-                var sql = "SELECT * FROM ConversionTask";
-                return await _databaseService.GetDatabaseAsync().Ado.SqlQueryAsync<ConversionTask>(sql);
+                return await Task.Run(() =>
+                {
+                    try
+                    {
+                        var db = _databaseService.GetDatabaseAsync();
+                        return db.Queryable<ConversionTask>().ToList();
+                    }
+                    catch (Exception innerEx)
+                    {
+                        _logger.LogWarning(innerEx, "数据库查询失败，返回空列表");
+                        return new List<ConversionTask>();
+                    }
+                });
             }
             catch (Exception ex)
             {

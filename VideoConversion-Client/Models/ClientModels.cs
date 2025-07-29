@@ -26,6 +26,11 @@ namespace VideoConversion_Client.Models
         private double? _conversionSpeed;
         private double? _duration;
         private double? _currentTime;
+        private string? _inputFormat;
+        private string? _outputFormat;
+        private string? _resolution;
+        private long? _originalFileSize;
+        private long? _outputFileSize;
 
         public string Id
         {
@@ -135,6 +140,36 @@ namespace VideoConversion_Client.Models
         {
             get => _currentTime;
             set => SetProperty(ref _currentTime, value);
+        }
+
+        public string? InputFormat
+        {
+            get => _inputFormat;
+            set => SetProperty(ref _inputFormat, value);
+        }
+
+        public string? OutputFormat
+        {
+            get => _outputFormat;
+            set => SetProperty(ref _outputFormat, value);
+        }
+
+        public string? Resolution
+        {
+            get => _resolution;
+            set => SetProperty(ref _resolution, value);
+        }
+
+        public long? OriginalFileSize
+        {
+            get => _originalFileSize;
+            set => SetProperty(ref _originalFileSize, value);
+        }
+
+        public long? OutputFileSize
+        {
+            get => _outputFileSize;
+            set => SetProperty(ref _outputFileSize, value);
         }
 
         // 计算属性
