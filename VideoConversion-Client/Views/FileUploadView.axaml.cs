@@ -110,23 +110,18 @@ namespace VideoConversion_Client.Views
             var emptyStateView = this.FindControl<Border>("EmptyStateView");
             var fileListView = this.FindControl<Grid>("FileListView");
 
-            Utils.Logger.Info("FileUploadView", $"UpdateViewState调用 - _hasFiles: {_hasFiles}");
-
             if (emptyStateView != null && fileListView != null)
             {
                 if (_hasFiles)
                 {
                     emptyStateView.IsVisible = false;
                     fileListView.IsVisible = true;
-                    Utils.Logger.Info("FileUploadView", "设置为文件列表视图 - EmptyStateView: false, FileListView: true");
                 }
                 else
                 {
                     emptyStateView.IsVisible = true;
                     fileListView.IsVisible = false;
-                    Utils.Logger.Info("FileUploadView", "设置为空状态视图 - EmptyStateView: true, FileListView: false");
                 }
-
                 // 验证设置结果
                 Utils.Logger.Info("FileUploadView", $"设置后实际状态 - EmptyStateView.IsVisible: {emptyStateView.IsVisible}, FileListView.IsVisible: {fileListView.IsVisible}");
             }
@@ -437,7 +432,6 @@ namespace VideoConversion_Client.Views
 
                 // 显示处理进度
                 UpdateStatus("📁 正在处理文件，请稍候...");
-                Utils.Logger.Info("FileUploadView", "开始处理拖拽的文件");
 
                 // 转换为文件路径列表
                 var filePaths = new List<string>();
@@ -446,12 +440,10 @@ namespace VideoConversion_Client.Views
                     if (item is IStorageFile file)
                     {
                         filePaths.Add(file.Path.LocalPath);
-                        Utils.Logger.Info("FileUploadView", $"拖拽文件: {file.Path.LocalPath}");
                     }
                     else if (item is IStorageFolder folder)
                     {
                         filePaths.Add(folder.Path.LocalPath);
-                        Utils.Logger.Info("FileUploadView", $"拖拽文件夹: {folder.Path.LocalPath}");
                     }
                 }
 
