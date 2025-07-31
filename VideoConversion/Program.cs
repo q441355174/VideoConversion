@@ -4,7 +4,19 @@ using VideoConversion.Middleware;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Http.Features;
 using Serilog;
+using System.Text;
 using System.Text.Json;
+
+// 🔑 设置控制台编码为UTF-8
+try
+{
+    Console.OutputEncoding = Encoding.UTF8;
+    Console.InputEncoding = Encoding.UTF8;
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"设置控制台UTF-8编码失败: {ex.Message}");
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,6 +35,18 @@ namespace VideoConversion_Client.Utils
         {
             try
             {
+                // 🔑 设置控制台编码为UTF-8
+                try
+                {
+                    Console.OutputEncoding = Encoding.UTF8;
+                    Console.InputEncoding = Encoding.UTF8;
+                }
+                catch (Exception ex)
+                {
+                    // 如果设置编码失败，记录但不影响程序运行
+                    System.Diagnostics.Debug.WriteLine($"设置控制台UTF-8编码失败: {ex.Message}");
+                }
+
                 // 获取应用程序根目录
                 var appDirectory = AppDomain.CurrentDomain.BaseDirectory;
                 _logDirectory = Path.Combine(appDirectory, "log");

@@ -215,15 +215,44 @@ namespace VideoConversion_Client.Models
     }
 
     /// <summary>
-    /// 转换状态枚举
+    /// 转换状态枚举 - 与服务端保持兼容
     /// </summary>
     public enum ConversionStatus
     {
+        /// <summary>
+        /// 等待中
+        /// </summary>
         Pending = 0,
+
+        /// <summary>
+        /// 转换中
+        /// </summary>
         Converting = 1,
+
+        /// <summary>
+        /// 已完成
+        /// </summary>
         Completed = 2,
+
+        /// <summary>
+        /// 失败
+        /// </summary>
         Failed = 3,
-        Cancelled = 4
+
+        /// <summary>
+        /// 已取消
+        /// </summary>
+        Cancelled = 4,
+
+        /// <summary>
+        /// 已暂停
+        /// </summary>
+        Paused = 5,
+
+        /// <summary>
+        /// 上传中 - 客户端专用状态
+        /// </summary>
+        Uploading = 10
     }
 
     /// <summary>

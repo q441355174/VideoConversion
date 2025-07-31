@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using VideoConversion_Client.Models;
 using VideoConversion_Client.Utils;
@@ -30,6 +31,9 @@ namespace VideoConversion_Client.Views
 
         // 磁盘空间API服务
         private DiskSpaceApiService? _diskSpaceApiService;
+
+        // 🔑 统一进度管理器
+        private UnifiedProgressManager? _progressManager;
 
         public FileUploadView()
         {
@@ -66,6 +70,17 @@ namespace VideoConversion_Client.Views
             catch (Exception ex)
             {
                 Utils.Logger.Error("FileUploadView", $"磁盘空间API服务初始化失败: {ex.Message}");
+            }
+
+            // 🔑 初始化统一进度管理器
+            try
+            {
+                _progressManager = new UnifiedProgressManager(FileItems);
+                Utils.Logger.Info("FileUploadView", "统一进度管理器初始化完成");
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("FileUploadView", $"统一进度管理器初始化失败: {ex.Message}");
             }
 
             Utils.Logger.Info("FileUploadView", "初始化完成");
@@ -1189,16 +1204,8 @@ namespace VideoConversion_Client.Views
                 ShowNotification("请先选择要转换的文件", "warning");
                 return;
             }
-
-            // 检查磁盘空间
-            if (!await CheckDiskSpaceAsync())
-            {
-                Utils.Logger.Info("Upload", "❌ 磁盘空间不足，退出转换流程");
-                return;
-            }
-
             Utils.Logger.Info("Upload", $"文件列表中共有 {FileItems.Count} 个文件");
-
+            
             _isConverting = true;
             UpdateViewState();
 
@@ -1217,7 +1224,7 @@ namespace VideoConversion_Client.Views
                     ShowNotification("没有待转换的文件", "warning");
                     return;
                 }
-
+                
                 // 打印待转换文件列表
                 foreach (var file in filesToConvert)
                 {
@@ -1247,7 +1254,26 @@ namespace VideoConversion_Client.Views
 
                 Utils.Logger.Info("Upload", $"🚀 开始调用批量转换API，文件数量: {filePaths.Count}");
                 ShowNotification($"开始批量转换 {filePaths.Count} 个文件", "info");
+                
+                // 🔑 === 统一TaskId管理和本地数据库保存的核心实现 ===
+                Utils.Logger.Info("Upload", "💾 === 开始统一TaskId管理和本地数据库保存 ===");
+                var taskIdMapping = await SaveTasksToLocalDatabaseWithUnifiedManagementAsync(filePaths, request);
+                Utils.Logger.Info("Upload", $"📊 本地任务数据库已更新，建立了 {taskIdMapping.Count} 个统一TaskId映射关系");
 
+                // 记录系统状态
+                Utils.Logger.Info("Upload", "🔍 当前系统状态:");
+                Utils.Logger.Info("Upload", $"   FileItems数量: {FileItems.Count}");
+                Utils.Logger.Info("Upload", $"   准备转换文件数: {taskIdMapping.Count}");
+                Utils.Logger.Info("Upload", $"   转换参数: {request.OutputFormat}, {request.Resolution}");
+
+                // 记录详细的TaskId映射关系
+                foreach (var mapping in taskIdMapping)
+                {
+                    Utils.Logger.Info("Upload", $"🔗 TaskId映射: {Path.GetFileName(mapping.Key)} -> {mapping.Value}");
+                }
+
+
+                
                 // 使用新的批量转换API
                 var result = await apiService.StartBatchConversionAsync(filePaths, request, progress);
 
@@ -1269,14 +1295,37 @@ namespace VideoConversion_Client.Views
                         var fileItem = FileItems.FirstOrDefault(f => f.FilePath == taskResult.FilePath);
                         if (fileItem != null)
                         {
-                            if (taskResult.Success)
+                            if (taskResult.Success && !string.IsNullOrEmpty(taskResult.TaskId))
                             {
-                                Utils.Logger.Info("Upload", $"✅ 文件转换启动成功: {Path.GetFileName(taskResult.FilePath)} -> TaskId: {taskResult.TaskId}");
-                                fileItem.TaskId = taskResult.TaskId;
-                                fileItem.Status = FileItemStatus.Converting;
-                                fileItem.StatusText = "转换已启动";
-                                fileItem.Progress = 0; // 重置进度，准备显示转换进度
-                                Utils.Logger.Info("Upload", $"🔄 重置进度条，准备显示转换进度: {fileItem.FileName}");
+                                var originalLocalTaskId = fileItem.LocalTaskId;
+
+                                Utils.Logger.Info("Upload", $"🔗 更新TaskId映射: {Path.GetFileName(taskResult.FilePath)}");
+                                Utils.Logger.Info("Upload", $"   本地TaskId: {originalLocalTaskId}");
+                                Utils.Logger.Info("Upload", $"   服务器TaskId: {taskResult.TaskId}");
+                                Utils.Logger.Info("Upload", $"   BatchId: {batchResult.BatchId}");
+
+                                try
+                                {
+                                    // 🔑 更新本地数据库中的服务器TaskId映射
+                                    var dbService = Services.DatabaseService.Instance;
+                                    await dbService.UpdateServerTaskMappingAsync(
+                                        originalLocalTaskId!,
+                                        taskResult.TaskId,
+                                        batchResult.BatchId);
+
+                                    // 🔑 更新FileItemViewModel - 现在使用服务器TaskId
+                                    fileItem.TaskId = taskResult.TaskId;
+                                    fileItem.Status = FileItemStatus.Converting;
+                                    fileItem.StatusText = "转换已启动";
+                                    fileItem.Progress = 0; // 重置进度，准备接收转换进度
+
+                                    Utils.Logger.Info("Upload", $"✅ TaskId映射完成: {originalLocalTaskId} -> {taskResult.TaskId}");
+                                    Utils.Logger.Info("Upload", $"🔄 重置进度条，准备显示转换进度: {fileItem.FileName}");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Utils.Logger.Error("Upload", $"❌ TaskId映射失败: {ex.Message}");
+                                }
 
                                 // 加入SignalR任务组以接收转换进度（在UI线程上执行）
                                 if (!string.IsNullOrEmpty(taskResult.TaskId))
@@ -1349,8 +1398,8 @@ namespace VideoConversion_Client.Views
             }
         }
 
-        // 更新批量转换进度
-        private void UpdateBatchProgress(Services.BatchUploadProgress progress)
+        // 🔑 统一的批量进度更新处理
+        private async void UpdateBatchProgress(Services.BatchUploadProgress progress)
         {
             try
             {
@@ -1366,51 +1415,54 @@ namespace VideoConversion_Client.Views
                     return;
                 }
 
-                // 验证进度值，防止负值
-                var safeProgress = Math.Max(0, Math.Min(100, progress.CurrentFileProgress));
-                var safeOverallProgress = Math.Max(0, Math.Min(100, progress.OverallProgress));
-
-                Utils.Logger.Info("UI", $"🎯 UI进度更新: 当前文件={progress.CurrentFile}, 文件进度={safeProgress:F1}%, 总进度={safeOverallProgress:F1}%");
-
-                // 如果进度值异常，记录详细信息用于调试
-                if (progress.CurrentFileProgress < 0 || progress.CurrentFileProgress > 100)
+                // 🔑 使用统一进度管理器处理上传进度
+                if (_progressManager != null && !string.IsNullOrEmpty(progress.CurrentFile))
                 {
-                    Utils.Logger.Info("UI", $"⚠️ 检测到异常进度值: 原始值={progress.CurrentFileProgress:F1}%, 修正为={safeProgress:F1}%");
-                }
+                    await _progressManager.UpdateProgressAsync(
+                        progress.CurrentFile,
+                        progress.CurrentFileProgress,
+                        "uploading",
+                        message: $"上传中... {progress.CurrentFileProgress:F1}% ({progress.CompletedFiles}/{progress.TotalFiles})"
+                    );
 
-                // 更新当前文件的进度
-                var currentFileItem = FileItems.FirstOrDefault(f => Path.GetFileName(f.FilePath) == progress.CurrentFile);
-                if (currentFileItem != null)
-                {
-                    Utils.Logger.Info("UI", $"✅ 找到文件项: {currentFileItem.FileName}, 更新进度: {currentFileItem.Progress:F1}% -> {safeProgress:F1}%");
-
-                    // 更新进度值（确保不为负数）
-                    currentFileItem.Progress = safeProgress;
-
-                    // 根据进度阶段更新状态文本
-                    if (safeProgress < 100)
-                    {
-                        // 上传阶段
-                        currentFileItem.Status = Models.FileItemStatus.Uploading;
-                        currentFileItem.StatusText = $"上传中... {safeProgress:F1}%";
-                    }
-                    else
-                    {
-                        // 上传完成，等待转换
-                        currentFileItem.Status = Models.FileItemStatus.UploadCompleted;
-                        currentFileItem.StatusText = "上传完成，等待转换...";
-                        currentFileItem.Progress = 0; // 重置进度，准备显示转换进度
-                    }
-
-                    Utils.Logger.Info("UI", $"✅ 文件项状态已更新: {currentFileItem.FileName} = {currentFileItem.StatusText}, 进度={currentFileItem.Progress:F1}%");
+                    // 更新批量进度
+                    await _progressManager.UpdateBatchProgressAsync(
+                        "batch_upload",
+                        progress.OverallProgress,
+                        progress.CompletedFiles,
+                        progress.TotalFiles,
+                        progress.CurrentFile,
+                        progress.CurrentFileProgress
+                    );
                 }
                 else
                 {
-                    Utils.Logger.Info("UI", $"❌ 未找到文件项: {progress.CurrentFile}");
-                    Utils.Logger.Info("UI", $"   当前FileItems数量: {FileItems.Count}");
-                    foreach (var item in FileItems.Take(3))
+                    // 降级到原有逻辑（兼容性处理）
+                    var safeProgress = Math.Max(0, Math.Min(100, progress.CurrentFileProgress));
+                    var currentFileItem = FileItems.FirstOrDefault(f => Path.GetFileName(f.FilePath) == progress.CurrentFile);
+                    if (currentFileItem != null)
                     {
-                        Utils.Logger.Info("UI", $"   文件项: {item.FileName}");
+                        Utils.Logger.Info("UI", $"✅ 降级处理文件项: {currentFileItem.FileName}, 更新进度: {currentFileItem.Progress:F1}% -> {safeProgress:F1}%");
+
+                        currentFileItem.Progress = safeProgress;
+
+                        if (safeProgress < 100)
+                        {
+                            currentFileItem.Status = Models.FileItemStatus.Uploading;
+                            currentFileItem.StatusText = $"上传中... {safeProgress:F1}%";
+                        }
+                        else
+                        {
+                            currentFileItem.Status = Models.FileItemStatus.UploadCompleted;
+                            currentFileItem.StatusText = "上传完成，等待转换...";
+                        }
+                        currentFileItem.Progress = 0; // 重置进度，准备显示转换进度
+
+                        Utils.Logger.Info("UI", $"✅ 降级处理完成: {currentFileItem.FileName} = {currentFileItem.StatusText}, 进度={currentFileItem.Progress:F1}%");
+                    }
+                    else
+                    {
+                        Utils.Logger.Info("UI", $"❌ 降级处理未找到文件项: {progress.CurrentFile}");
                     }
                 }
 
@@ -1425,63 +1477,114 @@ namespace VideoConversion_Client.Views
             }
             catch (Exception ex)
             {
-                Utils.Logger.Info("UI", $"❌ 更新批量进度失败: {ex.Message}");
+                Utils.Logger.Error("UI", $"❌ 更新批量进度失败: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// 处理转换进度更新（由SignalR调用）
+        /// 🔑 统一的转换进度更新处理（由SignalR调用）
         /// </summary>
-        public void UpdateConversionProgress(string taskId, double progress, double? speed = null, double? eta = null)
+        public async void UpdateConversionProgress(string taskId, double progress, double? speed = null, double? eta = null)
         {
             try
             {
-                Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                // 🔑 使用统一进度管理器处理转换进度
+                if (_progressManager != null)
                 {
-                    // 验证进度值，防止负值
-                    var safeProgress = Math.Max(0, Math.Min(100, progress));
-
-                    Utils.Logger.Info("UI", $"🔄 转换进度更新: TaskId={taskId}, 进度={safeProgress:F1}%, 速度={speed:F2}x");
-
-                    // 查找对应的文件项
-                    var fileItem = FileItems.FirstOrDefault(f => f.TaskId == taskId);
-                    if (fileItem != null)
+                    await _progressManager.UpdateProgressAsync(
+                        taskId,
+                        progress,
+                        "converting",
+                        speed,
+                        eta,
+                        $"转换中... {progress:F1}%"
+                    );
+                }
+                else
+                {
+                    // 降级到原有逻辑（兼容性处理）
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        Utils.Logger.Info("UI", $"✅ 找到转换文件项: {fileItem.FileName}, 更新转换进度: {fileItem.Progress:F1}% -> {safeProgress:F1}%");
+                        var safeProgress = Math.Max(0, Math.Min(100, progress));
+                        Utils.Logger.Info("UI", $"🔄 降级处理转换进度: TaskId={taskId}, 进度={safeProgress:F1}%, 速度={speed:F2}x");
 
-                        // 更新转换状态和进度
-                        fileItem.Status = Models.FileItemStatus.Converting;
-                        fileItem.Progress = safeProgress;
-                        fileItem.StatusText = $"转换中... {safeProgress:F1}%";
-
-                        // 更新转换速度和预计时间（FileItemViewModel没有这些属性，暂时跳过）
-                        // TODO: 如果需要显示转换速度和预计时间，需要在FileItemViewModel中添加这些属性
-
-                        // 如果转换完成
-                        if (safeProgress >= 100)
+                        var fileItem = FileItems.FirstOrDefault(f => f.TaskId == taskId);
+                        if (fileItem != null)
                         {
-                            fileItem.Status = Models.FileItemStatus.Completed;
-                            fileItem.StatusText = "转换完成";
-                            fileItem.Progress = 100;
-                            Utils.Logger.Info("UI", $"🎉 文件转换完成: {fileItem.FileName}");
-                        }
+                            Utils.Logger.Info("UI", $"✅ 降级处理找到文件项: {fileItem.FileName}, 更新进度: {fileItem.Progress:F1}% -> {safeProgress:F1}%");
 
-                        Utils.Logger.Info("UI", $"✅ 转换进度已更新: {fileItem.FileName} = {fileItem.StatusText}, 进度={fileItem.Progress:F1}%");
-                    }
-                    else
-                    {
-                        Utils.Logger.Info("UI", $"❌ 未找到转换文件项: TaskId={taskId}");
-                        Utils.Logger.Info("UI", $"   当前FileItems数量: {FileItems.Count}");
-                        foreach (var item in FileItems.Take(3))
-                        {
-                            Utils.Logger.Info("UI", $"   文件项: {item.FileName}, TaskId={item.TaskId}");
+                            fileItem.Status = Models.FileItemStatus.Converting;
+                            fileItem.Progress = safeProgress;
+                            fileItem.StatusText = $"转换中... {safeProgress:F1}%";
+
+                            if (safeProgress >= 100)
+                            {
+                                fileItem.Status = Models.FileItemStatus.Completed;
+                                fileItem.StatusText = "转换完成";
+                                fileItem.Progress = 100;
+                                Utils.Logger.Info("UI", $"🎉 降级处理文件转换完成: {fileItem.FileName}");
+                            }
+
+                            Utils.Logger.Info("UI", $"✅ 降级处理转换进度已更新: {fileItem.FileName} = {fileItem.StatusText}");
                         }
-                    }
-                });
+                        else
+                        {
+                            Utils.Logger.Warning("UI", $"❌ 降级处理未找到转换文件项: TaskId={taskId}");
+                            Utils.Logger.Warning("UI", $"   当前FileItems数量: {FileItems.Count}");
+                            foreach (var item in FileItems.Take(3))
+                            {
+                                Utils.Logger.Warning("UI", $"   文件项: {item.FileName}, TaskId={item.TaskId}");
+                            }
+                        }
+                    });
+                }
             }
             catch (Exception ex)
             {
-                Utils.Logger.Info("UI", $"❌ 更新转换进度失败: {ex.Message}");
+                Utils.Logger.Error("UI", $"❌ 更新转换进度失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 🔑 统一的任务完成处理
+        /// </summary>
+        public async void OnTaskCompleted(string taskId, bool success, string? message = null)
+        {
+            try
+            {
+                if (_progressManager != null)
+                {
+                    // 使用统一进度管理器处理完成状态
+                    await _progressManager.OnTaskCompletedAsync(taskId, success, message);
+                }
+                else
+                {
+                    // 降级处理
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        var fileItem = FileItems.FirstOrDefault(f => f.TaskId == taskId);
+                        if (fileItem != null)
+                        {
+                            if (success)
+                            {
+                                fileItem.Status = Models.FileItemStatus.Completed;
+                                fileItem.StatusText = message ?? "转换完成";
+                                fileItem.Progress = 100;
+                                Utils.Logger.Info("Task", $"🎉 降级处理任务完成: {fileItem.FileName}");
+                            }
+                            else
+                            {
+                                fileItem.Status = Models.FileItemStatus.Failed;
+                                fileItem.StatusText = message ?? "转换失败";
+                                Utils.Logger.Error("Task", $"❌ 降级处理任务失败: {fileItem.FileName} - {message}");
+                            }
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("Task", $"❌ 任务完成处理失败: {ex.Message}");
             }
         }
 
@@ -1712,85 +1815,100 @@ namespace VideoConversion_Client.Views
         }
 
         /// <summary>
-        /// 检查磁盘空间是否足够
+        /// 统一TaskId管理和本地数据库保存的核心实现
         /// </summary>
-        private async Task<bool> CheckDiskSpaceAsync()
+        private async Task<Dictionary<string, string>> SaveTasksToLocalDatabaseWithUnifiedManagementAsync(
+            List<string> filePaths,
+            StartConversionRequest request)
         {
+            var taskIdMapping = new Dictionary<string, string>();
+            var localTasks = new List<LocalConversionTask>();
+
             try
             {
-                if (_diskSpaceApiService == null)
-                {
-                    Utils.Logger.Info("Upload", "⚠️ 磁盘空间API服务未初始化，跳过空间检查");
-                    return true; // 如果服务未初始化，允许继续
-                }
+                Utils.Logger.Info("LocalDB", "🗄️ === 开始统一TaskId管理和本地数据库保存 ===");
+                Utils.Logger.Info("LocalDB", $"📊 处理参数: 文件数={filePaths.Count}, 输出格式={request.OutputFormat}");
 
-                // 计算所有文件的总大小
-                long totalFileSize = 0;
-                foreach (var fileItem in FileItems)
+                // 🔑 第一阶段：生成本地TaskId和准备数据
+                foreach (var filePath in filePaths)
                 {
-                    if (File.Exists(fileItem.FilePath))
+                    var fileItem = FileItems.FirstOrDefault(f => f.FilePath == filePath);
+                    if (fileItem != null)
                     {
-                        var fileInfo = new FileInfo(fileItem.FilePath);
-                        totalFileSize += fileInfo.Length;
+                        var fileInfo = new FileInfo(filePath);
+
+                        // 🔑 生成统一的本地TaskId - 这是整个系统的核心标识符
+                        var localTaskId = Guid.NewGuid().ToString();
+
+                        var localTask = new LocalConversionTask
+                        {
+                            LocalId = localTaskId,
+                            CurrentTaskId = localTaskId, // 初始使用本地TaskId
+
+                            // 文件信息
+                            FilePath = filePath,
+                            FileName = Path.GetFileName(filePath),
+                            FileSize = fileInfo.Length,
+
+                            // 转换参数 - 与服务器端ConversionTask保持一致
+                            OutputFormat = request.OutputFormat,
+                            Resolution = request.Resolution,
+                            VideoCodec = request.VideoCodec,
+                            AudioCodec = request.AudioCodec,
+                            VideoQuality = request.VideoQuality,
+                            AudioQuality = request.AudioQuality,
+
+                            // 状态初始化
+                            Status = ConversionStatus.Pending,
+                            CurrentPhase = "pending",
+                            CreatedAt = DateTime.Now,
+
+                            // 元数据保存
+                            OriginalMetadata = JsonSerializer.Serialize(new
+                            {
+                                fileItem.SourceFormat,
+                                fileItem.SourceResolution,
+                                fileItem.Duration,
+                                fileItem.FileSize,
+                                HasThumbnail = fileItem.Thumbnail != null
+                            }),
+                            ConversionSettings = JsonSerializer.Serialize(request),
+
+                            // 错误处理配置
+                            MaxRetries = 3,
+                            RetryCount = 0
+                        };
+
+                        localTasks.Add(localTask);
+                        taskIdMapping[filePath] = localTaskId;
+
+                        // 🔑 立即更新FileItemViewModel - 建立统一标识
+                        fileItem.LocalTaskId = localTaskId;
+                        fileItem.TaskId = localTaskId; // 暂时使用本地TaskId
+
+                        Utils.Logger.Info("LocalDB", $"📝 生成TaskId映射: {Path.GetFileName(filePath)} -> {localTaskId}");
                     }
                 }
 
-                if (totalFileSize == 0)
+                // 🔑 第二阶段：批量保存到本地数据库
+                if (localTasks.Any())
                 {
-                    Utils.Logger.Info("Upload", "⚠️ 文件总大小为0，跳过空间检查");
-                    return true;
+                    var dbService = Services.DatabaseService.Instance;
+                    await dbService.SaveLocalTasksAsync(localTasks);
+
+                    Utils.Logger.Info("LocalDB", $"✅ 成功保存 {localTasks.Count} 个任务到本地数据库");
+                    Utils.Logger.Info("LocalDB", "📊 数据统计:");
+                    Utils.Logger.Info("LocalDB", $"   总文件大小: {localTasks.Sum(t => t.FileSize) / 1024.0 / 1024.0:F2} MB");
+                    Utils.Logger.Info("LocalDB", $"   输出格式: {request.OutputFormat}");
+                    Utils.Logger.Info("LocalDB", $"   目标分辨率: {request.Resolution}");
                 }
 
-                Utils.Logger.Info("Upload", $"📊 检查磁盘空间: 文件总大小={totalFileSize / 1024.0 / 1024:F2}MB");
-
-                // 调用空间检查API
-                var spaceCheckResult = await _diskSpaceApiService.CheckSpaceAsync(totalFileSize);
-
-                if (spaceCheckResult?.Success == true)
-                {
-                    if (spaceCheckResult.HasEnoughSpace)
-                    {
-                        Utils.Logger.Info("Upload", $"✅ 磁盘空间充足: 需要={spaceCheckResult.RequiredSpaceGB:F2}GB, 可用={spaceCheckResult.AvailableSpaceGB:F2}GB");
-                        return true;
-                    }
-                    else
-                    {
-                        var message = $"磁盘空间不足！\n需要: {spaceCheckResult.RequiredSpaceGB:F2} GB\n可用: {spaceCheckResult.AvailableSpaceGB:F2} GB\n\n请清理磁盘空间后重试。";
-
-                        Utils.Logger.Info("Upload", $"❌ 磁盘空间不足: {spaceCheckResult.Message}");
-                        ShowNotification("磁盘空间不足", "error");
-
-                        // 显示详细的空间不足对话框
-                        await ShowDiskSpaceInsufficientDialog(message);
-                        return false;
-                    }
-                }
-                else
-                {
-                    Utils.Logger.Info("Upload", $"⚠️ 空间检查失败: {spaceCheckResult?.Message}，允许继续转换");
-                    return true; // 检查失败时允许继续，避免阻塞用户
-                }
+                return taskIdMapping;
             }
             catch (Exception ex)
             {
-                Utils.Logger.Info("Upload", $"❌ 磁盘空间检查异常: {ex.Message}，允许继续转换");
-                return true; // 异常时允许继续，避免阻塞用户
-            }
-        }
-
-        /// <summary>
-        /// 显示磁盘空间不足对话框
-        /// </summary>
-        private async Task ShowDiskSpaceInsufficientDialog(string message)
-        {
-            try
-            {
-                ShowNotification(message, "error");
-                Utils.Logger.Info("Upload", $"显示磁盘空间不足提示: {message}");
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Info("Upload", $"显示磁盘空间不足对话框失败: {ex.Message}");
+                Utils.Logger.Error("LocalDB", $"❌ 统一TaskId管理失败: {ex.Message}");
+                throw;
             }
         }
 

@@ -25,6 +25,7 @@ namespace VideoConversion_Client.Models
         private string _statusText = "等待处理";
         private Bitmap? _thumbnail;
         private string? _taskId;
+        private string? _localTaskId;
         private bool _isConverting = false;
         private bool _canConvert = true;
         private CancellationTokenSource? _cancellationTokenSource;
@@ -123,6 +124,15 @@ namespace VideoConversion_Client.Models
         {
             get => _taskId;
             set => SetProperty(ref _taskId, value);
+        }
+
+        /// <summary>
+        /// 🔑 本地TaskId - 用于统一TaskId管理
+        /// </summary>
+        public string? LocalTaskId
+        {
+            get => _localTaskId;
+            set => SetProperty(ref _localTaskId, value);
         }
 
         public bool IsConverting

@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -10,6 +11,17 @@ namespace VideoConversion_Client
     {
         public override void Initialize()
         {
+            // 🔑 设置控制台编码为UTF-8（应用启动时的额外保障）
+            try
+            {
+                Console.OutputEncoding = Encoding.UTF8;
+                Console.InputEncoding = Encoding.UTF8;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"App.Initialize设置控制台UTF-8编码失败: {ex.Message}");
+            }
+
             AvaloniaXamlLoader.Load(this);
         }
 
