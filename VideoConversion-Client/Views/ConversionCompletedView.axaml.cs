@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using VideoConversion_Client.Models;
 using VideoConversion_Client.Services;
+using System.Text.Json;
 
 namespace VideoConversion_Client.Views
 {
@@ -18,11 +19,17 @@ namespace VideoConversion_Client.Views
     {
         private readonly ApiService _apiService;
         private readonly SignalRService _signalRService;
+        private readonly DatabaseService _localDbService;
         private List<ConversionTask> _completedTasks = new();
         private List<ConversionTask> _filteredTasks = new();
+        private List<LocalConversionTask> _localTasks = new();
 
         // 事件：请求切换到上传页面
         public event EventHandler? NavigateToUploadRequested;
+
+        // 公共接口：数据关联状态
+        public bool IsDataAssociated { get; private set; } = false;
+        public string LastAssociationStats { get; private set; } = "";
 
         public ConversionCompletedView()
         {
@@ -32,6 +39,7 @@ namespace VideoConversion_Client.Views
             var settingsService = SystemSettingsService.Instance;
             _apiService = new ApiService { BaseUrl = settingsService.GetServerAddress() };
             _signalRService = new SignalRService(settingsService.GetServerAddress());
+            _localDbService = DatabaseService.Instance;
 
             // 注册SignalR事件
             RegisterSignalREvents();
@@ -114,37 +122,80 @@ namespace VideoConversion_Client.Views
         }
 
         /// <summary>
-        /// 任务完成事件处理
+        /// 任务完成事件处理（增强版：同步本地状态）
         /// </summary>
         private async void OnTaskCompleted(string taskId, string taskName, bool success, string? errorMessage)
         {
-            if (success)
+            try
             {
-                // 重新加载已完成的文件列表
-                await LoadCompletedFilesAsync();
+                Utils.Logger.Info("ConversionCompletedView", $"📢 收到任务完成通知: {taskName} (成功: {success})");
+
+                if (success)
+                {
+                    // 1. 更新本地数据库状态
+                    await _localDbService.UpdateTaskStatusAsync(taskId, ConversionStatus.Completed);
+
+                    // 2. 重新加载已完成的文件列表（这会重新关联数据）
+                    await LoadCompletedFilesAsync();
+
+                    Utils.Logger.Info("ConversionCompletedView", $"✅ 任务完成处理成功: {taskName}");
+                }
+                else
+                {
+                    // 处理失败情况
+                    await _localDbService.UpdateTaskStatusAsync(taskId, ConversionStatus.Failed, errorMessage);
+                    Utils.Logger.Warning("ConversionCompletedView", $"⚠️ 任务失败: {taskName} - {errorMessage}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 处理任务完成事件失败: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// 任务删除事件处理
+        /// 任务删除事件处理（增强版：同步本地数据）
         /// </summary>
         private async void OnTaskDeleted(string taskId)
         {
-            // 从列表中移除已删除的任务
-            _completedTasks.RemoveAll(t => t.Id == taskId);
-            _filteredTasks.RemoveAll(t => t.Id == taskId);
-
-            // 更新UI
-            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            try
             {
-                RefreshCompletedFilesList();
-                UpdateCompletedStats();
-                UpdateEmptyStateVisibility();
-            });
+                Utils.Logger.Info("ConversionCompletedView", $"📢 收到任务删除通知: {taskId}");
+
+                // 1. 从内存列表中移除已删除的任务
+                var removedCount = _completedTasks.RemoveAll(t => t.Id == taskId);
+                _filteredTasks.RemoveAll(t => t.Id == taskId);
+
+                // 2. 同步更新本地数据库（标记为已删除或直接删除）
+                var localTask = _localTasks.FirstOrDefault(lt =>
+                    lt.ServerTaskId == taskId || lt.CurrentTaskId == taskId);
+
+                if (localTask != null)
+                {
+                    // 可以选择删除本地记录或标记为已删除
+                    // 这里选择保留本地记录但更新状态
+                    await _localDbService.UpdateTaskStatusAsync(taskId, ConversionStatus.Cancelled, "服务器任务已删除");
+                    Utils.Logger.Info("ConversionCompletedView", $"💾 本地任务状态已更新: {localTask.LocalId}");
+                }
+
+                Utils.Logger.Info("ConversionCompletedView", $"✅ 任务删除处理完成: {taskId} (移除 {removedCount} 个)");
+
+                // 3. 更新UI
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    RefreshCompletedFilesList();
+                    UpdateCompletedStats();
+                    UpdateEmptyStateVisibility();
+                });
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 处理任务删除事件失败: {ex.Message}");
+            }
         }
 
         /// <summary>
-        /// 加载已完成的文件
+        /// 加载已完成的文件（增强版：关联本地数据）
         /// </summary>
         private async Task LoadCompletedFilesAsync()
         {
@@ -156,38 +207,264 @@ namespace VideoConversion_Client.Views
                     SetLoadingState(true);
                 });
 
-                var response = await _apiService.GetCompletedTasksAsync(1, 100);
-                if (response.Success && response.Data != null)
+                Utils.Logger.Info("ConversionCompletedView", "🔄 开始加载已完成任务数据...");
+
+                // 1. 并行获取服务端和本地数据
+                var serverTasksTask = _apiService.GetCompletedTasksAsync(1, 100);
+                var localTasksTask = _localDbService.GetAllLocalTasksAsync();
+
+                await Task.WhenAll(serverTasksTask, localTasksTask);
+
+                var serverResponse = await serverTasksTask;
+                var localTasks = await localTasksTask;
+
+                if (serverResponse.Success && serverResponse.Data != null)
                 {
-                    _completedTasks = response.Data;
+                    Utils.Logger.Info("ConversionCompletedView", $"📥 获取到服务端任务: {serverResponse.Data.Count} 个");
+                    Utils.Logger.Info("ConversionCompletedView", $"💾 获取到本地任务: {localTasks.Count} 个");
+
+                    // 2. 关联合并数据
+                    var mergedTasks = await MergeServerAndLocalDataAsync(serverResponse.Data, localTasks);
+
+                    _completedTasks = mergedTasks;
                     _filteredTasks = new List<ConversionTask>(_completedTasks);
+                    _localTasks = localTasks;
+
+                    Utils.Logger.Info("ConversionCompletedView", $"✅ 数据关联完成，最终任务数: {_completedTasks.Count} 个");
+
+                    // 更新关联状态
+                    IsDataAssociated = true;
+                    LastAssociationStats = GetDataAssociationStats();
+                    Utils.Logger.Info("ConversionCompletedView", $"📊 关联统计: {LastAssociationStats}");
+
+                    // 后台执行批量同步和检查
+                    _ = Task.Run(async () =>
+                    {
+                        await BatchSyncLocalStatusAsync();
+                        await BatchCheckLocalFilesAsync();
+                    });
 
                     await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         SetLoadingState(false);
-                        RefreshCompletedFilesList();
+                        RefreshCompletedFilesListEnhanced();
                         UpdateCompletedStats();
                         UpdateEmptyStateVisibility();
                     });
                 }
                 else
                 {
+                    Utils.Logger.Error("ConversionCompletedView", $"❌ 获取服务端数据失败: {serverResponse.Message}");
                     await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         SetLoadingState(false);
-                        ShowErrorMessage(response.Message ?? "加载失败");
+                        ShowErrorMessage(serverResponse.Message ?? "加载失败");
                     });
                 }
             }
             catch (Exception ex)
             {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 加载已完成文件失败: {ex.Message}");
                 await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     SetLoadingState(false);
                     ShowErrorMessage($"加载已完成文件失败: {ex.Message}");
                 });
-                Utils.Logger.Error("ConversionCompletedView", $"加载已完成文件失败: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 公共方法：手动触发数据重新关联
+        /// </summary>
+        public async Task RefreshDataAssociationAsync()
+        {
+            try
+            {
+                Utils.Logger.Info("ConversionCompletedView", "🔄 手动触发数据重新关联...");
+                await LoadCompletedFilesAsync();
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 手动关联失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 公共方法：获取当前关联状态信息
+        /// </summary>
+        public string GetCurrentAssociationInfo()
+        {
+            return $"关联状态: {(IsDataAssociated ? "已关联" : "未关联")} | {LastAssociationStats}";
+        }
+
+        /// <summary>
+        /// 关联合并服务端和本地数据
+        /// </summary>
+        private async Task<List<ConversionTask>> MergeServerAndLocalDataAsync(List<ConversionTask> serverTasks, List<LocalConversionTask> localTasks)
+        {
+            try
+            {
+                Utils.Logger.Info("ConversionCompletedView", "🔗 开始关联服务端和本地数据...");
+
+                var mergedTasks = new List<ConversionTask>();
+
+                foreach (var serverTask in serverTasks)
+                {
+                    // 1. 查找对应的本地任务
+                    var localTask = FindMatchingLocalTask(serverTask, localTasks);
+
+                    // 2. 创建增强的任务对象
+                    var enhancedTask = CreateEnhancedTask(serverTask, localTask);
+
+                    mergedTasks.Add(enhancedTask);
+
+                    if (localTask != null)
+                    {
+                        Utils.Logger.Debug("ConversionCompletedView",
+                            $"✅ 关联成功: {serverTask.Id} <-> {localTask.LocalId} ({localTask.FileName})");
+                    }
+                    else
+                    {
+                        Utils.Logger.Debug("ConversionCompletedView",
+                            $"⚠️ 未找到本地数据: {serverTask.Id} ({serverTask.OriginalFileName})");
+                    }
+                }
+
+                Utils.Logger.Info("ConversionCompletedView", $"🎯 数据关联完成: {mergedTasks.Count} 个任务");
+                return mergedTasks;
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 数据关联失败: {ex.Message}");
+                // 发生错误时返回原始服务端数据
+                return serverTasks;
+            }
+        }
+
+        /// <summary>
+        /// 查找匹配的本地任务
+        /// </summary>
+        private LocalConversionTask? FindMatchingLocalTask(ConversionTask serverTask, List<LocalConversionTask> localTasks)
+        {
+            // 优先级1: 通过ServerTaskId精确匹配
+            var matchByServerId = localTasks.FirstOrDefault(lt =>
+                !string.IsNullOrEmpty(lt.ServerTaskId) && lt.ServerTaskId == serverTask.Id);
+            if (matchByServerId != null)
+            {
+                return matchByServerId;
+            }
+
+            // 优先级2: 通过CurrentTaskId匹配
+            var matchByCurrentId = localTasks.FirstOrDefault(lt =>
+                !string.IsNullOrEmpty(lt.CurrentTaskId) && lt.CurrentTaskId == serverTask.Id);
+            if (matchByCurrentId != null)
+            {
+                return matchByCurrentId;
+            }
+
+            // 优先级3: 通过文件名和大小模糊匹配
+            var matchByFileInfo = localTasks.FirstOrDefault(lt =>
+                lt.FileName == serverTask.OriginalFileName &&
+                Math.Abs(lt.FileSize - (serverTask.OriginalFileSize ?? 0)) < 1024); // 允许1KB误差
+            if (matchByFileInfo != null)
+            {
+                Utils.Logger.Debug("ConversionCompletedView",
+                    $"🔍 通过文件信息匹配: {serverTask.OriginalFileName}");
+                return matchByFileInfo;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 创建增强的任务对象（合并服务端和本地数据）
+        /// </summary>
+        private ConversionTask CreateEnhancedTask(ConversionTask serverTask, LocalConversionTask? localTask)
+        {
+            // 基于服务端数据创建任务对象
+            var enhancedTask = new ConversionTask
+            {
+                // 服务端核心数据
+                Id = serverTask.Id,
+                TaskName = serverTask.TaskName,
+                OriginalFileName = serverTask.OriginalFileName,
+                OriginalFilePath = serverTask.OriginalFilePath,
+                OutputFileName = serverTask.OutputFileName,
+                OutputFilePath = serverTask.OutputFilePath,
+                Status = serverTask.Status,
+                Progress = serverTask.Progress,
+                CreatedAt = serverTask.CreatedAt,
+                StartedAt = serverTask.StartedAt,
+                CompletedAt = serverTask.CompletedAt,
+                OriginalFileSize = serverTask.OriginalFileSize,
+                OutputFileSize = serverTask.OutputFileSize,
+                InputFormat = serverTask.InputFormat,
+                OutputFormat = serverTask.OutputFormat,
+                VideoCodec = serverTask.VideoCodec,
+                AudioCodec = serverTask.AudioCodec,
+                VideoQuality = serverTask.VideoQuality,
+                AudioQuality = serverTask.AudioQuality,
+                Resolution = serverTask.Resolution,
+                FrameRate = serverTask.FrameRate,
+                ErrorMessage = serverTask.ErrorMessage,
+                ConversionSpeed = serverTask.ConversionSpeed,
+                EstimatedTimeRemaining = serverTask.EstimatedTimeRemaining,
+                Duration = serverTask.Duration,
+                CurrentTime = serverTask.CurrentTime
+            };
+
+            // 如果有本地数据，则增强任务信息
+            if (localTask != null)
+            {
+                // 添加本地特有的信息到自定义字段
+                enhancedTask.Notes = CreateEnhancedNotes(serverTask.Notes, localTask);
+
+                // 如果本地有更详细的错误信息，使用本地的
+                if (!string.IsNullOrEmpty(localTask.LastError) &&
+                    string.IsNullOrEmpty(enhancedTask.ErrorMessage))
+                {
+                    enhancedTask.ErrorMessage = localTask.LastError;
+                }
+
+                // 更新输出文件大小（如果本地有更准确的数据）
+                if (localTask.OutputFileSize > 0 && enhancedTask.OutputFileSize == 0)
+                {
+                    enhancedTask.OutputFileSize = localTask.OutputFileSize;
+                }
+            }
+
+            return enhancedTask;
+        }
+
+        /// <summary>
+        /// 创建增强的备注信息（包含本地状态）
+        /// </summary>
+        private string CreateEnhancedNotes(string originalNotes, LocalConversionTask localTask)
+        {
+            var enhancedInfo = new List<string>();
+
+            // 保留原始备注
+            if (!string.IsNullOrEmpty(originalNotes))
+            {
+                enhancedInfo.Add(originalNotes);
+            }
+
+            // 添加本地状态信息
+            var localStatus = new
+            {
+                LocalId = localTask.LocalId,
+                IsDownloaded = localTask.IsDownloaded,
+                LocalOutputPath = localTask.LocalOutputPath,
+                DownloadedAt = localTask.DownloadedAt,
+                SourceFileProcessed = localTask.SourceFileProcessed,
+                SourceFileAction = localTask.SourceFileAction,
+                ArchivePath = localTask.ArchivePath,
+                RetryCount = localTask.RetryCount
+            };
+
+            enhancedInfo.Add($"本地状态: {JsonSerializer.Serialize(localStatus)}");
+
+            return string.Join(" | ", enhancedInfo);
         }
 
         private void FilterCompletedFiles(string searchText)
@@ -205,7 +482,7 @@ namespace VideoConversion_Client.Views
                 ).ToList();
             }
 
-            RefreshCompletedFilesList();
+            RefreshCompletedFilesListEnhanced();
             UpdateCompletedStats();
             UpdateEmptyStateVisibility();
         }
@@ -507,26 +784,69 @@ namespace VideoConversion_Client.Views
 
                 if (task != null)
                 {
-                    // 下载文件
-                    var response = await _apiService.DownloadFileAsync(task.Id);
-                    if (response.Success && !string.IsNullOrEmpty(response.Data))
+                    Utils.Logger.Info("ConversionCompletedView", $"🔍 准备打开文件: {task.TaskName}");
+
+                    // 1. 首先检查本地是否已下载
+                    var localTask = FindMatchingLocalTask(task, _localTasks);
+                    string? localFilePath = null;
+
+                    if (localTask != null && localTask.IsDownloaded && !string.IsNullOrEmpty(localTask.LocalOutputPath))
                     {
-                        // 打开文件所在的文件夹并选中文件
-                        if (File.Exists(response.Data))
+                        if (File.Exists(localTask.LocalOutputPath))
                         {
-                            Process.Start("explorer.exe", $"/select,\"{response.Data}\"");
-                            Utils.Logger.Info("ConversionCompletedView", $"文件下载并打开成功: {response.Data}");
+                            localFilePath = localTask.LocalOutputPath;
+                            Utils.Logger.Info("ConversionCompletedView", $"✅ 使用本地已下载文件: {localFilePath}");
                         }
+                        else
+                        {
+                            Utils.Logger.Warning("ConversionCompletedView", $"⚠️ 本地文件不存在，重新下载: {localTask.LocalOutputPath}");
+                            // 更新本地数据库状态
+                            await _localDbService.UpdateTaskDownloadStatusAsync(task.Id, "");
+                        }
+                    }
+
+                    // 2. 如果本地没有文件，从服务器下载
+                    if (string.IsNullOrEmpty(localFilePath))
+                    {
+                        Utils.Logger.Info("ConversionCompletedView", "📥 从服务器下载文件...");
+                        var response = await _apiService.DownloadFileAsync(task.Id);
+                        if (response.Success && !string.IsNullOrEmpty(response.Data))
+                        {
+                            localFilePath = response.Data;
+
+                            // 更新本地数据库的下载状态
+                            if (localTask != null)
+                            {
+                                await _localDbService.UpdateTaskDownloadStatusAsync(task.Id, localFilePath);
+                                Utils.Logger.Info("ConversionCompletedView", $"💾 更新本地下载状态: {task.Id}");
+                            }
+                        }
+                        else
+                        {
+                            Utils.Logger.Error("ConversionCompletedView", $"❌ 下载文件失败: {response.Message}");
+                            return;
+                        }
+                    }
+
+                    // 3. 打开文件所在的文件夹并选中文件
+                    if (!string.IsNullOrEmpty(localFilePath) && File.Exists(localFilePath))
+                    {
+                        Process.Start("explorer.exe", $"/select,\"{localFilePath}\"");
+                        Utils.Logger.Info("ConversionCompletedView", $"✅ 文件打开成功: {localFilePath}");
                     }
                     else
                     {
-                        Utils.Logger.Error("ConversionCompletedView", $"下载文件失败: {response.Message}");
+                        Utils.Logger.Error("ConversionCompletedView", "❌ 文件不存在或下载失败");
                     }
+                }
+                else
+                {
+                    Utils.Logger.Error("ConversionCompletedView", $"❌ 未找到任务: {taskIdOrFileName}");
                 }
             }
             catch (Exception ex)
             {
-                Utils.Logger.Error("ConversionCompletedView", $"打开文件夹失败: {ex.Message}");
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 打开文件夹失败: {ex.Message}");
             }
         }
 
@@ -562,6 +882,97 @@ namespace VideoConversion_Client.Views
             {
                 Utils.Logger.Error("ConversionCompletedView", $"下载文件失败: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// 获取任务的本地状态信息
+        /// </summary>
+        private string GetTaskLocalStatusInfo(ConversionTask task)
+        {
+            var localTask = FindMatchingLocalTask(task, _localTasks);
+            if (localTask == null)
+            {
+                return "无本地数据";
+            }
+
+            var statusParts = new List<string>();
+
+            // 下载状态
+            if (localTask.IsDownloaded)
+            {
+                statusParts.Add("✅ 已下载");
+                if (localTask.DownloadedAt.HasValue)
+                {
+                    statusParts.Add($"下载时间: {localTask.DownloadedAt.Value:MM-dd HH:mm}");
+                }
+            }
+            else
+            {
+                statusParts.Add("📥 未下载");
+            }
+
+            // 源文件处理状态
+            if (localTask.SourceFileProcessed)
+            {
+                statusParts.Add($"源文件: {localTask.SourceFileAction}");
+            }
+
+            // 重试信息
+            if (localTask.RetryCount > 0)
+            {
+                statusParts.Add($"重试: {localTask.RetryCount}次");
+            }
+
+            return string.Join(" | ", statusParts);
+        }
+
+        /// <summary>
+        /// 检查任务是否有本地文件可用
+        /// </summary>
+        private bool HasLocalFileAvailable(ConversionTask task)
+        {
+            var localTask = FindMatchingLocalTask(task, _localTasks);
+            return localTask != null &&
+                   localTask.IsDownloaded &&
+                   !string.IsNullOrEmpty(localTask.LocalOutputPath) &&
+                   File.Exists(localTask.LocalOutputPath);
+        }
+
+        /// <summary>
+        /// 获取任务的完整文件路径（优先本地，其次服务器）
+        /// </summary>
+        private async Task<string?> GetTaskFilePathAsync(ConversionTask task)
+        {
+            // 1. 检查本地文件
+            var localTask = FindMatchingLocalTask(task, _localTasks);
+            if (localTask != null && localTask.IsDownloaded && !string.IsNullOrEmpty(localTask.LocalOutputPath))
+            {
+                if (File.Exists(localTask.LocalOutputPath))
+                {
+                    return localTask.LocalOutputPath;
+                }
+            }
+
+            // 2. 从服务器下载
+            try
+            {
+                var response = await _apiService.DownloadFileAsync(task.Id);
+                if (response.Success && !string.IsNullOrEmpty(response.Data))
+                {
+                    // 更新本地数据库
+                    if (localTask != null)
+                    {
+                        await _localDbService.UpdateTaskDownloadStatusAsync(task.Id, response.Data);
+                    }
+                    return response.Data;
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"获取文件路径失败: {ex.Message}");
+            }
+
+            return null;
         }
 
         private void UpdateCompletedStats()
@@ -678,6 +1089,14 @@ namespace VideoConversion_Client.Views
         }
 
         /// <summary>
+        /// 格式化文件大小（可空版本）
+        /// </summary>
+        private string FormatFileSize(long? bytes)
+        {
+            return FormatFileSize(bytes ?? 0);
+        }
+
+        /// <summary>
         /// 格式化持续时间
         /// </summary>
         private string FormatDuration(TimeSpan? duration)
@@ -709,6 +1128,162 @@ namespace VideoConversion_Client.Views
 
             if (emptyStatePanel != null)
                 emptyStatePanel.IsVisible = !isLoading && _filteredTasks.Count == 0;
+        }
+
+        /// <summary>
+        /// 刷新完成文件列表（增强版：显示本地状态）
+        /// </summary>
+        private void RefreshCompletedFilesListEnhanced()
+        {
+            try
+            {
+                var completedFilesListBox = this.FindControl<ListBox>("CompletedFilesListBox");
+                if (completedFilesListBox != null && _filteredTasks.Any())
+                {
+                    // 创建增强的显示项目
+                    var enhancedItems = _filteredTasks.Select(task => new
+                    {
+                        Task = task,
+                        LocalStatus = GetTaskLocalStatusInfo(task),
+                        HasLocalFile = HasLocalFileAvailable(task),
+                        DisplayName = $"{task.TaskName} ({task.OriginalFileName})",
+                        StatusIcon = GetTaskStatusIcon(task),
+                        FileSizeText = FormatFileSize(task.OutputFileSize ?? task.OriginalFileSize ?? 0),
+                        CompletedTimeText = task.CompletedAt?.ToString("MM-dd HH:mm") ?? "未知时间"
+                    }).ToList();
+
+                    completedFilesListBox.ItemsSource = enhancedItems;
+
+                    Utils.Logger.Debug("ConversionCompletedView", $"📋 刷新完成列表: {enhancedItems.Count} 个项目");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 刷新完成列表失败: {ex.Message}");
+                // 回退到原始方法
+                RefreshCompletedFilesList();
+            }
+        }
+
+        /// <summary>
+        /// 获取任务状态图标
+        /// </summary>
+        private string GetTaskStatusIcon(ConversionTask task)
+        {
+            var localTask = FindMatchingLocalTask(task, _localTasks);
+
+            if (localTask != null && localTask.IsDownloaded)
+            {
+                return "💾"; // 已下载到本地
+            }
+
+            return task.Status switch
+            {
+                ConversionStatus.Completed => "✅",
+                ConversionStatus.Failed => "❌",
+                ConversionStatus.Cancelled => "⏹️",
+                _ => "📄"
+            };
+        }
+
+
+
+        /// <summary>
+        /// 批量同步本地状态
+        /// </summary>
+        private async Task BatchSyncLocalStatusAsync()
+        {
+            try
+            {
+                Utils.Logger.Info("ConversionCompletedView", "🔄 开始批量同步本地状态...");
+
+                int syncCount = 0;
+                foreach (var task in _completedTasks)
+                {
+                    var localTask = FindMatchingLocalTask(task, _localTasks);
+                    if (localTask != null)
+                    {
+                        // 同步状态到本地数据库
+                        await _localDbService.UpdateTaskStatusAsync(task.Id, task.Status, task.ErrorMessage);
+
+                        // 如果服务端任务已完成但本地状态不是完成，则更新
+                        if (task.Status == ConversionStatus.Completed && localTask.Status != ConversionStatus.Completed)
+                        {
+                            await _localDbService.UpdateTaskStatusAsync(task.Id, ConversionStatus.Completed);
+                            syncCount++;
+                        }
+                    }
+                }
+
+                Utils.Logger.Info("ConversionCompletedView", $"✅ 批量同步完成: {syncCount} 个任务状态已更新");
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 批量同步失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 批量检查本地文件状态
+        /// </summary>
+        private async Task BatchCheckLocalFilesAsync()
+        {
+            try
+            {
+                Utils.Logger.Info("ConversionCompletedView", "🔍 开始批量检查本地文件状态...");
+
+                int checkedCount = 0;
+                int missingCount = 0;
+
+                foreach (var localTask in _localTasks.Where(lt => lt.IsDownloaded))
+                {
+                    if (!string.IsNullOrEmpty(localTask.LocalOutputPath))
+                    {
+                        if (!File.Exists(localTask.LocalOutputPath))
+                        {
+                            // 文件不存在，更新状态
+                            await _localDbService.UpdateTaskDownloadStatusAsync(
+                                localTask.CurrentTaskId ?? localTask.LocalId, "");
+                            missingCount++;
+
+                            Utils.Logger.Warning("ConversionCompletedView",
+                                $"⚠️ 本地文件丢失: {localTask.FileName} - {localTask.LocalOutputPath}");
+                        }
+                        checkedCount++;
+                    }
+                }
+
+                Utils.Logger.Info("ConversionCompletedView",
+                    $"✅ 文件检查完成: 检查 {checkedCount} 个，发现 {missingCount} 个丢失");
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 批量文件检查失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 获取数据关联统计信息
+        /// </summary>
+        private string GetDataAssociationStats()
+        {
+            try
+            {
+                var serverTaskCount = _completedTasks.Count;
+                var localTaskCount = _localTasks.Count;
+
+                var associatedCount = _completedTasks.Count(serverTask =>
+                    FindMatchingLocalTask(serverTask, _localTasks) != null);
+
+                var downloadedCount = _localTasks.Count(lt => lt.IsDownloaded);
+
+                return $"服务端: {serverTaskCount} | 本地: {localTaskCount} | 关联: {associatedCount} | 已下载: {downloadedCount}";
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionCompletedView", $"❌ 获取统计信息失败: {ex.Message}");
+                return "统计信息获取失败";
+            }
         }
 
         /// <summary>

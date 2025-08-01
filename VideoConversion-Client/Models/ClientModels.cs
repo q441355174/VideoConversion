@@ -32,6 +32,16 @@ namespace VideoConversion_Client.Models
         private long? _originalFileSize;
         private long? _outputFileSize;
 
+        // 新增字段以匹配服务端模型
+        private string? _originalFilePath;
+        private string? _outputFilePath;
+        private string? _videoCodec;
+        private string? _audioCodec;
+        private string? _videoQuality;
+        private string? _audioQuality;
+        private string? _frameRate;
+        private string? _notes;
+
         public string Id
         {
             get => _id;
@@ -170,6 +180,55 @@ namespace VideoConversion_Client.Models
         {
             get => _outputFileSize;
             set => SetProperty(ref _outputFileSize, value);
+        }
+
+        // 新增属性以匹配服务端模型
+        public string? OriginalFilePath
+        {
+            get => _originalFilePath;
+            set => SetProperty(ref _originalFilePath, value);
+        }
+
+        public string? OutputFilePath
+        {
+            get => _outputFilePath;
+            set => SetProperty(ref _outputFilePath, value);
+        }
+
+        public string? VideoCodec
+        {
+            get => _videoCodec;
+            set => SetProperty(ref _videoCodec, value);
+        }
+
+        public string? AudioCodec
+        {
+            get => _audioCodec;
+            set => SetProperty(ref _audioCodec, value);
+        }
+
+        public string? VideoQuality
+        {
+            get => _videoQuality;
+            set => SetProperty(ref _videoQuality, value);
+        }
+
+        public string? AudioQuality
+        {
+            get => _audioQuality;
+            set => SetProperty(ref _audioQuality, value);
+        }
+
+        public string? FrameRate
+        {
+            get => _frameRate;
+            set => SetProperty(ref _frameRate, value);
+        }
+
+        public string? Notes
+        {
+            get => _notes;
+            set => SetProperty(ref _notes, value);
         }
 
         // 计算属性
