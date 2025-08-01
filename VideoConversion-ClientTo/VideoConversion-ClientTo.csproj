@@ -1,0 +1,61 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <UseWPF>False</UseWPF>
+        <UseWindowsForms>False</UseWindowsForms>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Avalonia UI 框架 -->
+        <PackageReference Include="Avalonia" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.2" />
+        <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.2">
+            <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+            <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+        </PackageReference>
+
+        <!-- MVVM 支持 -->
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="MediaInfo.Core.Native" Version="21.9.1" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.7" />
+
+        <!-- HTTP 客户端 -->
+        <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.7" />
+
+        <!-- SignalR 客户端 -->
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="9.0.7" />
+
+        <!-- 依赖注入 -->
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.7" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.7" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
+        <PackageReference Include="NReco.VideoInfo" Version="1.2.1" />
+        <PackageReference Include="SqlSugarCore" Version="5.1.4.198" />
+
+        <!-- JSON 序列化 -->
+        <PackageReference Include="System.Text.Json" Version="9.0.7" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Application\Services\" />
+      <Folder Include="Infrastructure\Persistence\" />
+      <Folder Include="Infrastructure\Repositories\" />
+      <Folder Include="Models\" />
+      <Folder Include="Services\" />
+    </ItemGroup>
+</Project>

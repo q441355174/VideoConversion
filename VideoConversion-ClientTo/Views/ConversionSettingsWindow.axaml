@@ -1,0 +1,265 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:VideoConversion_ClientTo.Presentation.ViewModels"
+        x:Class="VideoConversion_ClientTo.Views.ConversionSettingsWindow"
+        x:DataType="vm:ConversionSettingsViewModel"
+        Title="转换设置"
+        Width="800"
+        Height="700"
+        MinWidth="700"
+        MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+
+    <Window.Styles>
+        <!-- 标题样式 -->
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#333" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+
+        <!-- 标签样式 -->
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#666" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- 设置组合框样式 -->
+        <Style Selector="ComboBox.setting-combo">
+            <Setter Property="MinWidth" Value="150" />
+            <Setter Property="Height" Value="32" />
+        </Style>
+
+        <!-- 按钮样式 -->
+        <Style Selector="Button.action-button">
+            <Setter Property="MinWidth" Value="80" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="5" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 主要设置区域 -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="20">
+
+                <!-- 预设配置 -->
+                <Border Background="White" BorderBrush="#e0e0e0" BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="预设配置" Classes="section-title" />
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="选择预设:" Classes="label" Margin="0,0,15,0" />
+                            <ComboBox Grid.Column="1" 
+                                      Classes="setting-combo"
+                                      SelectedIndex="{Binding SelectedPresetIndex}">
+                                <ComboBoxItem Content="Fast 1080p30" />
+                                <ComboBoxItem Content="High Quality 1080p30" />
+                                <ComboBoxItem Content="Fast 720p30" />
+                                <ComboBoxItem Content="High Quality 720p30" />
+                                <ComboBoxItem Content="Fast 480p30" />
+                                <ComboBoxItem Content="自定义设置" />
+                            </ComboBox>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 视频设置 -->
+                <Border Background="White" BorderBrush="#e0e0e0" BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="视频设置" Classes="section-title" />
+                        
+                        <!-- 输出格式 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="输出格式:" Classes="label" />
+                            <ComboBox Grid.Column="1" Classes="setting-combo" SelectedIndex="{Binding OutputFormatIndex}">
+                                <ComboBoxItem Content="MP4" />
+                                <ComboBoxItem Content="AVI" />
+                                <ComboBoxItem Content="MOV" />
+                                <ComboBoxItem Content="MKV" />
+                                <ComboBoxItem Content="WebM" />
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- 分辨率 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="分辨率:" Classes="label" />
+                            <ComboBox Grid.Column="1" Classes="setting-combo" SelectedIndex="{Binding ResolutionIndex}">
+                                <ComboBoxItem Content="3840x2160 (4K)" />
+                                <ComboBoxItem Content="1920x1080 (1080p)" />
+                                <ComboBoxItem Content="1280x720 (720p)" />
+                                <ComboBoxItem Content="854x480 (480p)" />
+                                <ComboBoxItem Content="640x360 (360p)" />
+                                <ComboBoxItem Content="自定义" />
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- 视频编码器 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="视频编码器:" Classes="label" />
+                            <ComboBox Grid.Column="1" Classes="setting-combo" SelectedIndex="{Binding VideoCodecIndex}">
+                                <ComboBoxItem Content="H.264 (libx264)" />
+                                <ComboBoxItem Content="H.265 (libx265)" />
+                                <ComboBoxItem Content="VP9 (libvpx-vp9)" />
+                                <ComboBoxItem Content="VP8 (libvpx)" />
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- 视频质量 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="视频质量:" Classes="label" />
+                            <Slider Grid.Column="1" 
+                                    Minimum="18" Maximum="28" 
+                                    Value="{Binding VideoQuality}"
+                                    TickFrequency="1" 
+                                    IsSnapToTickEnabled="True"
+                                    Margin="0,0,10,0" />
+                            <TextBlock Grid.Column="2" Text="{Binding VideoQuality, StringFormat=CRF {0}}" Classes="label" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 音频设置 -->
+                <Border Background="White" BorderBrush="#e0e0e0" BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="音频设置" Classes="section-title" />
+                        
+                        <!-- 音频编码器 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="音频编码器:" Classes="label" />
+                            <ComboBox Grid.Column="1" Classes="setting-combo" SelectedIndex="{Binding AudioCodecIndex}">
+                                <ComboBoxItem Content="AAC" />
+                                <ComboBoxItem Content="MP3" />
+                                <ComboBoxItem Content="Opus" />
+                                <ComboBoxItem Content="Vorbis" />
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- 音频比特率 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="音频比特率:" Classes="label" />
+                            <ComboBox Grid.Column="1" Classes="setting-combo" SelectedIndex="{Binding AudioBitrateIndex}">
+                                <ComboBoxItem Content="128k" />
+                                <ComboBoxItem Content="192k" />
+                                <ComboBoxItem Content="256k" />
+                                <ComboBoxItem Content="320k" />
+                            </ComboBox>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 高级设置 -->
+                <Border Background="White" BorderBrush="#e0e0e0" BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="高级设置" Classes="section-title" />
+                        
+                        <!-- 编码预设 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="编码预设:" Classes="label" />
+                            <ComboBox Grid.Column="1" Classes="setting-combo" SelectedIndex="{Binding EncodingPresetIndex}">
+                                <ComboBoxItem Content="ultrafast" />
+                                <ComboBoxItem Content="superfast" />
+                                <ComboBoxItem Content="veryfast" />
+                                <ComboBoxItem Content="faster" />
+                                <ComboBoxItem Content="fast" />
+                                <ComboBoxItem Content="medium" />
+                                <ComboBoxItem Content="slow" />
+                                <ComboBoxItem Content="slower" />
+                                <ComboBoxItem Content="veryslow" />
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- 硬件加速 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0" Text="硬件加速:" Classes="label" />
+                            <ComboBox Grid.Column="1" Classes="setting-combo" SelectedIndex="{Binding HardwareAccelIndex}">
+                                <ComboBoxItem Content="自动检测" />
+                                <ComboBoxItem Content="禁用" />
+                                <ComboBoxItem Content="NVIDIA (NVENC)" />
+                                <ComboBoxItem Content="Intel (QSV)" />
+                                <ComboBoxItem Content="AMD (AMF)" />
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- 两遍编码 -->
+                        <CheckBox Content="启用两遍编码 (提高质量，增加时间)" 
+                                  IsChecked="{Binding TwoPassEncoding}" />
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 底部按钮 -->
+        <Border Grid.Row="1" Background="#f8f9fa" BorderBrush="#e0e0e0" BorderThickness="0,1,0,0" Padding="0,15,0,0" Margin="-20,20,-20,-20">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="20,0">
+                <Button Content="重置为默认" 
+                        Classes="action-button"
+                        Command="{Binding ResetToDefaultCommand}" />
+                <Button Content="取消" 
+                        Classes="action-button"
+                        Command="{Binding CancelCommand}" />
+                <Button Content="确定" 
+                        Classes="action-button"
+                        Background="#007bff"
+                        Foreground="White"
+                        Command="{Binding OkCommand}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+
+</Window>

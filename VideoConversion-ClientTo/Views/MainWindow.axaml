@@ -1,0 +1,287 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:VideoConversion_ClientTo.Presentation.ViewModels"
+        xmlns:views="using:VideoConversion_ClientTo.Views"
+        xmlns:converters="using:VideoConversion_ClientTo.Presentation.Converters"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
+        x:Class="VideoConversion_ClientTo.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="视频转换工具"
+        Width="1200" Height="800"
+        MinWidth="1000" MinHeight="700"
+        WindowStartupLocation="CenterScreen">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 顶部标题栏 -->
+        <Border Grid.Row="0" Grid.ColumnSpan="2" Background="#2c3e50" Padding="20,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- 标题居中 -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="2"
+                           Orientation="Horizontal"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center">
+                    <TextBlock Text="🎬" FontSize="20" Margin="0,0,8,0" />
+                    <TextBlock Text="视频转换工具"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="White"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- 系统设置按钮 -->
+                <Button Grid.Column="1"
+                        Name="SystemSettingsBtn"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="12,8"
+                        CornerRadius="6"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                        ToolTip.Tip="系统设置"
+                        Click="SystemSettingsBtn_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="⚙️" FontSize="16" VerticalAlignment="Center" />
+                        <TextBlock Text="设置"
+                                   FontSize="12"
+                                   Foreground="White"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover">
+                            <Setter Property="Background" Value="#34495e" />
+                        </Style>
+                        <Style Selector="Button:pressed">
+                            <Setter Property="Background" Value="#1abc9c" />
+                        </Style>
+                    </Button.Styles>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- 主要内容区域 -->
+        <Border HorizontalAlignment="Stretch" Padding="15,0,15,0" Grid.Row="1" Grid.Column="0" Background="#e0e0e0" >
+            <Grid Name="MainContentGrid">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 统一的切换按钮区域 -->
+                <Border Grid.Row="0" HorizontalAlignment="Center" Margin="0,4,0,6"
+                        Background="White" CornerRadius="20" Padding="1">
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <Button Name="ConvertingStatusBtn"
+                                Content="正在转换"
+                                Background="{Binding ConvertingButtonBackground, FallbackValue=#9b59b6}"
+                                Foreground="{Binding ConvertingButtonForeground, FallbackValue=White}"
+                                BorderThickness="0"
+                                Padding="20,6"
+                                CornerRadius="18"
+                                FontSize="13"
+                                Margin="1"
+                                IsEnabled="True"
+                                IsHitTestVisible="True"
+                                Click="ConvertingStatusBtn_Click" />
+                        <Button Name="CompletedStatusBtn"
+                                Content="转换完成"
+                                Background="{Binding CompletedButtonBackground, FallbackValue=#f0f0f0}"
+                                Foreground="{Binding CompletedButtonForeground, FallbackValue=#666}"
+                                BorderThickness="0"
+                                Padding="20,6"
+                                CornerRadius="18"
+                                FontSize="13"
+                                Margin="1"
+                                IsEnabled="True"
+                                IsHitTestVisible="True"
+                                Click="CompletedStatusBtn_Click" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 页面内容区域 -->
+                <Grid Grid.Row="1" Name="PageContentGrid">
+                    <!-- 文件上传界面 -->
+                    <views:FileUploadView Name="FileUploadView" IsVisible="{Binding IsFileUploadViewVisible, FallbackValue=True}" />
+
+                    <!-- 转换完成界面 -->
+                    <views:ConversionCompletedView Name="ConversionCompletedView" IsVisible="{Binding IsCompletedViewVisible, FallbackValue=False}" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- 右侧服务器状态面板 -->
+        <Border Grid.Row="1" Grid.Column="1" Background="#f8f9fa" BorderBrush="#dee2e6" BorderThickness="1,0,0,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="15" Spacing="15">
+
+                    <!-- 服务器连接状态 -->
+                    <Border Background="White" CornerRadius="8" Padding="15" BoxShadow="0 2 8 #19000000">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="🌐 服务器状态" FontWeight="Bold" FontSize="14" Foreground="#2c3e50" />
+                                <Button Name="ServerSettingsBtn" Content="⚙️" FontSize="10" Padding="4"
+                                        Background="Transparent" BorderThickness="0" ToolTip.Tip="打开服务器设置"
+                                        Command="{Binding OpenServerSettingsCommand}" />
+                            </StackPanel>
+
+                            <!-- 连接状态 -->
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Name="ServerStatusIndicator" Width="12" Height="12">
+                                    <Ellipse.Fill>
+                                        <SolidColorBrush Color="{Binding IsConnected, Converter={x:Static converters:BooleanToColorConverter.Instance}}"/>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <TextBlock Name="ServerStatusText" Text="{Binding ConnectionStatus}" FontSize="12" Foreground="#6c757d" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 磁盘空间状态 -->
+                    <Border Background="White" CornerRadius="8" Padding="15" BoxShadow="0 2 8 #19000000">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="💾 磁盘空间" FontWeight="Bold" FontSize="14" Foreground="#2c3e50" />
+                                <Button Name="RefreshSpaceBtn" Content="🔄" FontSize="10" Padding="4"
+                                        Background="Transparent" BorderThickness="0" ToolTip.Tip="刷新服务器状态和空间信息"
+                                        Command="{Binding RefreshSpaceCommand}" />
+                            </StackPanel>
+
+                            <!-- 空间使用进度条 -->
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="已使用:" FontSize="11" Foreground="#6c757d" />
+                                    <TextBlock Name="UsedSpaceText" Text="{Binding UsedSpaceText}" FontSize="11" FontWeight="SemiBold" />
+                                    <TextBlock Text="/" FontSize="11" Foreground="#6c757d" />
+                                    <TextBlock Name="TotalSpaceText" Text="{Binding TotalSpaceText}" FontSize="11" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <ProgressBar Name="DiskUsageProgressBar" Height="8" Background="#e9ecef"
+                                           Foreground="#007bff" CornerRadius="4" Value="{Binding DiskUsagePercentage}" Maximum="100" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="可用:" FontSize="11" Foreground="#6c757d" />
+                                    <TextBlock Name="AvailableSpaceText" Text="{Binding AvailableSpaceText}" FontSize="11" Foreground="#28a745" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- 空间警告 -->
+                            <Border Name="SpaceWarningPanel" Background="#fff3cd" BorderBrush="#ffeaa7"
+                                    BorderThickness="1" CornerRadius="4" Padding="8" IsVisible="{Binding IsSpaceWarningVisible}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="⚠️" FontSize="12" />
+                                    <TextBlock Name="SpaceWarningText" Text="{Binding SpaceWarningText}" FontSize="11"
+                                               Foreground="#856404" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 当前任务状态 - 全局概览 -->
+                    <Border Background="White" CornerRadius="8" Padding="15" BoxShadow="0 2 8 #19000000">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="⚡ 当前任务" FontWeight="Bold" FontSize="14" Foreground="#2c3e50" />
+                                <TextBlock Text="(全局概览)" FontSize="10" Foreground="#6c757d" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- 无任务状态 -->
+                            <StackPanel Name="NoTaskPanel" Spacing="6" IsVisible="{Binding IsNoTaskVisible}">
+                                <TextBlock Text="暂无进行中的任务" FontSize="12" Foreground="#6c757d"
+                                           HorizontalAlignment="Center" Margin="0,10" />
+                                <TextBlock Text="系统空闲中，等待新任务..." FontSize="10" Foreground="#adb5bd"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- 有任务状态 -->
+                            <StackPanel Name="ActiveTaskPanel" Spacing="8" IsVisible="{Binding IsActiveTaskVisible}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="📋 任务:" FontSize="11" Foreground="#6c757d" />
+                                    <TextBlock Name="CurrentTaskNameText" Text="{Binding CurrentTaskName}" FontSize="11" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="📁 文件:" FontSize="11" Foreground="#6c757d" />
+                                    <TextBlock Name="CurrentFileNameText" Text="{Binding CurrentFileName}" FontSize="11"
+                                               TextTrimming="CharacterEllipsis" MaxWidth="180" />
+                                </StackPanel>
+                                <StackPanel Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Name="TaskProgressText" Text="{Binding TaskProgressText}" FontSize="11" FontWeight="SemiBold" />
+                                        <TextBlock Name="TaskSpeedText" Text="{Binding TaskSpeedText}" FontSize="11" Foreground="#28a745" />
+                                    </StackPanel>
+                                    <ProgressBar Name="TaskProgressBar" Height="6" Background="#e9ecef"
+                                               Foreground="#28a745" CornerRadius="3" Value="{Binding TaskProgress}" Maximum="100" />
+                                    <TextBlock Name="TaskETAText" Text="{Binding TaskETAText}" FontSize="10"
+                                               Foreground="#6c757d" HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 批量任务状态 - 整体进度概览 -->
+                    <Border Name="BatchTaskPanel" Background="White" CornerRadius="8" Padding="15"
+                            BoxShadow="0 2 8 #19000000" IsVisible="{Binding IsBatchTaskVisible}">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="📋 批量任务" FontWeight="Bold" FontSize="14" Foreground="#2c3e50" />
+                                <TextBlock Text="(整体进度)" FontSize="10" Foreground="#6c757d" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="📊 总进度:" FontSize="11" Foreground="#6c757d" />
+                                    <TextBlock Name="BatchProgressText" Text="{Binding BatchProgressText}" FontSize="11" FontWeight="SemiBold" />
+                                </StackPanel>
+                                <ProgressBar Name="BatchProgressBar" Height="8" Background="#e9ecef"
+                                           Foreground="#007bff" CornerRadius="4" Value="{Binding BatchProgress}" Maximum="100" />
+
+                                <!-- 批量任务暂停状态 -->
+                                <Border Name="BatchPausedPanel" Background="#f8d7da" BorderBrush="#f5c6cb"
+                                        BorderThickness="1" CornerRadius="4" Padding="8" IsVisible="{Binding IsBatchPausedVisible}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="⏸️" FontSize="12" />
+                                        <TextBlock Name="BatchPausedText" Text="{Binding BatchPausedText}" FontSize="11"
+                                                   Foreground="#721c24" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <TextBlock Text="💡 详细文件进度请查看文件上传页面" FontSize="10"
+                                           Foreground="#6c757d" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- 状态栏 -->
+        <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#34495e" Padding="20,10">
+                <TextBlock Name="StatusText"
+                           Grid.Column="0"
+                           Text="{Binding StatusText}"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           Foreground="White" />
+        </Border>
+    </Grid>
+
+</Window>
