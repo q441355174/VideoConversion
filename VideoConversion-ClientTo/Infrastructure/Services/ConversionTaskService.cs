@@ -34,12 +34,10 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         {
             try
             {
-                Utils.Logger.Info("ConversionTaskService", $"🎯 创建新任务: {taskName}");
-
                 var task = ConversionTask.Create(taskName, filePath, fileSize, parameters);
                 _localTasks.Add(task);
 
-                Utils.Logger.Info("ConversionTaskService", $"✅ 任务创建成功: {task.Id}");
+                // 任务创建完成（移除日志）
                 return task;
             }
             catch (Exception ex)
@@ -167,7 +165,6 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
                 if (response.Success)
                 {
                     task.Start();
-                    Utils.Logger.Info("ConversionTaskService", $"✅ 转换开始成功: {taskId}");
                     return true;
                 }
                 else
@@ -192,7 +189,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
                 {
                     task.Cancel();
                     await _apiClient.CancelTaskAsync(taskId.Value);
-                    Utils.Logger.Info("ConversionTaskService", $"⏹️ 任务已取消: {taskId}");
+                    // 任务取消完成（移除日志）
                     return true;
                 }
                 return false;
@@ -323,6 +320,45 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         public event EventHandler<TaskStatusChangedEventArgs>? TaskStatusChanged;
         public event EventHandler<TaskProgressUpdatedEventArgs>? TaskProgressUpdated;
         public event EventHandler<TaskCompletedEventArgs>? TaskCompleted;
+
+        /// <summary>
+        /// 批量转换API - 使用真实API服务
+        /// </summary>
+        public async Task<ApiResponseDto<object>> StartBatchConversionAsync(
+            List<string> filePaths,
+            StartConversionRequestDto request,
+            IProgress<object>? progress = null)
+        {
+            try
+            {
+                Utils.Logger.Info("ConversionTaskService", $"🚀 开始批量转换API调用，文件数量: {filePaths.Count}");
+
+                // 🔑 使用真实的API服务
+                using var apiService = new ApiService();
+
+                // 创建进度转换器
+                var apiProgress = progress != null ? new Progress<BatchUploadProgress>(p => progress.Report(p)) : null;
+
+                // 调用真实的批量转换API
+                var result = await apiService.StartBatchConversionAsync(filePaths, request, apiProgress);
+
+                if (result.Success)
+                {
+                    Utils.Logger.Info("ConversionTaskService", $"✅ 批量转换API调用成功，BatchId: {result.Data?.BatchId}");
+                    return ApiResponseDto<object>.CreateSuccess(result.Data, result.Message);
+                }
+                else
+                {
+                    Utils.Logger.Error("ConversionTaskService", $"❌ 批量转换API调用失败: {result.Message}");
+                    return ApiResponseDto<object>.CreateError(result.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionTaskService", $"❌ 批量转换API调用异常: {ex.Message}");
+                return ApiResponseDto<object>.CreateError($"批量转换失败: {ex.Message}");
+            }
+        }
 
         #endregion
     }

@@ -28,8 +28,8 @@ public partial class MainWindow : Window
     private ProgressBar? diskUsageProgressBar;
     private Border? spaceWarningPanel;
     private TextBlock? spaceWarningText;
-    private Border? noTaskPanel;
-    private Border? activeTaskPanel;
+    private StackPanel? noTaskPanel;
+    private StackPanel? activeTaskPanel;
     private TextBlock? currentTaskNameText;
     private TextBlock? currentFileNameText;
     private TextBlock? taskProgressText;
@@ -78,10 +78,7 @@ public partial class MainWindow : Window
             viewModel = ServiceLocator.GetRequiredService<MainWindowViewModel>();
             DataContext = viewModel;
 
-            // 调试：检查Command是否存在
-            Utils.Logger.Info("MainWindow", $"✅ 主窗口ViewModel初始化完成");
-            Utils.Logger.Debug("MainWindow", $"🔍 ShowConvertingViewCommand存在: {viewModel.ShowConvertingViewCommand != null}");
-            Utils.Logger.Debug("MainWindow", $"🔍 ShowCompletedViewCommand存在: {viewModel.ShowCompletedViewCommand != null}");
+            // 主窗口ViewModel初始化完成（移除日志）
         }
         catch (Exception ex)
         {
@@ -100,15 +97,15 @@ public partial class MainWindow : Window
             // 获取服务器状态面板控件引用
             serverStatusIndicator = this.FindControl<Ellipse>("ServerStatusIndicator");
             serverStatusText = this.FindControl<TextBlock>("ServerStatusText");
-            signalRStatusIndicator = this.FindControl<Ellipse>("SignalRStatusIndicator");
+            // signalRStatusIndicator = this.FindControl<Ellipse>("SignalRStatusIndicator"); // 控件不存在，已注释
             usedSpaceText = this.FindControl<TextBlock>("UsedSpaceText");
             totalSpaceText = this.FindControl<TextBlock>("TotalSpaceText");
             availableSpaceText = this.FindControl<TextBlock>("AvailableSpaceText");
             diskUsageProgressBar = this.FindControl<ProgressBar>("DiskUsageProgressBar");
             spaceWarningPanel = this.FindControl<Border>("SpaceWarningPanel");
             spaceWarningText = this.FindControl<TextBlock>("SpaceWarningText");
-            noTaskPanel = this.FindControl<Border>("NoTaskPanel");
-            activeTaskPanel = this.FindControl<Border>("ActiveTaskPanel");
+            noTaskPanel = this.FindControl<StackPanel>("NoTaskPanel");
+            activeTaskPanel = this.FindControl<StackPanel>("ActiveTaskPanel");
             currentTaskNameText = this.FindControl<TextBlock>("CurrentTaskNameText");
             currentFileNameText = this.FindControl<TextBlock>("CurrentFileNameText");
             taskProgressText = this.FindControl<TextBlock>("TaskProgressText");
@@ -155,7 +152,7 @@ public partial class MainWindow : Window
             // 设置转换设置变化事件
             SetupConversionSettingsEvents();
 
-            Utils.Logger.Info("MainWindow", "✅ 事件处理器设置完成");
+            // 事件处理器设置完成（移除日志）
         }
         catch (Exception ex)
         {
@@ -215,30 +212,28 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 初始化转换设置 - 与原项目逻辑一致
+    /// 初始化转换设置 - 与Client项目逻辑完全一致（确保性初始化）
     /// </summary>
     private void InitializeConversionSettings()
     {
         try
         {
-            // 通过ViewModel初始化转换设置
+            // 🔑 显式确保转换设置服务已初始化 - 与Client项目完全一致
+            Infrastructure.Services.ConversionSettingsService.Initialize();
+
+            var settingsService = Infrastructure.Services.ConversionSettingsService.Instance;
+
+            // 转换设置服务确保初始化完成（移除日志）
+
+            // 更新状态栏 - 与Client项目一致
             if (viewModel != null)
             {
-                // 这里可以调用ViewModel的转换设置初始化方法
-                // viewModel.InitializeConversionSettings();
-
-                Utils.Logger.Info("MainWindow", "✅ 转换设置已初始化");
-
-                // 更新状态栏
-                if (viewModel.StatusText == "就绪")
-                {
-                    viewModel.StatusText = "⚙️ 转换设置已加载";
-                }
+                viewModel.StatusText = $"⚙️ 转换设置已加载: {settingsService.CurrentSettings.Resolution}, {settingsService.CurrentSettings.VideoCodec}";
             }
         }
         catch (Exception ex)
         {
-            Utils.Logger.Error("MainWindow", $"❌ 初始化转换设置失败: {ex.Message}");
+            Utils.Logger.Error("MainWindow", $"❌ 初始化转换设置服务失败: {ex.Message}");
             if (viewModel != null)
             {
                 viewModel.StatusText = $"❌ 加载转换设置失败: {ex.Message}";
@@ -266,8 +261,9 @@ public partial class MainWindow : Window
         try
         {
             // 转发转换进度到FileUploadView
-            fileUploadView?.UpdateConversionProgress(taskId, progress, speed, eta);
-            Utils.Logger.Debug("MainWindow", $"📊 转发进度到FileUploadView: {taskId} - {progress}%");
+            fileUploadView?.UpdateConversionProgress(taskId, progress, $"转换中 {progress}%", speed, eta);
+
+            // 转换进度更新（移除日志）
         }
         catch (Exception ex)
         {
@@ -282,15 +278,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            // 这里可以订阅转换设置服务的变化事件
-            // 如果有ConversionSettingsService，可以这样订阅：
-            // ConversionSettingsService.Instance.SettingsChanged += OnConversionSettingsChanged;
-
-            // 或者通过ViewModel订阅设置变化事件
-            // if (viewModel != null)
-            // {
-            //     viewModel.ConversionSettingsChanged += OnConversionSettingsChanged;
-            // }
+            // 🔑 订阅转换设置服务的变化事件 - 与Client项目完全一致
+            var conversionSettingsService = Infrastructure.Services.ConversionSettingsService.Instance;
+            conversionSettingsService.SettingsChanged += OnConversionSettingsChanged;
 
             Utils.Logger.Info("MainWindow", "✅ 转换设置事件已设置");
         }
@@ -314,19 +304,6 @@ public partial class MainWindow : Window
 
             if (serverSettingsBtn != null)
                 serverSettingsBtn.Click += SystemSettingsBtn_Click;
-
-            // 查找并绑定其他服务器状态面板按钮
-            var configSpaceBtn = this.FindControl<Button>("ConfigSpaceBtn");
-            if (configSpaceBtn != null)
-                configSpaceBtn.Click += ConfigSpaceBtn_Click;
-
-            var cleanupFilesBtn = this.FindControl<Button>("CleanupFilesBtn");
-            if (cleanupFilesBtn != null)
-                cleanupFilesBtn.Click += CleanupFilesBtn_Click;
-
-            var viewLogsBtn = this.FindControl<Button>("ViewLogsBtn");
-            if (viewLogsBtn != null)
-                viewLogsBtn.Click += ViewLogsBtn_Click;
 
             Utils.Logger.Info("MainWindow", "✅ 服务器状态按钮事件已设置");
         }
@@ -363,15 +340,14 @@ public partial class MainWindow : Window
         try
         {
             Utils.Logger.Info("MainWindow", "⚙️ 打开系统设置窗口");
-
-            // 暂时使用ConversionSettingsWindow（后续可以创建SystemSettingsWindow）
-            var settingsWindow = new ConversionSettingsWindow();
+            
+            var settingsWindow = new SystemSetting.SystemSettingsWindow();
             await settingsWindow.ShowDialog(this);
 
             // 如果设置有变化，更新应用配置 - 与原项目逻辑一致
             if (settingsWindow.SettingsChanged)
             {
-                await ApplyNewSettings(settingsWindow.Settings);
+                await ApplyNewSettings(settingsWindow.GetSettingsSummary());
             }
 
             Utils.Logger.Info("MainWindow", "✅ 系统设置窗口已关闭");
@@ -401,7 +377,7 @@ public partial class MainWindow : Window
                     UpdateStatus(viewModel?.StatusText ?? "");
                     break;
                 case nameof(MainWindowViewModel.IsConnected):
-                    UpdateConnectionIndicator(viewModel?.IsConnected ?? false);
+                    UpdateServerStatusUI(); // 使用现有的服务器状态更新方法
                     break;
                 case nameof(MainWindowViewModel.ConnectionStatus):
                     UpdateServerStatusUI();
@@ -416,19 +392,19 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 处理转换设置变化事件 - 与原项目逻辑一致
+    /// 处理转换设置变化事件 - 与Client项目逻辑完全一致
     /// </summary>
-    private void OnConversionSettingsChanged(object? sender, EventArgs e)
+    private void OnConversionSettingsChanged(object? sender, Infrastructure.Services.ConversionSettingsChangedEventArgs e)
     {
         try
         {
-            // 通知文件上传视图更新转换后的预估值
+            // 通知文件上传视图更新转换后的预估值 - 与Client项目一致
             fileUploadView?.UpdateTargetInfoFromSettings();
 
-            // 更新状态显示
-            UpdateStatus("⚙️ 转换设置已更新");
+            // 更新状态显示 - 与Client项目一致
+            UpdateStatus($"⚙️ 转换设置已更新: {e.Settings.Resolution}, {e.Settings.VideoCodec}");
 
-            Utils.Logger.Info("MainWindow", "✅ 转换设置变化已处理");
+            // 转换设置更新完成（移除日志）
         }
         catch (Exception ex)
         {
@@ -576,16 +552,12 @@ public partial class MainWindow : Window
     {
         try
         {
-            Utils.Logger.Info("MainWindow", "🔄 ConvertingStatusBtn_Click被调用");
-
             // 直接操作UI控件 - 确保切换生效
             SwitchToFileUploadView();
-
-            Utils.Logger.Info("MainWindow", "✅ ConvertingStatusBtn_Click处理完成");
         }
         catch (Exception ex)
         {
-            Utils.Logger.Error("MainWindow", $"❌ ConvertingStatusBtn_Click处理失败: {ex.Message}");
+            Utils.Logger.Error("MainWindow", $"❌ 切换到文件上传视图失败: {ex.Message}");
         }
     }
 
@@ -765,77 +737,6 @@ public partial class MainWindow : Window
             }
         }
     }
-
-    #region 服务器状态面板按钮事件 - 与原项目逻辑一致
-
-    /// <summary>
-    /// 磁盘空间配置按钮点击事件
-    /// </summary>
-    private async void ConfigSpaceBtn_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            UpdateStatus("🔧 打开磁盘空间配置...");
-
-            // 这里可以实现磁盘空间配置对话框
-            // var configDialog = new DiskSpaceConfigDialog();
-            // await configDialog.ShowDialog(this);
-
-            UpdateStatus("✅ 磁盘空间配置功能待实现");
-            Utils.Logger.Info("MainWindow", "🔧 磁盘空间配置按钮被点击");
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"❌ 打开空间配置失败: {ex.Message}");
-            Utils.Logger.Error("MainWindow", $"❌ 打开磁盘空间配置失败: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 文件清理按钮点击事件
-    /// </summary>
-    private async void CleanupFilesBtn_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            UpdateStatus("🧹 开始文件清理...");
-
-            // 这里可以实现文件清理功能
-            // await viewModel.CleanupFilesAsync();
-
-            UpdateStatus("✅ 文件清理功能待实现");
-            Utils.Logger.Info("MainWindow", "🧹 文件清理按钮被点击");
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"❌ 文件清理失败: {ex.Message}");
-            Utils.Logger.Error("MainWindow", $"❌ 文件清理失败: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 查看日志按钮点击事件
-    /// </summary>
-    private async void ViewLogsBtn_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            UpdateStatus("📋 打开日志查看器...");
-
-            // 这里可以实现日志查看功能
-            // var logViewer = new LogViewerWindow();
-            // await logViewer.ShowDialog(this);
-
-            UpdateStatus("✅ 日志查看功能待实现");
-            Utils.Logger.Info("MainWindow", "📋 查看日志按钮被点击");
-        }
-        catch (Exception ex)
-        {
-            UpdateStatus($"❌ 打开日志查看器失败: {ex.Message}");
-            Utils.Logger.Error("MainWindow", $"❌ 打开日志查看器失败: {ex.Message}");
-        }
-    }
-
     #endregion
 
     /// <summary>
@@ -864,41 +765,6 @@ public partial class MainWindow : Window
             Utils.Logger.Error("MainWindow", $"❌ 更新状态失败: {ex.Message}");
         }
     }
-
-    /// <summary>
-    /// 更新连接指示器 - 与原项目逻辑一致
-    /// </summary>
-    private void UpdateConnectionIndicator(bool connected)
-    {
-        try
-        {
-            var indicator = this.FindControl<Border>("ConnectionIndicator");
-            var statusText = this.FindControl<TextBlock>("ConnectionStatusText");
-
-            if (indicator != null)
-            {
-                indicator.Background = connected ?
-                    Avalonia.Media.Brushes.Green :
-                    Avalonia.Media.Brushes.Red;
-            }
-
-            if (statusText != null)
-            {
-                var serverUrl = viewModel?.GetServerStatusViewModel()?.ServerUrl ?? "未知";
-                statusText.Text = connected ?
-                    $"SignalR连接: 已连接 ({serverUrl})" :
-                    $"SignalR连接: 连接失败: 由于目标计算机积极拒绝，无法连接。 ({serverUrl})";
-            }
-
-            Utils.Logger.Debug("MainWindow", $"🔗 连接状态更新: {(connected ? "已连接" : "断开连接")}");
-        }
-        catch (Exception ex)
-        {
-            Utils.Logger.Error("MainWindow", $"❌ 更新连接指示器失败: {ex.Message}");
-        }
-    }
-
-    #endregion
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {

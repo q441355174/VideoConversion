@@ -22,7 +22,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         {
             _httpClient = httpClientFactory.CreateClient("VideoConversionApi");
             _httpClient.BaseAddress = new Uri(_baseUrl);
-            Utils.Logger.Info("ApiClientService", "✅ API客户端服务已初始化");
+            // API客户端服务初始化完成（移除日志）
         }
 
         #region 基础属性
@@ -106,15 +106,10 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         {
             try
             {
-                Utils.Logger.Info("ApiClientService", "📋 获取活跃任务列表");
-
                 var response = await GetAsync<List<ConversionTaskDto>>("/api/tasks/active");
 
-                if (response.Success)
-                {
-                    Utils.Logger.Info("ApiClientService", $"✅ 获取活跃任务成功: {response.Data?.Count ?? 0} 个任务");
-                }
-                else
+                // 只在失败时记录日志
+                if (!response.Success)
                 {
                     Utils.Logger.Warning("ApiClientService", $"⚠️ 获取活跃任务失败: {response.Message}");
                 }
@@ -177,10 +172,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
                 var response = await _httpClient.PostAsync("/api/conversion/upload", form);
                 var result = await ProcessResponseAsync<string>(response);
                 
-                if (result.Success)
-                {
-                    Utils.Logger.Info("ApiClientService", $"✅ 文件上传成功: {filePath}");
-                }
+                // 文件上传结果处理（移除成功日志，保留错误日志）
                 
                 return result;
             }
@@ -211,13 +203,13 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         {
             _baseUrl = baseUrl;
             _httpClient.BaseAddress = new Uri(baseUrl);
-            Utils.Logger.Info("ApiClientService", $"🔧 基础URL已设置: {baseUrl}");
+            // 基础URL设置完成（移除日志）
         }
 
         public void SetTimeout(TimeSpan timeout)
         {
             _httpClient.Timeout = timeout;
-            Utils.Logger.Info("ApiClientService", $"🔧 超时时间已设置: {timeout}");
+            // 超时时间设置完成（移除日志）
         }
 
         public void SetHeader(string name, string value)
@@ -278,15 +270,10 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         {
             try
             {
-                Utils.Logger.Info("ApiClientService", "📊 获取磁盘空间信息");
-
                 var response = await GetAsync<DiskSpaceDto>("/api/space/info");
 
-                if (response.Success)
-                {
-                    Utils.Logger.Info("ApiClientService", "✅ 磁盘空间信息获取成功");
-                }
-                else
+                // 只在失败时记录日志
+                if (!response.Success)
                 {
                     Utils.Logger.Warning("ApiClientService", $"⚠️ 磁盘空间信息获取失败: {response.Message}");
                 }

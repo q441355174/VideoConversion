@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using VideoConversion_ClientTo.Presentation.ViewModels;
+using VideoConversion_ClientTo.Infrastructure;
 
 namespace VideoConversion_ClientTo.Infrastructure.Services
 {
@@ -24,12 +25,18 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
     public class FilePreprocessorService : IFilePreprocessorService
     {
         private readonly IFileDialogService _fileDialogService;
+        private readonly FFmpegService _ffmpegService;
+        private readonly ThumbnailService _thumbnailService;
         private readonly string[] _supportedExtensions;
 
         public FilePreprocessorService(IFileDialogService fileDialogService)
         {
             _fileDialogService = fileDialogService;
+            _ffmpegService = FFmpegService.Instance;
+            _thumbnailService = ThumbnailService.Instance;
             _supportedExtensions = _fileDialogService.GetSupportedVideoExtensions();
+
+            Utils.Logger.Info("FilePreprocessorService", "✅ 文件预处理服务已初始化，集成FFmpeg和缩略图服务");
         }
 
         public async Task<PreprocessResult> PreprocessFilesAsync(
@@ -42,7 +49,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
 
             try
             {
-                Utils.Logger.Info("FilePreprocessorService", "🔄 开始文件预处理");
+                // 开始文件预处理（移除日志）
                 progress?.Report("开始文件预处理...");
 
                 // 1. 展开文件路径（处理目录）
@@ -216,8 +223,8 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
                         ModifiedTime = fileInfo.LastWriteTime
                     };
 
-                    // 创建FileItemViewModel
-                    processedFile.ViewModel = CreateFileItemViewModel(processedFile);
+                    // 创建FileItemViewModel并进行视频分析
+                    processedFile.ViewModel = await CreateFileItemViewModelWithAnalysisAsync(processedFile, progress);
 
                     processedFiles.Add(processedFile);
                     Utils.Logger.Debug("FilePreprocessorService", $"📁 处理文件: {processedFile.FileName}");
@@ -231,32 +238,86 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
             return processedFiles;
         }
 
-        private FileItemViewModel CreateFileItemViewModel(ProcessedFileInfo fileInfo)
+        /// <summary>
+        /// 创建FileItemViewModel并进行完整的视频分析
+        /// </summary>
+        private async Task<FileItemViewModel> CreateFileItemViewModelWithAnalysisAsync(
+            ProcessedFileInfo fileInfo,
+            IProgress<string>? progress = null)
         {
-            return new FileItemViewModel
+            var fileItem = new Presentation.ViewModels.FileItemViewModel
             {
                 FileName = fileInfo.FileName,
                 FilePath = fileInfo.FilePath,
-                FileSize = fileInfo.FileSize,
-                Status = "等待处理",
+                FileSize = FormatFileSize(fileInfo.FileSize),
+                Status = Presentation.ViewModels.FileItemStatus.Pending,
                 Progress = 0,
                 IsConverting = false,
-                IsCompleted = false
+                CanConvert = true,
+                LocalTaskId = Guid.NewGuid().ToString(),
+                StatusText = "分析中..."
             };
-        }
 
-        private PreprocessStatistics CalculateStatistics(List<ProcessedFileInfo> processedFiles, int skippedCount)
-        {
-            return new PreprocessStatistics
+            try
             {
-                TotalFiles = processedFiles.Count + skippedCount,
-                ProcessedFiles = processedFiles.Count,
-                SkippedFiles = skippedCount,
-                TotalSize = processedFiles.Sum(f => f.FileSize),
-                FormattedTotalSize = FormatFileSize(processedFiles.Sum(f => f.FileSize))
+                // 通知开始分析
+                progress?.Report($"分析视频信息: {fileInfo.FileName}");
+
+                // 使用FFmpeg获取视频信息
+                var videoInfo = await _ffmpegService.GetVideoInfoAsync(fileInfo.FilePath);
+                if (videoInfo != null)
+                {
+                    fileItem.SourceFormat = videoInfo.Format;
+                    fileItem.SourceResolution = videoInfo.Resolution;
+                    fileItem.Duration = videoInfo.Duration;
+                    fileItem.EstimatedFileSize = videoInfo.EstimatedSize;
+                    fileItem.EstimatedDuration = videoInfo.EstimatedDuration;
+
+                    // 视频信息分析完成（移除日志）
+                }
+
+                // 生成缩略图
+                progress?.Report($"生成缩略图: {fileInfo.FileName}");
+                var thumbnail = await _thumbnailService.GetThumbnailAsync(fileInfo.FilePath, 100, 70);
+                if (thumbnail != null)
+                {
+                    fileItem.Thumbnail = thumbnail;
+                    Utils.Logger.Info("FilePreprocessorService", $"✅ 缩略图生成完成: {fileInfo.FileName}");
+                }
+
+                fileItem.StatusText = "等待处理";
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("FilePreprocessorService", $"❌ 视频分析失败: {fileInfo.FileName} - {ex.Message}");
+
+                // 设置默认值
+                fileItem.SourceFormat = Path.GetExtension(fileInfo.FilePath).TrimStart('.').ToUpper();
+                fileItem.SourceResolution = "未知";
+                fileItem.Duration = "未知";
+                fileItem.StatusText = "分析失败";
+            }
+
+            return fileItem;
+        }
+
+        private FileItemViewModel CreateFileItemViewModel(ProcessedFileInfo fileInfo)
+        {
+            return new Presentation.ViewModels.FileItemViewModel
+            {
+                FileName = fileInfo.FileName,
+                FilePath = fileInfo.FilePath,
+                FileSize = FormatFileSize(fileInfo.FileSize),
+                Status = Presentation.ViewModels.FileItemStatus.Pending,
+                Progress = 0,
+                IsConverting = false,
+                CanConvert = true
             };
         }
 
+        /// <summary>
+        /// 格式化文件大小
+        /// </summary>
         private string FormatFileSize(long bytes)
         {
             if (bytes == 0) return "0 B";
@@ -270,6 +331,18 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
                 len = len / 1024;
             }
             return $"{len:0.##} {sizes[order]}";
+        }
+
+        private PreprocessStatistics CalculateStatistics(List<ProcessedFileInfo> processedFiles, int skippedCount)
+        {
+            return new PreprocessStatistics
+            {
+                TotalFiles = processedFiles.Count + skippedCount,
+                ProcessedFiles = processedFiles.Count,
+                SkippedFiles = skippedCount,
+                TotalSize = processedFiles.Sum(f => f.FileSize),
+                FormattedTotalSize = FormatFileSize(processedFiles.Sum(f => f.FileSize))
+            };
         }
     }
 

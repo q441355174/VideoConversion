@@ -59,6 +59,14 @@ namespace VideoConversion_ClientTo.Application.Interfaces
         Task<bool> StartConversionAsync(TaskId taskId, StartConversionRequestDto request);
 
         /// <summary>
+        /// 批量转换API - 与Client项目逻辑一致
+        /// </summary>
+        Task<ApiResponseDto<object>> StartBatchConversionAsync(
+            List<string> filePaths,
+            StartConversionRequestDto request,
+            IProgress<object>? progress = null);
+
+        /// <summary>
         /// 取消转换任务
         /// </summary>
         Task<bool> CancelTaskAsync(TaskId taskId);

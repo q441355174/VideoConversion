@@ -133,12 +133,12 @@ namespace VideoConversion_ClientTo.Views
         /// <summary>
         /// 更新转换进度
         /// </summary>
-        public void UpdateConversionProgress(string taskId, int progress, double? speed, double? eta)
+        public void UpdateConversionProgress(string taskId, double progress, string status, double? fps = null, double? eta = null)
         {
             try
             {
                 // 调用ViewModel更新进度
-                _viewModel?.UpdateConversionProgress(taskId, progress, speed, eta);
+                _viewModel?.UpdateConversionProgress(taskId, progress, status, fps, eta);
                 Utils.Logger.Debug("FileUploadView", $"📊 更新转换进度: {taskId} - {progress}%");
             }
             catch (Exception ex)
@@ -156,7 +156,6 @@ namespace VideoConversion_ClientTo.Views
             {
                 // 这里可以调用ViewModel的方法来更新目标信息
                 // _viewModel?.UpdateTargetInfoFromSettings();
-                Utils.Logger.Debug("FileUploadView", "✅ 从转换设置更新目标信息");
             }
             catch (Exception ex)
             {

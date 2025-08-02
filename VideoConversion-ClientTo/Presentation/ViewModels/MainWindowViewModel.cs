@@ -165,14 +165,14 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
                 IsLoading = true;
                 ConnectionStatus = "正在连接...";
                 
-                Utils.Logger.Info("MainWindowViewModel", "🔌 开始连接服务器");
+                // 开始连接服务器（移除日志）
                 
                 var connected = await _signalRClient.ConnectAsync();
                 if (connected)
                 {
                     IsConnected = true;
                     ConnectionStatus = "已连接";
-                    Utils.Logger.Info("MainWindowViewModel", "✅ 服务器连接成功");
+                    // 服务器连接成功（移除日志）
                     
                     // 加载任务列表
                     await LoadTasksAsync();
@@ -324,13 +324,22 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
             {
                 Utils.Logger.Info("MainWindowViewModel", "⚙️ 打开系统设置");
 
-                // 创建并显示转换设置窗口
-                var settingsWindow = new Views.ConversionSettingsWindow();
+                // 🔑 创建并显示系统设置窗口
+                var settingsWindow = new Views.SystemSetting.SystemSettingsWindow();
 
                 // 获取主窗口
                 if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
                 {
                     await settingsWindow.ShowDialog(desktop.MainWindow);
+
+                    // 检查设置是否有变化
+                    if (settingsWindow.SettingsChanged)
+                    {
+                        Utils.Logger.Info("MainWindowViewModel", "📝 系统设置已更改，刷新相关状态");
+
+                        // 更新状态显示
+                        UpdateStatus("⚙️ 系统设置已更新");
+                    }
                 }
                 else
                 {
@@ -342,6 +351,7 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
             catch (Exception ex)
             {
                 Utils.Logger.Error("MainWindowViewModel", $"❌ 打开系统设置失败: {ex.Message}");
+                UpdateStatus($"❌ 打开系统设置失败: {ex.Message}");
             }
         }
 
@@ -352,13 +362,22 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
             {
                 Utils.Logger.Info("MainWindowViewModel", "⚙️ 打开服务器设置");
 
-                // 创建并显示转换设置窗口（这里可以创建专门的服务器设置窗口）
-                var settingsWindow = new Views.ConversionSettingsWindow();
+                // 🔑 创建并显示系统设置窗口 - 与Client项目逻辑一致
+                var settingsWindow = new Views.SystemSetting.SystemSettingsWindow();
 
                 // 获取主窗口
                 if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
                 {
                     await settingsWindow.ShowDialog(desktop.MainWindow);
+
+                    // 检查设置是否有变化 - 与Client项目一致
+                    if (settingsWindow.SettingsChanged)
+                    {
+                        Utils.Logger.Info("MainWindowViewModel", "📝 服务器设置已更改，刷新相关状态");
+
+                        // 更新状态显示
+                        UpdateStatus("⚙️ 服务器设置已更新");
+                    }
                 }
                 else
                 {
@@ -378,7 +397,7 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         {
             try
             {
-                Utils.Logger.Info("MainWindowViewModel", "🔄 刷新磁盘空间信息");
+                // 刷新磁盘空间信息（移除日志）
                 // TODO: 实现刷新磁盘空间信息
                 await Task.Delay(100); // 模拟异步操作
             }
@@ -396,7 +415,7 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         {
             IsConnected = true;
             ConnectionStatus = "已连接";
-            Utils.Logger.Info("MainWindowViewModel", "✅ SignalR连接成功");
+            // SignalR连接成功（移除日志）
         }
 
         private void OnSignalRDisconnected(object? sender, string message)
@@ -676,7 +695,7 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         {
             try
             {
-                Utils.Logger.Info("MainWindowViewModel", "🚀 初始化主窗口");
+                // 初始化主窗口（移除日志）
                 
                 // 自动连接到服务器
                 await ConnectToServerAsync();

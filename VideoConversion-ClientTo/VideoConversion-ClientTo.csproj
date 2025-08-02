@@ -58,4 +58,32 @@
       <Folder Include="Models\" />
       <Folder Include="Services\" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Views\SystemSetting\SystemSettingsWindow.axaml.cs">
+        <DependentUpon>SystemSettingsWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\SystemSetting\SystemSettingsWindow.axaml.cs">
+        <DependentUpon>SystemSettingsWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\PreprocessProgressWindow.axaml.cs">
+        <DependentUpon>PreprocessProgressWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="Views\ConversionSettingsWindow.axaml.cs">
+        <DependentUpon>ConversionSettingsWindow.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Remove="Views\SystemSettingsWindow.axaml.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AdditionalFiles Include="Views\SystemSetting\SystemSettingsWindow.axaml" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <AvaloniaXaml Remove="Views\SystemSettingsWindow.axaml" />
+    </ItemGroup>
 </Project>

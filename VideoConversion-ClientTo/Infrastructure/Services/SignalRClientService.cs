@@ -176,7 +176,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
             // 任务删除
             _connection.On<string>("TaskDeleted", (taskId) =>
             {
-                Utils.Logger.Info("SignalRClientService", $"🗑️ 任务删除: {taskId}");
+                // 任务删除通知（移除日志）
                 TaskDeleted?.Invoke(this, taskId);
             });
 

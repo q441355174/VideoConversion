@@ -26,7 +26,7 @@ namespace VideoConversion_ClientTo.Utils
         private static readonly object _lockObject = new object();
         private static readonly string _logDirectory;
         private static readonly string _currentLogFile;
-        private static LogLevel _minimumLogLevel = LogLevel.Debug;
+        private static LogLevel _minimumLogLevel = LogLevel.Info;
 
         /// <summary>
         /// 静态构造函数 - 初始化日志目录和文件
@@ -61,10 +61,7 @@ namespace VideoConversion_ClientTo.Utils
                 var today = DateTime.Now.ToString("yyyy-MM-dd");
                 _currentLogFile = Path.Combine(_logDirectory, $"app_{today}.log");
 
-                // 写入启动日志
-                WriteToFile(LogLevel.Info, "Logger", "日志系统已初始化");
-                WriteToFile(LogLevel.Info, "Logger", $"日志目录: {_logDirectory}");
-                WriteToFile(LogLevel.Info, "Logger", $"当前日志文件: {_currentLogFile}");
+                // 日志系统初始化完成（移除启动日志）
             }
             catch (Exception ex)
             {
@@ -275,7 +272,7 @@ namespace VideoConversion_ClientTo.Utils
                     if (fileInfo.CreationTime < cutoffDate)
                     {
                         File.Delete(logFile);
-                        Info("Logger", $"已删除旧日志文件: {Path.GetFileName(logFile)}");
+                        // 旧日志文件已删除（移除日志）
                     }
                 }
             }

@@ -21,7 +21,7 @@ namespace VideoConversion_ClientTo.Infrastructure
         {
             // 注册应用服务
             services.AddScoped<IConversionTaskService, ConversionTaskService>();
-            services.AddScoped<IApiClient, ApiClientService>();
+            services.AddSingleton<IApiClient, ApiClientService>(); // 🔑 改为单例以支持ChunkedUploadService实时控制
             services.AddScoped<ISignalRClient, SignalRClientService>();
 
             // 注册基础设施服务

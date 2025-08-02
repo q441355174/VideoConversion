@@ -1,0 +1,564 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:VideoConversion_ClientTo.Presentation.ViewModels"
+        x:Class="VideoConversion_ClientTo.Views.SystemSetting.SystemSettingsWindow"
+        x:DataType="vm:SystemSettingsViewModel"
+        Title="系统设置"
+        Width="600" Height="500"
+        MinWidth="500" MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
+            <TextBlock Text="⚙️" FontSize="24" VerticalAlignment="Center" Margin="0,0,10,0" />
+            <TextBlock Text="系统设置"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- 设置内容 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="20">
+
+                <!-- 服务器设置 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="🌐 服务器设置"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="服务器地址:"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Medium" />
+
+                            <TextBox Grid.Column="1"
+                                     Name="ServerAddressTextBox"
+                                     Text="{Binding ServerAddress}"
+                                     Margin="10,0"
+                                     Padding="10,8"
+                                     CornerRadius="4"
+                                     Watermark="http://localhost:5065" />
+
+                            <Button Grid.Column="2"
+                                    Name="TestConnectionBtn"
+                                    Content="测试连接"
+                                    Background="#3498db"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="15,8"
+                                    CornerRadius="4"
+                                    IsEnabled="{Binding !IsTestingConnection}"
+                                    Command="{Binding TestConnectionCommand}">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#2980b9" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+                        </Grid>
+
+                        <!-- 连接状态指示器 -->
+                        <StackPanel Name="ConnectionStatusPanel"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                            <Border Name="ConnectionStatusIndicator"
+                                    Width="12" Height="12"
+                                    CornerRadius="6"
+                                    Background="{Binding ConnectionStatusColor}" />
+                            <TextBlock Name="ConnectionStatusText"
+                                       Text="{Binding ConnectionStatus}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 并发设置 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="⚡ 并发设置"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <!-- 同时上传数量 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="60" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="同时上传数量:"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Medium" />
+
+                            <Slider Grid.Column="1"
+                                    Name="MaxUploadsSlider"
+                                    Value="{Binding MaxConcurrentUploads}"
+                                    Minimum="1" Maximum="10"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="10,0" />
+
+                            <TextBlock Grid.Column="2"
+                                       Name="MaxUploadsValueText"
+                                       Text="{Binding MaxConcurrentUploads}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       FontWeight="Bold"
+                                       FontSize="14" />
+                        </Grid>
+
+                        <!-- 同时下载数量 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="60" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="同时下载数量:"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Medium" />
+
+                            <Slider Grid.Column="1"
+                                    Name="MaxDownloadsSlider"
+                                    Value="{Binding MaxConcurrentDownloads}"
+                                    Minimum="1" Maximum="10"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="10,0" />
+
+                            <TextBlock Grid.Column="2"
+                                       Name="MaxDownloadsValueText"
+                                       Text="{Binding MaxConcurrentDownloads}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       FontWeight="Bold"
+                                       FontSize="14" />
+                        </Grid>
+
+                        <!-- 分片并发数设置 -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,0">
+                            <TextBlock Grid.Column="0"
+                                       Text="分片并发数:"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Medium" />
+
+                            <Slider Grid.Column="1"
+                                    Name="MaxChunksSlider"
+                                    Value="{Binding MaxConcurrentChunks}"
+                                    Minimum="1" Maximum="8"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    Margin="10,0" />
+
+                            <TextBlock Grid.Column="2"
+                                       Name="MaxChunksValueText"
+                                       Text="{Binding MaxConcurrentChunks}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Center"
+                                       FontWeight="Bold"
+                                       FontSize="14" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 其他设置 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="🔧 其他设置"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <!-- 自动开始转换 -->
+                        <CheckBox Name="AutoStartConversionCheckBox"
+                                  IsChecked="{Binding AutoStartConversion}"
+                                  Content="上传完成后自动开始转换"
+                                  FontWeight="Medium" />
+
+                        <!-- 显示通知 -->
+                        <CheckBox Name="ShowNotificationsCheckBox"
+                                  IsChecked="{Binding ShowNotifications}"
+                                  Content="显示系统通知"
+                                  FontWeight="Medium" />
+
+                        <!-- 默认输出路径 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="默认输出路径:"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Medium" />
+
+                            <TextBox Grid.Column="1"
+                                     Name="DefaultOutputPathTextBox"
+                                     Text="{Binding DefaultOutputPath}"
+                                     Margin="10,0"
+                                     Padding="10,8"
+                                     CornerRadius="4"
+                                     IsReadOnly="True"
+                                     Watermark="选择默认输出文件夹" />
+
+                            <Button Grid.Column="2"
+                                    Name="BrowseOutputPathBtn"
+                                    Content="浏览..."
+                                    Background="#95a5a6"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="15,8"
+                                    CornerRadius="4"
+                                    Command="{Binding BrowseOutputPathCommand}">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#7f8c8d" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 系统信息 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="ℹ️ 系统信息"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- 左列 -->
+                            <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,10,0">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="服务器版本:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="ServerVersionText" Text="{Binding ServerVersion}" FontSize="11" FontWeight="Medium" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="FFmpeg版本:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="FFmpegVersionText" Text="{Binding FfmpegVersion}" FontSize="11" FontWeight="Medium" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- 右列 -->
+                            <StackPanel Grid.Column="1" Spacing="8" Margin="10,0,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="硬件加速:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="HardwareAccelText" Text="{Binding HardwareAcceleration}" FontSize="11" FontWeight="Medium" Foreground="#28a745" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="运行时间:" FontSize="11" Foreground="#6c757d" Width="80" />
+                                    <TextBlock Name="UptimeText" Text="{Binding Uptime}" FontSize="11" FontWeight="Medium" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 刷新按钮 -->
+                        <Button Name="RefreshSystemInfoBtn"
+                                Content="🔄 刷新系统信息"
+                                Background="#17a2b8"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Padding="15,8"
+                                CornerRadius="4"
+                                HorizontalAlignment="Left"
+                                Command="{Binding RefreshSystemInfoCommand}">
+                            <Button.Styles>
+                                <Style Selector="Button:pointerover">
+                                    <Setter Property="Background" Value="#138496" />
+                                </Style>
+                            </Button.Styles>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- 系统管理 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="🔧 系统管理"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0"
+                                    Name="ConfigSpaceBtn"
+                                    Content="💾 配置磁盘空间"
+                                    Background="#007bff"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Margin="0,0,5,0">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#0056b3" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+
+                            <Button Grid.Column="1"
+                                    Name="CleanupFilesBtn"
+                                    Content="🗑️ 清理临时文件"
+                                    Background="#28a745"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Margin="5,0"
+                                    Command="{Binding CleanupFilesCommand}">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#218838" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+
+                            <Button Grid.Column="2"
+                                    Name="ViewLogsBtn"
+                                    Content="📋 查看系统日志"
+                                    Background="#6c757d"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="12,8"
+                                    CornerRadius="4"
+                                    Margin="5,0,0,0">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#5a6268" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 数据库信息 -->
+                <Border Background="#f8f9fa"
+                        CornerRadius="8"
+                        Padding="20">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="💾 数据库信息"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="#2c3e50" />
+
+                        <!-- 数据库路径 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="数据库路径:"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Medium" />
+
+                            <TextBox Grid.Column="1"
+                                     Name="DatabasePathTextBox"
+                                     Text="{Binding DatabasePath}"
+                                     Margin="10,0"
+                                     Padding="10,8"
+                                     CornerRadius="4"
+                                     IsReadOnly="True"
+                                     FontSize="12" />
+
+                            <Button Grid.Column="2"
+                                    Name="OpenDatabaseFolderBtn"
+                                    Content="打开文件夹"
+                                    Background="#17a2b8"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="15,8"
+                                    CornerRadius="4"
+                                    Command="{Binding OpenDatabaseFolderCommand}">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#138496" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+                        </Grid>
+
+                        <!-- 数据库状态 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="数据库状态:"
+                                       VerticalAlignment="Center"
+                                       FontWeight="Medium" />
+
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="10"
+                                        Margin="10,0">
+                                <Border Name="DatabaseStatusIndicator"
+                                        Width="12" Height="12"
+                                        CornerRadius="6"
+                                        Background="Gray"
+                                        VerticalAlignment="Center" />
+                                <TextBlock Name="DatabaseStatusText"
+                                           Text="{Binding DatabaseStatus}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Name="DatabaseSizeText"
+                                           Text="{Binding DatabaseSize}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center"
+                                           Foreground="#666" />
+                            </StackPanel>
+
+                            <Button Grid.Column="2"
+                                    Name="BackupDatabaseBtn"
+                                    Content="备份"
+                                    Background="#28a745"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="15,8"
+                                    CornerRadius="4"
+                                    Margin="0,0,5,0"
+                                    Command="{Binding BackupDatabaseCommand}">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#218838" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+
+                            <Button Grid.Column="3"
+                                    Name="RestoreDatabaseBtn"
+                                    Content="恢复"
+                                    Background="#ffc107"
+                                    Foreground="#212529"
+                                    BorderThickness="0"
+                                    Padding="15,8"
+                                    CornerRadius="4"
+                                    Command="{Binding RestoreDatabaseCommand}">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover">
+                                        <Setter Property="Background" Value="#e0a800" />
+                                    </Style>
+                                </Button.Styles>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 底部按钮 -->
+        <Grid Grid.Row="2" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Name="ResetBtn"
+                    Content="重置默认"
+                    Background="#e74c3c"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Padding="20,10"
+                    CornerRadius="6"
+                    Command="{Binding ResetSettingsCommand}">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Background" Value="#c0392b" />
+                    </Style>
+                </Button.Styles>
+            </Button>
+
+            <Button Grid.Column="2"
+                    Name="CancelBtn"
+                    Content="取消"
+                    Background="#95a5a6"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Padding="20,10"
+                    CornerRadius="6"
+                    Margin="0,0,10,0"
+                    Click="CancelBtn_Click">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Background" Value="#7f8c8d" />
+                    </Style>
+                </Button.Styles>
+            </Button>
+
+            <Button Grid.Column="3"
+                    Name="SaveBtn"
+                    Content="保存设置"
+                    Background="#27ae60"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Padding="20,10"
+                    CornerRadius="6"
+                    Command="{Binding SaveSettingsCommand}">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover">
+                        <Setter Property="Background" Value="#229954" />
+                    </Style>
+                </Button.Styles>
+            </Button>
+        </Grid>
+    </Grid>
+</Window>
