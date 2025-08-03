@@ -1,0 +1,193 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:VideoConversion_ClientTo.Presentation.ViewModels.Dialogs"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="600"
+        x:Class="VideoConversion_ClientTo.Presentation.Views.Dialogs.DiskSpaceConfigDialog"
+        x:DataType="vm:DiskSpaceConfigViewModel"
+        Title="磁盘空间配置"
+        Width="500" Height="600"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 标题 -->
+        <TextBlock Grid.Row="0" Text="磁盘空间配置" FontSize="18" FontWeight="Bold" 
+                   Foreground="#2c3e50" Margin="0,0,0,20" HorizontalAlignment="Center"/>
+
+        <!-- 配置内容 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="20">
+
+                <!-- 当前使用情况 -->
+                <Border Background="#f8f9fa" CornerRadius="8" Padding="15" BorderBrush="#dee2e6" BorderThickness="1">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="📊 当前使用情况" FontWeight="Bold" FontSize="14" Foreground="#2c3e50"/>
+
+                        <ProgressBar Name="CurrentUsageBar"
+                                   Value="{Binding DiskUsagePercentage}"
+                                   Maximum="100"
+                                   Height="25"
+                                   Background="#e9ecef"
+                                   Foreground="#007bff"
+                                   CornerRadius="12"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="5">
+                                <TextBlock Text="已用" FontSize="11" Foreground="#6c757d" HorizontalAlignment="Center"/>
+                                <TextBlock Name="CurrentUsedText" Text="{Binding FormattedUsedSpace}"
+                                         FontSize="12" Foreground="#dc3545" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="5">
+                                <TextBlock Text="总计" FontSize="11" Foreground="#6c757d" HorizontalAlignment="Center"/>
+                                <TextBlock Name="CurrentTotalText" Text="{Binding FormattedTotalSpace}"
+                                         FontSize="12" Foreground="#495057" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Text="可用" FontSize="11" Foreground="#6c757d" HorizontalAlignment="Center"/>
+                                <TextBlock Name="CurrentAvailableText" Text="{Binding FormattedAvailableSpace}"
+                                         FontSize="12" Foreground="#28a745" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                            <TextBlock Text="使用率:" FontSize="11" Foreground="#6c757d"/>
+                            <TextBlock Name="CurrentUsagePercentText" Text="{Binding FormattedUsagePercentage}"
+                                     FontSize="11" Foreground="#007bff" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 空间配置 -->
+                <Border Background="White" CornerRadius="8" Padding="15" BorderBrush="#dee2e6" BorderThickness="1">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="⚙️ 空间配置" FontWeight="Bold" FontSize="14" Foreground="#2c3e50"/>
+
+                        <!-- 启用/禁用空间限制 -->
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <CheckBox Name="EnableSpaceLimitCheckBox"
+                                      Content="启用磁盘空间限制"
+                                      IsChecked="{Binding EnableSpaceLimit}"
+                                      FontSize="12"/>
+                        </StackPanel>
+
+                        <!-- 最大总空间 -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding EnableSpaceLimit}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="最大总空间:" FontSize="12" Foreground="#495057" VerticalAlignment="Center"/>
+                                <TextBlock Name="MaxSpaceValueText" Text="{Binding FormattedMaxSpace}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="#007bff" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Slider Name="MaxSpaceSlider"
+                                    Value="{Binding MaxSpaceGB}"
+                                    Minimum="10" Maximum="1000"
+                                    TickFrequency="10" IsSnapToTickEnabled="True"
+                                    Height="30"/>
+                            <Grid>
+                                <TextBlock Text="10 GB" FontSize="10" Foreground="#6c757d" HorizontalAlignment="Left"/>
+                                <TextBlock Text="1000 GB" FontSize="10" Foreground="#6c757d" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- 保留空间 -->
+                        <StackPanel Spacing="8" IsEnabled="{Binding EnableSpaceLimit}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="保留空间:" FontSize="12" Foreground="#495057" VerticalAlignment="Center"/>
+                                <TextBlock Name="ReservedSpaceValueText" Text="{Binding FormattedReservedSpace}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="#28a745" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Slider Name="ReservedSpaceSlider"
+                                    Value="{Binding ReservedSpaceGB}"
+                                    Minimum="1" Maximum="50"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    Height="30"/>
+                            <Grid>
+                                <TextBlock Text="1 GB" FontSize="10" Foreground="#6c757d" HorizontalAlignment="Left"/>
+                                <TextBlock Text="50 GB" FontSize="10" Foreground="#6c757d" HorizontalAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- 效果预览 -->
+                        <Border Background="#f8f9fa" CornerRadius="4" Padding="10" IsVisible="{Binding EnableSpaceLimit}">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="📋 效果预览" FontSize="11" FontWeight="SemiBold" Foreground="#495057"/>
+                                <TextBlock Name="EffectiveSpaceText" Text="{Binding EffectiveSpaceText}" FontSize="11" Foreground="#6c757d"/>
+                                <TextBlock Name="ConfigWarningText" Text="{Binding ConfigWarningText}" FontSize="11" Foreground="#dc3545"
+                                           IsVisible="{Binding HasConfigWarning}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- 自动清理 -->
+                <Border Background="White" CornerRadius="8" Padding="15" BorderBrush="#dee2e6" BorderThickness="1">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="🧹 自动清理" FontWeight="Bold" FontSize="14" Foreground="#2c3e50"/>
+
+                        <CheckBox Name="AutoCleanupCheckBox"
+                                  Content="启用自动清理"
+                                  IsChecked="{Binding AutoCleanup}"
+                                  FontSize="12"/>
+
+                        <StackPanel Spacing="10" IsEnabled="{Binding AutoCleanup}">
+                            <CheckBox Name="CleanupDownloadedCheckBox"
+                                      Content="清理已下载的文件"
+                                      IsChecked="{Binding CleanupDownloaded}"
+                                      FontSize="11" Margin="20,0,0,0"/>
+                            <CheckBox Name="CleanupTempCheckBox"
+                                      Content="清理临时文件"
+                                      IsChecked="{Binding CleanupTemp}"
+                                      FontSize="11" Margin="20,0,0,0"/>
+                        </StackPanel>
+
+                        <TextBlock Text="自动删除超过指定时间的临时文件和转换结果"
+                                 FontSize="11"
+                                 Foreground="#6c757d"
+                                 TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 按钮区域 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,20,0,0">
+            <Button Name="RefreshBtn"
+                    Content="刷新"
+                    Command="{Binding RefreshCommand}"
+                    Background="#6c757d" Foreground="White"
+                    CornerRadius="4" Padding="15,8" FontSize="12"/>
+            <Button Name="ManualCleanupBtn"
+                    Content="手动清理"
+                    Command="{Binding ManualCleanupCommand}"
+                    Background="#ffc107" Foreground="White"
+                    CornerRadius="4" Padding="15,8" FontSize="12"/>
+            <Button Name="CancelBtn"
+                    Content="取消"
+                    Command="{Binding CancelCommand}"
+                    Background="#6c757d" Foreground="White"
+                    CornerRadius="4" Padding="15,8" FontSize="12"/>
+            <Button Name="SaveBtn"
+                    Content="保存配置"
+                    Command="{Binding SaveCommand}"
+                    Background="#007bff" Foreground="White"
+                    CornerRadius="4" Padding="15,8" FontSize="12"/>
+        </StackPanel>
+
+    </Grid>
+</Window>
