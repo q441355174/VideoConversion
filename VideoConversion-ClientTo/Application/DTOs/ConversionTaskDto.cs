@@ -259,4 +259,82 @@ namespace VideoConversion_ClientTo.Application.DTOs
             };
         }
     }
+
+    /// <summary>
+    /// 系统状态信息DTO - 与Client项目一致
+    /// </summary>
+    public class SystemStatusDto
+    {
+        [JsonPropertyName("serverVersion")]
+        public string ServerVersion { get; set; } = "";
+
+        [JsonPropertyName("ffmpegVersion")]
+        public string FfmpegVersion { get; set; } = "";
+
+        [JsonPropertyName("hardwareAcceleration")]
+        public string HardwareAcceleration { get; set; } = "";
+
+        [JsonPropertyName("uptime")]
+        public string Uptime { get; set; } = "";
+
+        [JsonPropertyName("availableDiskSpace")]
+        public long AvailableDiskSpace { get; set; }
+
+        [JsonPropertyName("totalDiskSpace")]
+        public long TotalDiskSpace { get; set; }
+
+        [JsonPropertyName("activeTasks")]
+        public int ActiveTasks { get; set; }
+
+        [JsonPropertyName("queuedTasks")]
+        public int QueuedTasks { get; set; }
+
+        [JsonPropertyName("cpuUsage")]
+        public double CpuUsage { get; set; }
+
+        [JsonPropertyName("memoryUsage")]
+        public double MemoryUsage { get; set; }
+    }
+
+    /// <summary>
+    /// 系统诊断信息DTO - 与Client项目一致
+    /// </summary>
+    public class SystemDiagnosticDto
+    {
+        [JsonPropertyName("category")]
+        public string Category { get; set; } = "";
+
+        [JsonPropertyName("level")]
+        public string Level { get; set; } = "";
+
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = "";
+
+        [JsonPropertyName("timestamp")]
+        public DateTime Timestamp { get; set; }
+
+        [JsonPropertyName("details")]
+        public string? Details { get; set; }
+    }
+
+    /// <summary>
+    /// 磁盘空间配置DTO - 与Client项目一致
+    /// </summary>
+    public class DiskSpaceConfigDto
+    {
+        [JsonPropertyName("minFreeSpace")]
+        public long MinFreeSpace { get; set; }
+
+        [JsonPropertyName("autoCleanup")]
+        public bool AutoCleanup { get; set; }
+
+        [JsonPropertyName("cleanupIntervalHours")]
+        public int CleanupIntervalHours { get; set; }
+
+        [JsonPropertyName("maxFileAgeHours")]
+        public int MaxFileAgeHours { get; set; }
+
+        [JsonPropertyName("cleanupPath")]
+        public string CleanupPath { get; set; } = "";
+    }
 }

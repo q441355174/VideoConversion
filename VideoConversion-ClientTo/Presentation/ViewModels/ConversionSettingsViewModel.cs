@@ -116,6 +116,16 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         [ObservableProperty]
         private bool _settingsChanged = false;
 
+        /// <summary>
+        /// 保存完成后的回调
+        /// </summary>
+        public Action? OnSaveCompleted { get; set; }
+
+        /// <summary>
+        /// 是否已初始化
+        /// </summary>
+        private bool _isInitialized = false;
+
         // 🔑 设置摘要 - 与Client项目SettingsSummary一致
         [ObservableProperty]
         private string _settingsSummary = "";
@@ -216,16 +226,16 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
             // 🔑 获取全局转换设置服务实例 - 与Client项目完全一致
             _settingsService = ConversionSettingsService.Instance;
 
-            // 🔑 初始化集合 - 与Client项目ComboBox选项完全一致
-            Presets = new ObservableCollection<string>(GetClientPresetOptions());
-            OutputFormats = new ObservableCollection<string>(GetClientOutputFormatOptions());
-            Resolutions = new ObservableCollection<string>(GetClientResolutionOptions());
-            VideoCodecs = new ObservableCollection<string>(GetClientVideoCodecOptions());
-            QualityModes = new ObservableCollection<string>(GetClientQualityModeOptions());
+            // 🔑 初始化集合 - 使用ConversionOptions结构化选项替代硬编码
+            Presets = new ObservableCollection<string>(ConversionOptions.GetPresetOptions());
+            OutputFormats = new ObservableCollection<string>(ConversionOptions.GetOutputFormatDisplayNames());
+            Resolutions = new ObservableCollection<string>(ConversionOptions.GetResolutionOptions());
+            VideoCodecs = new ObservableCollection<string>(ConversionOptions.GetVideoCodecOptions());
+            QualityModes = new ObservableCollection<string>(ConversionOptions.GetQualityModeOptions());
             FrameRates = new ObservableCollection<string>(GetClientFrameRateOptions());
-            EncodingPresets = new ObservableCollection<string>(GetClientEncodingPresetOptions());
+            EncodingPresets = new ObservableCollection<string>(ConversionOptions.GetEncodingPresetOptions());
             Profiles = new ObservableCollection<string>(GetClientProfileOptions());
-            AudioCodecs = new ObservableCollection<string>(GetClientAudioCodecOptions());
+            AudioCodecs = new ObservableCollection<string>(ConversionOptions.GetAudioCodecOptions());
             AudioQualities = new ObservableCollection<string>(GetClientAudioQualityOptions());
             AudioChannels = new ObservableCollection<string>(GetClientAudioChannelOptions());
             SampleRates = new ObservableCollection<string>(GetClientSampleRateOptions());
@@ -262,23 +272,44 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         /// </summary>
         private void LoadCurrentSettings()
         {
-            try
+            // 🔧 延迟初始化设置，确保UI属性完全初始化后再加载
+            _ = Task.Run(async () =>
             {
-                // 🔑 从全局设置服务加载当前设置 - 与Client项目一致
-                _currentSettings = _settingsService.CurrentSettings;
+                try
+                {
+                    // 等待一小段时间确保UI完全初始化
+                    await Task.Delay(50);
 
-                // 🔑 加载设置到UI - 与Client项目LoadSettings()一致
-                LoadSettings(_currentSettings);
+                    // 🔑 从全局设置服务加载当前设置 - 与Client项目一致
+                    _currentSettings = await _settingsService.GetSettingsAsync();
 
-                // 🔑 更新设置摘要
-                UpdateSettingsSummary();
+                    // 🔧 在UI线程上加载设置
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        // 🔑 加载设置到UI - 与Client项目LoadSettings()一致
+                        LoadSettings(_currentSettings);
 
-                Utils.Logger.Debug("ConversionSettingsViewModel", "转码设置窗口已完成设置加载");
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Error("ConversionSettingsViewModel", $"❌ 加载当前设置失败: {ex.Message}");
-            }
+                        // 🔑 更新设置摘要
+                        UpdateSettingsSummary();
+
+                        // 🔧 标记为已初始化
+                        _isInitialized = true;
+
+                        Utils.Logger.Debug("ConversionSettingsViewModel", "✅ 转码设置窗口已完成设置加载");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Utils.Logger.Error("ConversionSettingsViewModel", $"❌ 加载当前设置失败: {ex.Message}");
+
+                    // 🔧 加载失败时使用默认设置
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        LoadDefaultSettings();
+                        _isInitialized = true;
+                    });
+                }
+            });
         }
 
         /// <summary>
@@ -400,6 +431,59 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
             }
         }
 
+        /// <summary>
+        /// 加载默认设置 - 当从服务加载失败时使用
+        /// </summary>
+        private void LoadDefaultSettings()
+        {
+            try
+            {
+                Utils.Logger.Info("ConversionSettingsViewModel", "🔧 加载默认转码设置");
+
+                var defaultSettings = new ConversionSettings
+                {
+                    // 基本设置 - 使用结构化选项的显示名称
+                    OutputFormat = "MP4 (推荐)",
+                    Resolution = "保持原始",
+
+                    // 视频设置 - 使用结构化选项
+                    VideoCodec = "H.264 (CPU)",
+                    FrameRate = "保持原始",
+                    QualityMode = "恒定质量 (CRF)",
+                    VideoQuality = "23",
+                    EncodingPreset = "中等 (推荐)",
+                    Profile = "High",
+
+                    // 音频设置 - 使用结构化选项
+                    AudioCodec = "AAC (推荐)",
+                    AudioChannels = "保持原始",
+                    AudioQuality = "192 kbps (高质量)",
+                    SampleRate = "48 kHz (DVD质量)",
+                    AudioVolume = "0",
+
+                    // 高级设置
+                    HardwareAcceleration = "自动检测",
+                    PixelFormat = "YUV420P (标准)",
+                    ColorSpace = "BT.709 (HD)",
+                    FastStart = true,
+                    Deinterlace = false,
+                    TwoPass = false,
+
+                    // 滤镜设置
+                    Denoise = "无",
+                    VideoFilters = "",
+                    AudioFilters = ""
+                };
+
+                LoadSettings(defaultSettings);
+                Utils.Logger.Info("ConversionSettingsViewModel", "✅ 默认转码设置已加载");
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionSettingsViewModel", $"❌ 加载默认设置失败: {ex.Message}");
+            }
+        }
+
         #endregion
 
         #region 命令 - 完全按照Client项目事件处理逻辑
@@ -408,10 +492,17 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         /// 保存设置命令 - 完全按照Client项目SaveButton_Click逻辑
         /// </summary>
         [RelayCommand]
-        public void SaveSettings()
+        public async Task SaveSettingsAsync()
         {
             try
             {
+                // 🔧 检查是否已初始化
+                if (!_isInitialized)
+                {
+                    Utils.Logger.Warning("ConversionSettingsViewModel", "⚠️ 设置尚未初始化完成，无法保存");
+                    return;
+                }
+
                 // 🔑 验证设置有效性
                 if (!ValidateSettings())
                 {
@@ -422,20 +513,26 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
                 // 🔑 获取当前UI中的设置 - 与Client项目GetCurrentSettings()一致
                 var newSettings = GetCurrentSettings();
 
-                // 🔑 直接更新全局设置服务 - 与Client项目一致
-                _settingsService.UpdateSettings(newSettings);
+                // 🔧 异步保存到设置服务
+                await _settingsService.SaveSettingsAsync(newSettings);
+
+                // 🔑 更新当前设置引用
+                _currentSettings = newSettings;
 
                 // 🔑 更新设置摘要
                 UpdateSettingsSummary();
 
                 SettingsChanged = true;
 
-                Utils.Logger.Debug("ConversionSettingsViewModel", $"转码设置已保存到全局服务: {newSettings.VideoCodec}, {newSettings.Resolution}");
-                // 转换设置保存完成（移除日志）
+                Utils.Logger.Info("ConversionSettingsViewModel", $"✅ 转码设置已保存: {newSettings.VideoCodec}, {newSettings.Resolution}");
+
+                // 🔧 保存完成后调用回调关闭窗口
+                OnSaveCompleted?.Invoke();
             }
             catch (Exception ex)
             {
                 Utils.Logger.Error("ConversionSettingsViewModel", $"❌ 保存转码设置失败: {ex.Message}");
+                // TODO: 显示错误消息给用户
             }
         }
 

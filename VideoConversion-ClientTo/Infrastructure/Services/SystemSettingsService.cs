@@ -12,7 +12,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         private static SystemSettingsService? _instance;
         private static readonly object _lock = new object();
         
-        private readonly DatabaseService _databaseService;
+        private readonly IDatabaseService _databaseService;
         private SystemSettings _currentSettings;
 
         public static SystemSettingsService Instance
@@ -32,7 +32,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
 
         private SystemSettingsService()
         {
-            _databaseService = ServiceLocator.GetRequiredService<DatabaseService>();
+            _databaseService = ServiceLocator.GetRequiredService<IDatabaseService>();
             _currentSettings = LoadSettingsAsync().GetAwaiter().GetResult();
         }
 

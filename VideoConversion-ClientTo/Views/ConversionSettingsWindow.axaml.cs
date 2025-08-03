@@ -23,13 +23,18 @@ namespace VideoConversion_ClientTo.Views
 
             // 创建并设置ViewModel
             _viewModel = new ConversionSettingsViewModel();
+
+            // 🔧 设置保存完成回调
+            _viewModel.OnSaveCompleted = () =>
+            {
+                SettingsChanged = true;
+                Close();
+            };
+
             DataContext = _viewModel;
 
             // 设置事件处理
             SetupEventHandlers();
-
-            // 设置窗口关闭事件 - 与Client项目一致
-            Closing += OnWindowClosing;
 
             Utils.Logger.Info("ConversionSettingsWindow", "✅ 转换设置窗口已初始化");
         }
@@ -51,14 +56,13 @@ namespace VideoConversion_ClientTo.Views
         {
             try
             {
-                // 按钮事件 - 使用Command绑定，这里只处理窗口关闭
+                // 🔧 简化按钮事件 - SaveButton通过回调自动关闭，CancelButton直接关闭
                 if (SaveButton != null)
                 {
-                    SaveButton.Click += (s, e) =>
+                    SaveButton.Click += async (s, e) =>
                     {
-                        _viewModel.SaveSettingsCommand.Execute(null);
-                        SettingsChanged = true;
-                        Close();
+                        await _viewModel.SaveSettingsAsync();
+                        // 保存完成后会通过回调自动关闭窗口
                     };
                 }
 
@@ -178,83 +182,6 @@ namespace VideoConversion_ClientTo.Views
         #region 生命周期管理 - 与Client项目一致
 
         /// <summary>
-        /// 窗口关闭事件处理 - 与SystemSettingsWindow一致
-        /// </summary>
-        private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
-        {
-            try
-            {
-                // 如果设置有变化，询问是否保存
-                if (_viewModel?.SettingsChanged == true)
-                {
-                    e.Cancel = true; // 先取消关闭
-
-                    var result = await ShowSaveConfirmationDialog();
-
-                    switch (result)
-                    {
-                        case SaveDialogResult.Save:
-                            _viewModel.SaveSettingsCommand.Execute(null);
-                            SettingsChanged = true;
-                            Close(); // 保存后关闭
-                            break;
-
-                        case SaveDialogResult.DontSave:
-                            SettingsChanged = false;
-                            Close(); // 不保存直接关闭
-                            break;
-
-                        case SaveDialogResult.Cancel:
-                            // 取消关闭，什么都不做
-                            break;
-                    }
-                }
-
-                Utils.Logger.Info("ConversionSettingsWindow", "🚪 转换设置窗口正在关闭");
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Error("ConversionSettingsWindow", $"❌ 窗口关闭处理失败: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 显示保存确认对话框
-        /// </summary>
-        private async Task<SaveDialogResult> ShowSaveConfirmationDialog()
-        {
-            try
-            {
-                var messageBoxService = new Infrastructure.Services.MessageBoxService();
-
-                // 创建自定义确认对话框
-                var dialog = new Window
-                {
-                    Title = "保存设置",
-                    Width = 400,
-                    Height = 200,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    CanResize = false
-                };
-
-                var result = SaveDialogResult.Cancel;
-
-                // 简化版对话框 - 实际项目中应该使用专门的对话框控件
-                var confirmResult = await messageBoxService.ShowConfirmAsync(
-                    "转换设置已修改，是否保存？",
-                    "保存设置",
-                    this);
-
-                return confirmResult ? SaveDialogResult.Save : SaveDialogResult.DontSave;
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Error("ConversionSettingsWindow", $"❌ 显示保存确认对话框失败: {ex.Message}");
-                return SaveDialogResult.Cancel;
-            }
-        }
-
-        /// <summary>
         /// 窗口关闭时的资源清理
         /// </summary>
         protected override void OnClosed(EventArgs e)
@@ -280,15 +207,5 @@ namespace VideoConversion_ClientTo.Views
         }
 
         #endregion
-    }
-
-    /// <summary>
-    /// 保存对话框结果枚举
-    /// </summary>
-    public enum SaveDialogResult
-    {
-        Save,
-        DontSave,
-        Cancel
     }
 }

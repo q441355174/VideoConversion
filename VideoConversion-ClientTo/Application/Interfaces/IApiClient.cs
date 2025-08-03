@@ -20,6 +20,15 @@ namespace VideoConversion_ClientTo.Application.Interfaces
 
         #endregion
 
+        #region 连接测试
+
+        /// <summary>
+        /// 测试服务器连接
+        /// </summary>
+        Task<bool> TestConnectionAsync();
+
+        #endregion
+
         #region 基础HTTP操作
 
         /// <summary>
@@ -79,13 +88,6 @@ namespace VideoConversion_ClientTo.Application.Interfaces
         #endregion
 
         #region 文件操作API
-
-        /// <summary>
-        /// 上传文件
-        /// </summary>
-        Task<ApiResponseDto<string>> UploadFileAsync(
-            string filePath, 
-            IProgress<UploadProgressDto>? progress = null);
 
         /// <summary>
         /// 下载文件

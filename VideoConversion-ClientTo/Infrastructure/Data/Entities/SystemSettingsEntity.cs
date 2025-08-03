@@ -1,114 +1,91 @@
+using SqlSugar;
 using System;
-using System.ComponentModel.DataAnnotations;
+using System.ComponentModel;
 
 namespace VideoConversion_ClientTo.Infrastructure.Data.Entities
 {
     /// <summary>
-    /// 系统设置实体
-    /// 职责: 存储系统配置信息
+    /// 系统设置数据库实体 - 与Client项目完全一致
     /// </summary>
+    [SugarTable("SystemSettings")]
     public class SystemSettingsEntity
     {
         /// <summary>
-        /// 设置键（主键）
+        /// 主键ID
         /// </summary>
-        [Key]
-        [Required]
-        [MaxLength(100)]
-        public string Key { get; set; } = string.Empty;
+        [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
+        public int Id { get; set; }
 
         /// <summary>
-        /// 设置值
+        /// 服务器地址
         /// </summary>
-        [MaxLength(2000)]
-        public string? Value { get; set; }
+        [SugarColumn(Length = 500, IsNullable = false)]
+        public string ServerAddress { get; set; } = "http://localhost:5065";
 
         /// <summary>
-        /// 设置描述
+        /// 最大同时上传数量
         /// </summary>
-        [MaxLength(500)]
-        public string? Description { get; set; }
+        [SugarColumn(IsNullable = false)]
+        public int MaxConcurrentUploads { get; set; } = 3;
+
+        /// <summary>
+        /// 最大同时下载数量
+        /// </summary>
+        [SugarColumn(IsNullable = false)]
+        public int MaxConcurrentDownloads { get; set; } = 3;
+
+        /// <summary>
+        /// 最大分片并发数
+        /// </summary>
+        [SugarColumn(IsNullable = false)]
+        public int MaxConcurrentChunks { get; set; } = 4;
+
+        /// <summary>
+        /// 是否自动开始转换
+        /// </summary>
+        [SugarColumn(IsNullable = false)]
+        public bool AutoStartConversion { get; set; } = true;
+
+        /// <summary>
+        /// 是否显示通知
+        /// </summary>
+        [SugarColumn(IsNullable = false)]
+        public bool ShowNotifications { get; set; } = true;
+
+        /// <summary>
+        /// 默认输出路径
+        /// </summary>
+        [SugarColumn(Length = 1000, IsNullable = true)]
+        public string? DefaultOutputPath { get; set; }
 
         /// <summary>
         /// 创建时间
         /// </summary>
+        [SugarColumn(IsNullable = false)]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
         /// 更新时间
         /// </summary>
+        [SugarColumn(IsNullable = false)]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
-        /// 获取布尔值
+        /// 版本号（用于数据迁移）
         /// </summary>
-        public bool GetBoolValue(bool defaultValue = false)
-        {
-            if (string.IsNullOrEmpty(Value))
-                return defaultValue;
-
-            return bool.TryParse(Value, out var result) ? result : defaultValue;
-        }
+        [SugarColumn(IsNullable = false)]
+        public int Version { get; set; } = 1;
 
         /// <summary>
-        /// 获取整数值
+        /// 转换设置JSON
         /// </summary>
-        public int GetIntValue(int defaultValue = 0)
-        {
-            if (string.IsNullOrEmpty(Value))
-                return defaultValue;
-
-            return int.TryParse(Value, out var result) ? result : defaultValue;
-        }
+        [SugarColumn(ColumnDataType = "TEXT", IsNullable = true)]
+        public string? ConversionSettings { get; set; }
 
         /// <summary>
-        /// 获取双精度值
+        /// 备注信息
         /// </summary>
-        public double GetDoubleValue(double defaultValue = 0.0)
-        {
-            if (string.IsNullOrEmpty(Value))
-                return defaultValue;
-
-            return double.TryParse(Value, out var result) ? result : defaultValue;
-        }
-
-        /// <summary>
-        /// 获取字符串值
-        /// </summary>
-        public string GetStringValue(string defaultValue = "")
-        {
-            return Value ?? defaultValue;
-        }
-
-        /// <summary>
-        /// 设置值
-        /// </summary>
-        public void SetValue(object? value)
-        {
-            Value = value?.ToString();
-            UpdatedAt = DateTime.UtcNow;
-        }
-    }
-
-    /// <summary>
-    /// 系统设置键常量
-    /// </summary>
-    public static class SystemSettingsKeys
-    {
-        public const string ServerUrl = "ServerUrl";
-        public const string DefaultOutputFormat = "DefaultOutputFormat";
-        public const string DefaultOutputLocation = "DefaultOutputLocation";
-        public const string AutoStartConversion = "AutoStartConversion";
-        public const string MaxConcurrentTasks = "MaxConcurrentTasks";
-        public const string EnableNotifications = "EnableNotifications";
-        public const string AutoDeleteCompletedTasks = "AutoDeleteCompletedTasks";
-        public const string KeepCompletedTasksDays = "KeepCompletedTasksDays";
-        public const string DefaultVideoQuality = "DefaultVideoQuality";
-        public const string DefaultAudioQuality = "DefaultAudioQuality";
-        public const string EnableHardwareAcceleration = "EnableHardwareAcceleration";
-        public const string PreferredHardwareAcceleration = "PreferredHardwareAcceleration";
-        public const string LogLevel = "LogLevel";
-        public const string ThemeMode = "ThemeMode";
-        public const string Language = "Language";
+        [SugarColumn(Length = 1000, IsNullable = true)]
+        public string? Remarks { get; set; }
     }
 }

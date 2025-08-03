@@ -302,8 +302,7 @@ public partial class MainWindow : Window
             if (refreshSpaceBtn != null)
                 refreshSpaceBtn.Click += RefreshSpaceBtn_Click;
 
-            if (serverSettingsBtn != null)
-                serverSettingsBtn.Click += SystemSettingsBtn_Click;
+            // serverSettingsBtn 现在使用Command绑定，不需要Click事件处理
 
             Utils.Logger.Info("MainWindow", "✅ 服务器状态按钮事件已设置");
         }
@@ -332,35 +331,7 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// 系统设置按钮点击事件 - 与原项目逻辑一致
-    /// </summary>
-    private async void SystemSettingsBtn_Click(object? sender, RoutedEventArgs e)
-    {
-        try
-        {
-            Utils.Logger.Info("MainWindow", "⚙️ 打开系统设置窗口");
-            
-            var settingsWindow = new SystemSetting.SystemSettingsWindow();
-            await settingsWindow.ShowDialog(this);
-
-            // 如果设置有变化，更新应用配置 - 与原项目逻辑一致
-            if (settingsWindow.SettingsChanged)
-            {
-                await ApplyNewSettings(settingsWindow.GetSettingsSummary());
-            }
-
-            Utils.Logger.Info("MainWindow", "✅ 系统设置窗口已关闭");
-        }
-        catch (Exception ex)
-        {
-            Utils.Logger.Error("MainWindow", $"❌ 打开系统设置失败: {ex.Message}");
-            if (viewModel != null)
-            {
-                viewModel.StatusText = $"❌ 打开设置失败: {ex.Message}";
-            }
-        }
-    }
+    // SystemSettingsBtn_Click 方法已移除 - 现在使用Command绑定统一处理
 
 
 
@@ -430,50 +401,20 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 更新服务器状态UI
+    /// 更新服务器状态UI - 简化版本，主要依赖数据绑定
     /// </summary>
     private void UpdateServerStatusUI()
     {
         try
         {
-            var serverStatusViewModel = viewModel?.GetServerStatusViewModel();
-            if (serverStatusViewModel == null) return;
+            // 🔑 现在主要依赖MVVM数据绑定自动更新UI
+            // MainWindowViewModel会从ServerStatusViewModel同步数据
+            // XAML中的绑定会自动反映这些变化
 
-            // 更新服务器连接状态
-            if (serverStatusIndicator != null)
-                serverStatusIndicator.Fill = serverStatusViewModel.IsServerConnected ?
-                    Avalonia.Media.Brushes.Green : Avalonia.Media.Brushes.Red;
+            Utils.Logger.Debug("MainWindow", "📊 服务器状态UI更新触发（通过数据绑定）");
 
-            if (serverStatusText != null)
-                serverStatusText.Text = serverStatusViewModel.ServerStatusText;
-
-            // 更新SignalR连接状态
-            if (signalRStatusIndicator != null)
-                signalRStatusIndicator.Fill = serverStatusViewModel.IsSignalRConnected ?
-                    Avalonia.Media.Brushes.Green : Avalonia.Media.Brushes.Red;
-
-            // 更新磁盘空间信息
-            if (usedSpaceText != null)
-                usedSpaceText.Text = serverStatusViewModel.UsedSpaceText;
-
-            if (totalSpaceText != null)
-                totalSpaceText.Text = serverStatusViewModel.TotalSpaceText;
-
-            if (availableSpaceText != null)
-                availableSpaceText.Text = serverStatusViewModel.AvailableSpaceText;
-
-            if (diskUsageProgressBar != null)
-                diskUsageProgressBar.Value = serverStatusViewModel.DiskUsagePercentage;
-
-            // 更新空间警告
-            if (spaceWarningPanel != null)
-                spaceWarningPanel.IsVisible = serverStatusViewModel.IsSpaceWarningVisible;
-
-            if (spaceWarningText != null)
-                spaceWarningText.Text = serverStatusViewModel.SpaceWarningText;
-
-            // 更新任务状态
-            UpdateTaskStatusUI(serverStatusViewModel);
+            // 只有在需要特殊处理的情况下才直接操作UI
+            // 例如：动画、特殊效果等
         }
         catch (Exception ex)
         {
@@ -482,58 +423,19 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 更新任务状态UI
+    /// 更新任务状态UI - 简化版本，主要依赖数据绑定
     /// </summary>
     private void UpdateTaskStatusUI(ServerStatusViewModel serverStatusViewModel)
     {
         try
         {
-            // 更新当前任务状态
-            if (noTaskPanel != null)
-                noTaskPanel.IsVisible = !serverStatusViewModel.HasActiveTask;
+            // 🔑 现在主要依赖MVVM数据绑定自动更新UI
+            // 任务状态相关的UI控件都通过数据绑定自动更新
 
-            if (activeTaskPanel != null)
-                activeTaskPanel.IsVisible = serverStatusViewModel.HasActiveTask;
+            Utils.Logger.Debug("MainWindow", "📋 任务状态UI更新触发（通过数据绑定）");
 
-            if (serverStatusViewModel.HasActiveTask)
-            {
-                if (currentTaskNameText != null)
-                    currentTaskNameText.Text = serverStatusViewModel.CurrentTaskName;
-
-                if (currentFileNameText != null)
-                    currentFileNameText.Text = serverStatusViewModel.CurrentFileName;
-
-                if (taskProgressText != null)
-                    taskProgressText.Text = serverStatusViewModel.TaskProgressText;
-
-                if (taskSpeedText != null)
-                    taskSpeedText.Text = serverStatusViewModel.TaskSpeedText;
-
-                if (taskETAText != null)
-                    taskETAText.Text = serverStatusViewModel.TaskETAText;
-
-                if (taskProgressBar != null)
-                    taskProgressBar.Value = serverStatusViewModel.TaskProgress;
-            }
-
-            // 更新批量任务状态
-            if (batchTaskPanel != null)
-                batchTaskPanel.IsVisible = serverStatusViewModel.HasBatchTask;
-
-            if (serverStatusViewModel.HasBatchTask)
-            {
-                if (batchProgressText != null)
-                    batchProgressText.Text = serverStatusViewModel.BatchProgressText;
-
-                if (batchProgressBar != null)
-                    batchProgressBar.Value = serverStatusViewModel.BatchProgress;
-
-                if (batchPausedPanel != null)
-                    batchPausedPanel.IsVisible = serverStatusViewModel.IsBatchPaused;
-
-                if (batchPausedText != null)
-                    batchPausedText.Text = serverStatusViewModel.BatchPausedText;
-            }
+            // 只有在需要特殊处理的情况下才直接操作UI
+            // 例如：动画、特殊效果等
         }
         catch (Exception ex)
         {

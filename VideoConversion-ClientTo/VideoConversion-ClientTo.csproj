@@ -30,7 +30,6 @@
         <!-- MVVM 支持 -->
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="MediaInfo.Core.Native" Version="21.9.1" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.7" />
 
         <!-- HTTP 客户端 -->
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.7" />
@@ -85,5 +84,9 @@
 
     <ItemGroup>
       <AvaloniaXaml Remove="Views\SystemSettingsWindow.axaml" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\VideoConversion-Client\VideoConversion-Client.csproj" />
     </ItemGroup>
 </Project>

@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using VideoConversion_ClientTo.Application.DTOs;
+using VideoConversion_ClientTo.Domain.Models;
 using VideoConversion_ClientTo.Infrastructure;
 
 namespace VideoConversion_ClientTo.Infrastructure.Services
@@ -569,10 +571,11 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
                 var fileExtension = Path.GetExtension(filePath).ToLower();
                 Utils.Logger.Info("ApiService", $"📁 源文件格式: {fileExtension}");
 
-                // 智能输出格式选择
-                if (request.OutputFormat == "智能选择" || string.IsNullOrEmpty(request.OutputFormat))
+                // 🔧 智能输出格式选择 - 使用ConversionOptions处理
+                if (request.OutputFormat == "智能选择" || string.IsNullOrEmpty(request.OutputFormat) ||
+                    request.OutputFormat == "keep_original" || request.OutputFormat == "auto_best")
                 {
-                    processedRequest.OutputFormat = DetermineOptimalOutputFormat(fileExtension);
+                    processedRequest.OutputFormat = ConversionOptions.ResolveSmartFormat(request.OutputFormat ?? "auto_best", filePath);
                     Utils.Logger.Info("ApiService", $"🎯 智能选择输出格式: {processedRequest.OutputFormat}");
                 }
 
@@ -687,6 +690,416 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
 
         #endregion
 
+        #region 系统管理API - 与Client项目一致
+
+        /// <summary>
+        /// 获取系统状态信息
+        /// </summary>
+        public async Task<ApiResponseDto<SystemStatusDto>> GetSystemStatusAsync()
+        {
+            try
+            {
+                Utils.Logger.Info("ApiService", "🔍 获取系统状态信息");
+                var url = $"{BaseUrl}/api/health/status";
+                var response = await _httpClient.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+
+                    // 解析服务器返回的嵌套格式
+                    using var document = JsonDocument.Parse(content);
+                    var root = document.RootElement;
+
+                    var systemStatusDto = new SystemStatusDto
+                    {
+                        ServerVersion = GetStringValue(root, "version") ?? "未知",
+                        FfmpegVersion = "6.0", // 服务器暂未提供，使用默认值
+                        HardwareAcceleration = "未知", // 服务器暂未提供
+                        Uptime = GetStringValue(root, "system.uptime") ?? "未知",
+                        AvailableDiskSpace = GetLongValue(root, "system.diskSpace.freeBytes") ?? 0,
+                        TotalDiskSpace = GetLongValue(root, "system.diskSpace.totalBytes") ?? 0,
+                        ActiveTasks = GetIntValue(root, "tasks.converting") ?? 0,
+                        QueuedTasks = GetIntValue(root, "tasks.pending") ?? 0,
+                        CpuUsage = 0, // 服务器暂未提供
+                        MemoryUsage = GetDoubleValue(root, "system.memoryUsage.mb") ?? 0
+                    };
+
+                    var result = ApiResponseDto<SystemStatusDto>.CreateSuccess(systemStatusDto, "获取系统状态成功");
+                    Utils.Logger.Info("ApiService", "✅ 系统状态获取成功");
+                    return result;
+                }
+                else
+                {
+                    Utils.Logger.Warning("ApiService", $"⚠️ 系统状态HTTP请求失败: {response.StatusCode}");
+                    return ApiResponseDto<SystemStatusDto>.CreateError($"HTTP错误: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ApiService", $"❌ 获取系统状态异常: {ex.Message}");
+                return ApiResponseDto<SystemStatusDto>.CreateError($"获取系统状态失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 获取系统诊断信息
+        /// </summary>
+        public async Task<ApiResponseDto<List<SystemDiagnosticDto>>> GetSystemDiagnosticsAsync()
+        {
+            try
+            {
+                Utils.Logger.Info("ApiService", "🔍 获取系统诊断信息");
+                var url = $"{BaseUrl}/api/health/diagnostics";
+                var response = await _httpClient.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+
+                    // 解析服务器返回的诊断格式
+                    using var document = JsonDocument.Parse(content);
+                    var root = document.RootElement;
+
+                    var diagnostics = new List<SystemDiagnosticDto>();
+
+                    if (root.TryGetProperty("diagnostics", out var diagnosticsArray) && diagnosticsArray.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in diagnosticsArray.EnumerateArray())
+                        {
+                            var diagnostic = new SystemDiagnosticDto
+                            {
+                                Category = item.TryGetProperty("category", out var catProp) ? catProp.GetString() ?? "系统" : "系统",
+                                Level = item.TryGetProperty("status", out var statusProp) ? MapStatusToLevel(statusProp.GetString()) : "Info",
+                                Message = item.TryGetProperty("message", out var msgProp) ? msgProp.GetString() ?? "" : "",
+                                Timestamp = DateTime.Now,
+                                Details = item.TryGetProperty("details", out var detailsProp) ? detailsProp.GetString() : null
+                            };
+                            diagnostics.Add(diagnostic);
+                        }
+                    }
+
+                    var result = ApiResponseDto<List<SystemDiagnosticDto>>.CreateSuccess(diagnostics, "获取系统诊断成功");
+                    Utils.Logger.Info("ApiService", $"✅ 系统诊断信息获取成功，共 {diagnostics.Count} 条");
+                    return result;
+                }
+                else
+                {
+                    Utils.Logger.Warning("ApiService", $"⚠️ 系统诊断HTTP请求失败: {response.StatusCode}");
+                    return ApiResponseDto<List<SystemDiagnosticDto>>.CreateError($"HTTP错误: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ApiService", $"❌ 获取系统诊断异常: {ex.Message}");
+                return ApiResponseDto<List<SystemDiagnosticDto>>.CreateError($"获取系统诊断失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 获取磁盘空间配置
+        /// </summary>
+        public async Task<ApiResponseDto<DiskSpaceConfigDto>> GetDiskSpaceConfigAsync()
+        {
+            try
+            {
+                Utils.Logger.Info("ApiService", "🔍 获取磁盘空间配置");
+                var url = $"{BaseUrl}/api/diskspace/config";
+                var response = await _httpClient.GetAsync(url);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+
+                    // 解析服务器返回的格式
+                    using var document = JsonDocument.Parse(content);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("success", out var successProp) && successProp.GetBoolean() &&
+                        root.TryGetProperty("data", out var dataProp))
+                    {
+                        var diskSpaceConfig = new DiskSpaceConfigDto
+                        {
+                            MinFreeSpace = (long)((dataProp.TryGetProperty("reservedSpaceGB", out var reservedProp) ? reservedProp.GetDouble() : 10.0) * 1024 * 1024 * 1024),
+                            AutoCleanup = dataProp.TryGetProperty("isEnabled", out var enabledProp) && enabledProp.GetBoolean(),
+                            CleanupIntervalHours = 24, // 默认值，服务器暂未提供
+                            MaxFileAgeHours = 168, // 默认值，服务器暂未提供
+                            CleanupPath = "" // 默认值，服务器暂未提供
+                        };
+
+                        var result = ApiResponseDto<DiskSpaceConfigDto>.CreateSuccess(diskSpaceConfig, "获取磁盘配置成功");
+                        Utils.Logger.Info("ApiService", "✅ 磁盘空间配置获取成功");
+                        return result;
+                    }
+                    else
+                    {
+                        Utils.Logger.Warning("ApiService", "⚠️ 磁盘配置API返回格式错误");
+                        return ApiResponseDto<DiskSpaceConfigDto>.CreateError("磁盘配置API返回格式错误");
+                    }
+                }
+                else
+                {
+                    Utils.Logger.Warning("ApiService", $"⚠️ 磁盘配置HTTP请求失败: {response.StatusCode}");
+                    return ApiResponseDto<DiskSpaceConfigDto>.CreateError($"HTTP错误: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ApiService", $"❌ 获取磁盘配置异常: {ex.Message}");
+                return ApiResponseDto<DiskSpaceConfigDto>.CreateError($"获取磁盘配置失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 配置磁盘空间设置
+        /// </summary>
+        public async Task<ApiResponseDto<bool>> ConfigureDiskSpaceAsync(DiskSpaceConfigDto config)
+        {
+            try
+            {
+                Utils.Logger.Info("ApiService", "⚙️ 配置磁盘空间设置");
+                var url = $"{BaseUrl}/api/diskspace/config";
+
+                // 转换为服务器期望的格式
+                var serverRequest = new
+                {
+                    maxTotalSpaceGB = config.MinFreeSpace / (1024.0 * 1024.0 * 1024.0) + 100.0, // 假设总空间比最小空闲空间大100GB
+                    reservedSpaceGB = config.MinFreeSpace / (1024.0 * 1024.0 * 1024.0),
+                    isEnabled = config.AutoCleanup
+                };
+
+                var json = JsonSerializer.Serialize(serverRequest, _jsonOptions);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync(url, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    var result = JsonSerializer.Deserialize<ApiResponseDto<bool>>(responseContent, _jsonOptions);
+
+                    if (result?.Success == true)
+                    {
+                        Utils.Logger.Info("ApiService", "✅ 磁盘空间配置成功");
+                        return result;
+                    }
+                    else
+                    {
+                        Utils.Logger.Warning("ApiService", $"⚠️ 磁盘配置API返回失败: {result?.Message}");
+                        return ApiResponseDto<bool>.CreateError(result?.Message ?? "配置磁盘空间失败");
+                    }
+                }
+                else
+                {
+                    Utils.Logger.Warning("ApiService", $"⚠️ 磁盘配置HTTP请求失败: {response.StatusCode}");
+                    return ApiResponseDto<bool>.CreateError($"HTTP错误: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ApiService", $"❌ 配置磁盘空间异常: {ex.Message}");
+                return ApiResponseDto<bool>.CreateError($"配置磁盘空间失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 设置磁盘空间配置（与Client项目一致的新方法）
+        /// </summary>
+        public async Task<ApiResponseDto<bool>> SetSpaceConfigAsync(double maxTotalSpaceGB, double reservedSpaceGB, bool isEnabled = true)
+        {
+            try
+            {
+                Utils.Logger.Info("ApiService", $"⚙️ 设置磁盘空间配置: {maxTotalSpaceGB}GB/{reservedSpaceGB}GB, 启用: {isEnabled}");
+                var url = $"{BaseUrl}/api/diskspace/config";
+
+                // 🔧 使用与Client项目和服务端一致的格式
+                var serverRequest = new
+                {
+                    maxTotalSpaceGB = maxTotalSpaceGB,
+                    reservedSpaceGB = reservedSpaceGB,
+                    isEnabled = isEnabled
+                };
+
+                var json = JsonSerializer.Serialize(serverRequest, _jsonOptions);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync(url, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseContent = await response.Content.ReadAsStringAsync();
+
+                    // 解析服务器返回的格式
+                    using var document = JsonDocument.Parse(responseContent);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("success", out var successProp) && successProp.GetBoolean())
+                    {
+                        Utils.Logger.Info("ApiService", "✅ 磁盘空间配置设置成功");
+                        return ApiResponseDto<bool>.CreateSuccess(true, "配置更新成功");
+                    }
+                    else
+                    {
+                        var message = root.TryGetProperty("message", out var msgProp) ? msgProp.GetString() : "配置失败";
+                        Utils.Logger.Warning("ApiService", $"⚠️ 磁盘配置API返回失败: {message}");
+                        return ApiResponseDto<bool>.CreateError(message ?? "配置磁盘空间失败");
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Utils.Logger.Warning("ApiService", $"⚠️ 磁盘配置HTTP请求失败: {response.StatusCode}, {errorContent}");
+                    return ApiResponseDto<bool>.CreateError($"HTTP {response.StatusCode}: {errorContent}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ApiService", $"❌ 设置磁盘空间配置异常: {ex.Message}");
+                return ApiResponseDto<bool>.CreateError($"设置磁盘空间配置异常: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region JSON解析辅助方法
+
+        /// <summary>
+        /// 从JSON元素中获取字符串值
+        /// </summary>
+        private static string? GetStringValue(JsonElement element, string path)
+        {
+            try
+            {
+                var parts = path.Split('.');
+                var current = element;
+
+                foreach (var part in parts)
+                {
+                    if (current.TryGetProperty(part, out var property))
+                    {
+                        current = property;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return current.GetString();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 从JSON元素中获取长整型值
+        /// </summary>
+        private static long? GetLongValue(JsonElement element, string path)
+        {
+            try
+            {
+                var parts = path.Split('.');
+                var current = element;
+
+                foreach (var part in parts)
+                {
+                    if (current.TryGetProperty(part, out var property))
+                    {
+                        current = property;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return current.GetInt64();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 从JSON元素中获取整型值
+        /// </summary>
+        private static int? GetIntValue(JsonElement element, string path)
+        {
+            try
+            {
+                var parts = path.Split('.');
+                var current = element;
+
+                foreach (var part in parts)
+                {
+                    if (current.TryGetProperty(part, out var property))
+                    {
+                        current = property;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return current.GetInt32();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 从JSON元素中获取双精度值
+        /// </summary>
+        private static double? GetDoubleValue(JsonElement element, string path)
+        {
+            try
+            {
+                var parts = path.Split('.');
+                var current = element;
+
+                foreach (var part in parts)
+                {
+                    if (current.TryGetProperty(part, out var property))
+                    {
+                        current = property;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
+                return current.GetDouble();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 将服务器状态映射为诊断级别
+        /// </summary>
+        private static string MapStatusToLevel(string? status)
+        {
+            return status switch
+            {
+                "success" => "Info",
+                "warning" => "Warning",
+                "error" => "Error",
+                "info" => "Info",
+                _ => "Info"
+            };
+        }
+
+        #endregion
+
         public void Dispose()
         {
             if (!_disposed)
@@ -727,6 +1140,57 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
                 }
             }
         }
+        #region 文件清理API
+
+        /// <summary>
+        /// 手动触发文件清理 - 与Client项目完全一致
+        /// </summary>
+        public async Task<ApiResponseDto<CleanupResult>> TriggerManualCleanupAsync(ManualCleanupRequest request)
+        {
+            try
+            {
+                Utils.Logger.Info("ApiService", $"🧹 开始手动清理: {request}");
+
+                var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"{BaseUrl}/api/cleanup/manual", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    using var document = JsonDocument.Parse(responseContent);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("success", out var successProp) && successProp.GetBoolean() &&
+                        root.TryGetProperty("data", out var dataProp))
+                    {
+                        var result = new CleanupResult
+                        {
+                            TotalCleanedFiles = dataProp.TryGetProperty("totalCleanedFiles", out var filesProp) ? filesProp.GetInt32() : 0,
+                            TotalCleanedSize = dataProp.TryGetProperty("totalCleanedSize", out var sizeProp) ? sizeProp.GetInt64() : 0,
+                            EndTime = DateTime.Now
+                        };
+
+                        Utils.Logger.Info("ApiService", $"✅ 手动清理完成: {result}");
+                        return ApiResponseDto<CleanupResult>.CreateSuccess(result, "清理完成");
+                    }
+                }
+
+                Utils.Logger.Warning("ApiService", $"⚠️ 手动清理失败: {response.StatusCode}");
+                return ApiResponseDto<CleanupResult>.CreateError($"清理失败: {response.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ApiService", $"❌ 手动清理异常: {ex.Message}");
+                return ApiResponseDto<CleanupResult>.CreateError($"清理异常: {ex.Message}");
+            }
+        }
+
+        #endregion
     }
 
     #region 分片上传相关DTO

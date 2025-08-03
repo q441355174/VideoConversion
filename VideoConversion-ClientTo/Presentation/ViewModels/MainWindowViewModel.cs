@@ -24,6 +24,9 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         private readonly IApiClient _apiClient;
         private ServerStatusViewModel? _serverStatusViewModel;
 
+        // 🔑 窗口状态管理 - 防止重复打开
+        private VideoConversion_ClientTo.Views.SystemSetting.SystemSettingsWindow? _currentSettingsWindow;
+
         // 进度转发事件
         public event Action<string, int, double?, double?>? ConversionProgressUpdated;
 
@@ -320,39 +323,8 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         [RelayCommand]
         private async Task OpenSystemSettingsAsync()
         {
-            try
-            {
-                Utils.Logger.Info("MainWindowViewModel", "⚙️ 打开系统设置");
-
-                // 🔑 创建并显示系统设置窗口
-                var settingsWindow = new Views.SystemSetting.SystemSettingsWindow();
-
-                // 获取主窗口
-                if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
-                {
-                    await settingsWindow.ShowDialog(desktop.MainWindow);
-
-                    // 检查设置是否有变化
-                    if (settingsWindow.SettingsChanged)
-                    {
-                        Utils.Logger.Info("MainWindowViewModel", "📝 系统设置已更改，刷新相关状态");
-
-                        // 更新状态显示
-                        UpdateStatus("⚙️ 系统设置已更新");
-                    }
-                }
-                else
-                {
-                    settingsWindow.Show();
-                }
-
-                Utils.Logger.Info("MainWindowViewModel", "✅ 系统设置窗口已关闭");
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Error("MainWindowViewModel", $"❌ 打开系统设置失败: {ex.Message}");
-                UpdateStatus($"❌ 打开系统设置失败: {ex.Message}");
-            }
+            // 🔑 统一使用OpenServerSettingsAsync方法，避免重复代码和重复窗口问题
+            await OpenServerSettingsAsync();
         }
 
         [RelayCommand]
@@ -362,21 +334,56 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
             {
                 Utils.Logger.Info("MainWindowViewModel", "⚙️ 打开服务器设置");
 
+                // 🔑 检查是否已有窗口打开 - 防止重复打开
+                if (_currentSettingsWindow != null)
+                {
+                    Utils.Logger.Info("MainWindowViewModel", "⚠️ 系统设置窗口已打开，激活现有窗口");
+
+                    // 激活现有窗口并置顶
+                    _currentSettingsWindow.Activate();
+                    _currentSettingsWindow.Topmost = true;
+                    _currentSettingsWindow.Topmost = false; // 重置Topmost以正常显示
+                    return;
+                }
+
                 // 🔑 创建并显示系统设置窗口 - 与Client项目逻辑一致
-                var settingsWindow = new Views.SystemSetting.SystemSettingsWindow();
+                _currentSettingsWindow = new VideoConversion_ClientTo.Views.SystemSetting.SystemSettingsWindow();
+
+                if (_currentSettingsWindow == null)
+                {
+                    Utils.Logger.Error("MainWindowViewModel", "❌ 系统设置窗口创建失败");
+                    return;
+                }
+
+                // 🔑 设置窗口关闭事件 - 清理引用
+                _currentSettingsWindow.Closed += (s, e) =>
+                {
+                    _currentSettingsWindow = null;
+                    Utils.Logger.Info("MainWindowViewModel", "🔄 系统设置窗口已关闭，清理引用");
+                };
+
+                // 🔑 保存窗口引用，防止在ShowDialog期间被清空
+                var settingsWindow = _currentSettingsWindow;
 
                 // 获取主窗口
                 if (Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)
                 {
                     await settingsWindow.ShowDialog(desktop.MainWindow);
 
-                    // 检查设置是否有变化 - 与Client项目一致
-                    if (settingsWindow.SettingsChanged)
+                    // 🔑 检查设置是否有变化 - 使用保存的引用，防止空引用
+                    if (settingsWindow?.SettingsChanged == true)
                     {
                         Utils.Logger.Info("MainWindowViewModel", "📝 服务器设置已更改，刷新相关状态");
 
                         // 更新状态显示
                         UpdateStatus("⚙️ 服务器设置已更新");
+
+                        // 🔑 重新启动服务器状态监控以应用新设置
+                        await StartServerStatusMonitoringAsync();
+                    }
+                    else
+                    {
+                        Utils.Logger.Info("MainWindowViewModel", "ℹ️ 服务器设置未更改");
                     }
                 }
                 else
@@ -384,11 +391,18 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
                     settingsWindow.Show();
                 }
 
-                Utils.Logger.Info("MainWindowViewModel", "✅ 服务器设置窗口已关闭");
+                Utils.Logger.Info("MainWindowViewModel", "✅ 服务器设置窗口操作完成");
             }
             catch (Exception ex)
             {
                 Utils.Logger.Error("MainWindowViewModel", $"❌ 打开服务器设置失败: {ex.Message}");
+                Utils.Logger.Error("MainWindowViewModel", $"❌ 堆栈跟踪: {ex.StackTrace}");
+
+                // 🔑 异常时清理窗口引用
+                _currentSettingsWindow = null;
+
+                // 更新状态显示
+                UpdateStatus("❌ 打开设置窗口失败");
             }
         }
 
@@ -397,9 +411,18 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         {
             try
             {
-                // 刷新磁盘空间信息（移除日志）
-                // TODO: 实现刷新磁盘空间信息
-                await Task.Delay(100); // 模拟异步操作
+                Utils.Logger.Info("MainWindowViewModel", "🔄 手动刷新服务器状态和磁盘空间");
+
+                // 通过ServerStatusViewModel刷新服务器状态
+                if (_serverStatusViewModel != null)
+                {
+                    await _serverStatusViewModel.RefreshServerStatus();
+                    Utils.Logger.Info("MainWindowViewModel", "✅ 服务器状态刷新完成");
+                }
+                else
+                {
+                    Utils.Logger.Warning("MainWindowViewModel", "⚠️ ServerStatusViewModel未初始化");
+                }
             }
             catch (Exception ex)
             {
@@ -498,6 +521,21 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
                             break;
                         case nameof(ServerStatusViewModel.TaskProgress):
                             TaskProgress = _serverStatusViewModel.TaskProgress;
+                            break;
+                        case nameof(ServerStatusViewModel.HasBatchTask):
+                            IsBatchTaskVisible = _serverStatusViewModel.HasBatchTask;
+                            break;
+                        case nameof(ServerStatusViewModel.BatchProgressText):
+                            BatchProgressText = _serverStatusViewModel.BatchProgressText;
+                            break;
+                        case nameof(ServerStatusViewModel.BatchProgress):
+                            BatchProgress = _serverStatusViewModel.BatchProgress;
+                            break;
+                        case nameof(ServerStatusViewModel.IsBatchPaused):
+                            IsBatchPausedVisible = _serverStatusViewModel.IsBatchPaused;
+                            break;
+                        case nameof(ServerStatusViewModel.BatchPausedText):
+                            BatchPausedText = _serverStatusViewModel.BatchPausedText;
                             break;
                     }
                 }

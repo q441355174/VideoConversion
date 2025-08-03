@@ -1,8 +1,8 @@
 using System;
 using System.ComponentModel;
-using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using VideoConversion_Client.Services;
 using VideoConversion_ClientTo.Domain.Models;
 using VideoConversion_ClientTo.Infrastructure;
 
@@ -18,7 +18,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         private static readonly object _lock = new object();
 
         private ConversionSettings _currentSettings;
-        private readonly string _settingsFilePath;
+        private readonly SqlSugarDatabaseService _databaseService;
 
         #region 单例模式 - 与Client项目完全一致
 
@@ -75,16 +75,96 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
 
         private ConversionSettingsService()
         {
-            // 设置文件路径
-            _settingsFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
-                                           "VideoConversion", "conversion_settings.json");
+            // 🔧 初始化数据库服务
+            _databaseService = SqlSugarDatabaseService.Instance;
 
-            // 🔑 初始化默认设置 - 与Client项目LoadDefaultSettings()完全一致
-            _currentSettings = LoadDefaultSettings();
+            // 🔑 从数据库加载设置，如果不存在则使用默认设置
+            _currentSettings = LoadSettingsFromDatabase();
 
-            // 记录服务初始化 - 与Client项目一致
-            Utils.Logger.Info("ConversionSettingsService", 
+            // 记录服务初始化
+            Utils.Logger.Info("ConversionSettingsService",
                 $"ConversionSettingsService 已初始化，设置: {_currentSettings.VideoCodec}, {_currentSettings.Resolution}");
+        }
+
+        /// <summary>
+        /// 从数据库加载转换设置（同步版本，用于初始化）
+        /// </summary>
+        private ConversionSettings LoadSettingsFromDatabase()
+        {
+            try
+            {
+                Utils.Logger.Info("ConversionSettingsService", "🔍 从数据库加载转换设置");
+
+                // 🔧 使用同步方式获取数据库设置（初始化时使用）
+                // 注意：这里使用Task.Run().Result是为了在构造函数中同步获取数据
+                var settingsJson = Task.Run(async () =>
+                {
+                    try
+                    {
+                        return await _databaseService.GetSettingAsync("ConversionSettings");
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                }).Result;
+
+                if (!string.IsNullOrEmpty(settingsJson))
+                {
+                    var settings = JsonSerializer.Deserialize<ConversionSettings>(settingsJson);
+                    if (settings != null)
+                    {
+                        Utils.Logger.Info("ConversionSettingsService", "✅ 从数据库成功加载转换设置");
+                        return settings;
+                    }
+                }
+
+                // 如果数据库中没有设置，创建并保存默认设置
+                Utils.Logger.Info("ConversionSettingsService", "📝 数据库中无转换设置，创建默认设置");
+                var defaultSettings = CreateDefaultSettings();
+
+                // 异步保存到数据库（不等待结果）
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SaveSettingsToDatabaseAsync(defaultSettings);
+                    }
+                    catch (Exception ex)
+                    {
+                        Utils.Logger.Error("ConversionSettingsService", $"❌ 保存默认设置到数据库失败: {ex.Message}");
+                    }
+                });
+
+                return defaultSettings;
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 从数据库加载转换设置失败: {ex.Message}");
+                return CreateDefaultSettings();
+            }
+        }
+
+        /// <summary>
+        /// 异步保存转换设置到数据库
+        /// </summary>
+        private async Task SaveSettingsToDatabaseAsync(ConversionSettings settings)
+        {
+            try
+            {
+                var settingsJson = JsonSerializer.Serialize(settings, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                await _databaseService.SetSettingAsync("ConversionSettings", settingsJson);
+                Utils.Logger.Debug("ConversionSettingsService", "✅ 转换设置已保存到数据库");
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 保存转换设置到数据库失败: {ex.Message}");
+            }
         }
 
         #endregion
@@ -113,137 +193,207 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         #region 核心方法 - 与Client项目完全一致
 
         /// <summary>
-        /// 加载默认设置 - 与Client项目LoadDefaultSettings()完全一致
+        /// 加载默认设置 - 直接返回默认设置，不涉及文件操作
         /// </summary>
         private ConversionSettings LoadDefaultSettings()
         {
             try
             {
-                // 尝试从文件加载设置
-                if (File.Exists(_settingsFilePath))
-                {
-                    var json = File.ReadAllText(_settingsFilePath);
-                    var settings = JsonSerializer.Deserialize<ConversionSettings>(json);
-                    if (settings != null)
-                    {
-                        Utils.Logger.Info("ConversionSettingsService", "从文件加载转换设置成功");
-                        return settings;
-                    }
-                }
+                Utils.Logger.Info("ConversionSettingsService", "🔧 创建默认转换设置");
 
-                // 🔑 如果数据库中没有设置，返回默认设置 - 与Client项目完全一致
-                var defaultSettings = new ConversionSettings
-                {
-                    // 基本设置
-                    OutputFormat = "mp4",
-                    Resolution = "原始",
+                // 🔑 返回默认设置 - 使用ConversionOptions结构化选项
+                var defaultSettings = CreateDefaultSettings();
 
-                    // 视频设置
-                    VideoCodec = "libx264",
-                    FrameRate = "原始",
-                    QualityMode = "CRF",
-                    VideoQuality = "23",
-                    EncodingPreset = "medium",
-                    Profile = "auto",
-
-                    // 音频设置
-                    AudioCodec = "aac",
-                    AudioChannels = "原始",
-                    AudioQuality = "192",
-                    SampleRate = "48000",
-                    AudioVolume = "0",
-
-                    // 高级设置
-                    HardwareAcceleration = "auto",
-                    PixelFormat = "auto",
-                    ColorSpace = "auto",
-                    FastStart = true,
-                    Deinterlace = false,
-                    TwoPass = false,
-
-                    // 滤镜设置
-                    Denoise = "none",
-                    VideoFilters = "",
-                    AudioFilters = "",
-
-                    // 任务设置
-                    Priority = 0,
-                    MaxRetries = 3
-                };
-
-                // 保存默认设置到文件
-                SaveSettingsToFile(defaultSettings);
-                Utils.Logger.Info("ConversionSettingsService", "使用默认转换设置并保存到文件");
-
+                Utils.Logger.Info("ConversionSettingsService", "✅ 默认转换设置已创建");
                 return defaultSettings;
             }
             catch (Exception ex)
             {
-                Utils.Logger.Error("ConversionSettingsService", $"加载默认转换设置失败: {ex.Message}");
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 创建默认转换设置失败: {ex.Message}");
                 return ConversionSettings.CreateDefault();
             }
         }
 
         /// <summary>
-        /// 更新转换设置 - 与Client项目UpdateSettings()完全一致
+        /// 更新转换设置 - 保存到数据库确保一致性
         /// </summary>
         /// <param name="newSettings">新的转换设置</param>
         public void UpdateSettings(ConversionSettings newSettings)
         {
             try
             {
-                CurrentSettings = newSettings;
-                SaveSettings(newSettings);
-                Utils.Logger.Info("ConversionSettingsService", "转换设置已更新");
+                Utils.Logger.Debug("ConversionSettingsService", "🔄 更新转换设置");
+
+                // 🔧 保存到数据库（异步，不等待）
+                SaveSettingsToDatabase(newSettings);
+
+                // 🔧 立即更新当前设置
+                _currentSettings = newSettings;
+                OnPropertyChanged(nameof(CurrentSettings));
+
+                // 🔧 触发设置变化事件
+                SettingsChanged?.Invoke(this, new ConversionSettingsChangedEventArgs(newSettings));
+
+                Utils.Logger.Info("ConversionSettingsService", "✅ 转换设置已更新并启动数据库保存");
             }
             catch (Exception ex)
             {
-                Utils.Logger.Error("ConversionSettingsService", $"更新转换设置失败: {ex.Message}");
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 更新转换设置失败: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// 保存设置 - 与Client项目SaveSettings()一致
+        /// 异步获取设置 - 从数据库获取最新设置
+        /// </summary>
+        public async Task<ConversionSettings> GetSettingsAsync()
+        {
+            try
+            {
+                Utils.Logger.Debug("ConversionSettingsService", "🔍 异步从数据库获取转换设置");
+
+                // 🔧 直接从数据库获取最新设置
+                var settingsJson = await _databaseService.GetSettingAsync("ConversionSettings");
+
+                if (!string.IsNullOrEmpty(settingsJson))
+                {
+                    var settings = JsonSerializer.Deserialize<ConversionSettings>(settingsJson);
+                    if (settings != null)
+                    {
+                        _currentSettings = settings;
+                        Utils.Logger.Debug("ConversionSettingsService", "✅ 异步从数据库获取转换设置成功");
+                        return settings;
+                    }
+                }
+
+                // 如果数据库中没有设置，返回当前设置或默认设置
+                Utils.Logger.Debug("ConversionSettingsService", "📝 数据库中无设置，返回当前设置");
+                return _currentSettings ?? CreateDefaultSettings();
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 异步获取转换设置失败: {ex.Message}");
+                return _currentSettings ?? CreateDefaultSettings();
+            }
+        }
+
+        /// <summary>
+        /// 异步保存设置 - 保存到数据库
+        /// </summary>
+        public async Task SaveSettingsAsync(ConversionSettings settings)
+        {
+            try
+            {
+                Utils.Logger.Debug("ConversionSettingsService", "💾 异步保存转换设置到数据库");
+
+                // 🔧 保存到数据库
+                await SaveSettingsToDatabaseAsync(settings);
+
+                // 🔧 更新当前设置
+                _currentSettings = settings;
+                OnPropertyChanged(nameof(CurrentSettings));
+
+                // 🔧 触发设置变化事件
+                SettingsChanged?.Invoke(this, new ConversionSettingsChangedEventArgs(settings));
+
+                Utils.Logger.Info("ConversionSettingsService", "✅ 转换设置已异步保存到数据库");
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 异步保存转换设置失败: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 保存设置 - 使用数据库存储
         /// </summary>
         private void SaveSettings(ConversionSettings settings)
         {
             try
             {
-                SaveSettingsToFile(settings);
-                Utils.Logger.Debug("ConversionSettingsService", "转换设置已保存到文件");
+                SaveSettingsToDatabase(settings);
+                Utils.Logger.Debug("ConversionSettingsService", "✅ 转换设置已保存到数据库");
             }
             catch (Exception ex)
             {
-                Utils.Logger.Error("ConversionSettingsService", $"保存转换设置失败: {ex.Message}");
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 保存转换设置失败: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// 保存设置到文件
+        /// 保存转换设置到数据库（同步版本）
         /// </summary>
-        private void SaveSettingsToFile(ConversionSettings settings)
+        private void SaveSettingsToDatabase(ConversionSettings settings)
         {
             try
             {
-                // 确保目录存在
-                var directory = Path.GetDirectoryName(_settingsFilePath);
-                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                // 🔧 使用异步方法但不等待结果（用于同步调用场景）
+                _ = Task.Run(async () =>
                 {
-                    Directory.CreateDirectory(directory);
-                }
-
-                // 序列化并保存
-                var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions 
-                { 
-                    WriteIndented = true 
+                    try
+                    {
+                        await SaveSettingsToDatabaseAsync(settings);
+                    }
+                    catch (Exception ex)
+                    {
+                        Utils.Logger.Error("ConversionSettingsService", $"❌ 异步保存转换设置失败: {ex.Message}");
+                    }
                 });
-                File.WriteAllText(_settingsFilePath, json);
+
+                Utils.Logger.Debug("ConversionSettingsService", "✅ 转换设置保存任务已启动");
             }
             catch (Exception ex)
             {
-                Utils.Logger.Error("ConversionSettingsService", $"保存设置到文件失败: {ex.Message}");
+                Utils.Logger.Error("ConversionSettingsService", $"❌ 启动保存转换设置任务失败: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// 创建默认转换设置 - 使用ConversionOptions结构化选项
+        /// </summary>
+        private ConversionSettings CreateDefaultSettings()
+        {
+            return new ConversionSettings
+            {
+                // 基本设置 - 使用结构化选项的显示名称
+                OutputFormat = ConversionOptions.GetDisplayNameByFormatValue("mp4"), // "MP4 (推荐)"
+                Resolution = "保持原始",
+
+                // 视频设置 - 使用结构化选项
+                VideoCodec = "H.264 (CPU)",
+                FrameRate = "保持原始",
+                QualityMode = "恒定质量 (CRF)",
+                VideoQuality = "23",
+                EncodingPreset = "中等 (推荐)",
+                Profile = "High",
+
+                // 音频设置 - 使用结构化选项
+                AudioCodec = "AAC (推荐)",
+                AudioChannels = "保持原始",
+                AudioQuality = "192 kbps (高质量)",
+                SampleRate = "48 kHz (DVD质量)",
+                AudioVolume = "0",
+
+                // 高级设置
+                HardwareAcceleration = "自动检测",
+                PixelFormat = "YUV420P (标准)",
+                ColorSpace = "BT.709 (HD)",
+                FastStart = true,
+                Deinterlace = false,
+                TwoPass = false,
+
+                // 滤镜设置
+                Denoise = "无",
+                VideoFilters = "",
+                AudioFilters = "",
+
+                // 任务设置
+                Priority = 0,
+                MaxRetries = 3
+            };
+        }
+
+
 
         #endregion
 

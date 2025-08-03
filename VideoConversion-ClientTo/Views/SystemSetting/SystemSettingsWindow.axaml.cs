@@ -49,15 +49,80 @@ namespace VideoConversion_ClientTo.Views.SystemSetting
         {
             try
             {
+                Utils.Logger.Info("SystemSettingsWindow", "🔄 开始初始化ViewModel");
+
                 // 直接创建ViewModel（简化实现）
                 _viewModel = new SystemSettingsViewModel();
+
+                if (_viewModel == null)
+                {
+                    Utils.Logger.Error("SystemSettingsWindow", "❌ ViewModel创建失败，返回null");
+                    return;
+                }
+
                 DataContext = _viewModel;
+                Utils.Logger.Info("SystemSettingsWindow", "✅ DataContext已设置");
+
+                // 等待数据加载完成后再显示界面
+                _ = InitializeDataAsync();
 
                 Utils.Logger.Info("SystemSettingsWindow", "✅ ViewModel已初始化");
             }
             catch (Exception ex)
             {
                 Utils.Logger.Error("SystemSettingsWindow", $"❌ ViewModel初始化失败: {ex.Message}");
+                Utils.Logger.Error("SystemSettingsWindow", $"❌ 堆栈跟踪: {ex.StackTrace}");
+
+                // 创建一个最小的ViewModel作为备用
+                try
+                {
+                    _viewModel = CreateFallbackViewModel();
+                    DataContext = _viewModel;
+                    Utils.Logger.Info("SystemSettingsWindow", "✅ 已创建备用ViewModel");
+                }
+                catch (Exception fallbackEx)
+                {
+                    Utils.Logger.Error("SystemSettingsWindow", $"❌ 备用ViewModel创建也失败: {fallbackEx.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 异步初始化数据
+        /// </summary>
+        private async Task InitializeDataAsync()
+        {
+            try
+            {
+                if (_viewModel != null)
+                {
+                    Utils.Logger.Info("SystemSettingsWindow", "🔄 开始数据初始化");
+
+                    // 等待基础数据加载完成
+                    await Task.Delay(50); // 给ViewModel一点时间完成基础初始化
+
+                    // 检查ViewModel是否有CompleteInitializationAsync方法
+                    if (_viewModel.GetType().GetMethod("CompleteInitializationAsync") != null)
+                    {
+                        // 执行完整初始化
+                        await _viewModel.CompleteInitializationAsync();
+                    }
+                    else
+                    {
+                        Utils.Logger.Warning("SystemSettingsWindow", "⚠️ ViewModel没有CompleteInitializationAsync方法");
+                    }
+
+                    Utils.Logger.Info("SystemSettingsWindow", "✅ 数据初始化完成");
+                }
+                else
+                {
+                    Utils.Logger.Error("SystemSettingsWindow", "❌ ViewModel为null，无法初始化数据");
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.Logger.Error("SystemSettingsWindow", $"❌ 数据初始化失败: {ex.Message}");
+                Utils.Logger.Error("SystemSettingsWindow", $"❌ 堆栈跟踪: {ex.StackTrace}");
             }
         }
 
@@ -107,151 +172,19 @@ namespace VideoConversion_ClientTo.Views.SystemSetting
         #region 事件处理方法
 
         /// <summary>
-        /// 窗口关闭事件处理
+        /// 窗口关闭事件处理 - 简化逻辑，直接关闭
         /// </summary>
-        private async void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+        private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
         {
             try
             {
-                // 如果设置有变化，询问是否保存
-                if (_viewModel?.SettingsChanged == true)
-                {
-                    e.Cancel = true; // 先取消关闭
-
-                    var result = await ShowSaveConfirmationDialog();
-
-                    switch (result)
-                    {
-                        case SaveDialogResult.Save:
-                            await _viewModel.SaveSettingsCommand.ExecuteAsync(null);
-                            Close(); // 保存后关闭
-                            break;
-
-                        case SaveDialogResult.DontSave:
-                            Close(); // 不保存直接关闭
-                            break;
-
-                        case SaveDialogResult.Cancel:
-                            // 取消关闭，什么都不做
-                            break;
-                    }
-                }
-
+                // 🔧 简化逻辑：直接关闭，不提示保存
                 Utils.Logger.Info("SystemSettingsWindow", "🚪 系统设置窗口正在关闭");
             }
             catch (Exception ex)
             {
                 Utils.Logger.Error("SystemSettingsWindow", $"❌ 窗口关闭处理失败: {ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// 显示保存确认对话框
-        /// </summary>
-        private async Task<SaveDialogResult> ShowSaveConfirmationDialog()
-        {
-            try
-            {
-                // 这里可以使用自定义的对话框或者简单的MessageBox
-                // 为了简化，我们使用一个简单的确认对话框
-
-                var dialog = new Window
-                {
-                    Title = "保存设置",
-                    Width = 400,
-                    Height = 200,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    CanResize = false
-                };
-
-                var result = SaveDialogResult.Cancel;
-
-                var panel = new StackPanel
-                {
-                    Margin = new Avalonia.Thickness(20),
-                    Spacing = 20
-                };
-
-                panel.Children.Add(new TextBlock
-                {
-                    Text = "设置已更改，是否保存？",
-                    FontSize = 14,
-                    TextAlignment = Avalonia.Media.TextAlignment.Center
-                });
-
-                var buttonPanel = new StackPanel
-                {
-                    Orientation = Avalonia.Layout.Orientation.Horizontal,
-                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                    Spacing = 10
-                };
-
-                var saveButton = new Button
-                {
-                    Content = "保存",
-                    Width = 80,
-                    Height = 32
-                };
-                saveButton.Click += (s, e) =>
-                {
-                    result = SaveDialogResult.Save;
-                    dialog.Close();
-                };
-
-                var dontSaveButton = new Button
-                {
-                    Content = "不保存",
-                    Width = 80,
-                    Height = 32
-                };
-                dontSaveButton.Click += (s, e) =>
-                {
-                    result = SaveDialogResult.DontSave;
-                    dialog.Close();
-                };
-
-                var cancelButton = new Button
-                {
-                    Content = "取消",
-                    Width = 80,
-                    Height = 32
-                };
-                cancelButton.Click += (s, e) =>
-                {
-                    result = SaveDialogResult.Cancel;
-                    dialog.Close();
-                };
-
-                buttonPanel.Children.Add(saveButton);
-                buttonPanel.Children.Add(dontSaveButton);
-                buttonPanel.Children.Add(cancelButton);
-
-                panel.Children.Add(buttonPanel);
-                dialog.Content = panel;
-
-                await dialog.ShowDialog(this);
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Error("SystemSettingsWindow", $"❌ 显示保存确认对话框失败: {ex.Message}");
-                return SaveDialogResult.Cancel;
-            }
-        }
-
-        #endregion
-
-        #region 辅助枚举
-
-        /// <summary>
-        /// 保存对话框结果
-        /// </summary>
-        private enum SaveDialogResult
-        {
-            Save,
-            DontSave,
-            Cancel
         }
 
         #endregion
@@ -333,6 +266,45 @@ namespace VideoConversion_ClientTo.Views.SystemSetting
                 Utils.Logger.Error("SystemSettingsWindow", $"❌ 获取设置摘要失败: {ex.Message}");
                 return "设置摘要获取失败";
             }
+        }
+
+        /// <summary>
+        /// 创建备用ViewModel（当正常创建失败时使用）
+        /// </summary>
+        private SystemSettingsViewModel CreateFallbackViewModel()
+        {
+            Utils.Logger.Info("SystemSettingsWindow", "🔧 创建备用ViewModel");
+
+            // 创建一个最简单的ViewModel，不依赖任何服务
+            var fallbackViewModel = new SystemSettingsViewModel();
+
+            // 手动设置默认值，确保UI有数据显示
+            fallbackViewModel.ServerAddress = "http://localhost:5065";
+            fallbackViewModel.MaxConcurrentUploads = 3;
+            fallbackViewModel.MaxConcurrentDownloads = 3;
+            fallbackViewModel.MaxConcurrentChunks = 4;
+            fallbackViewModel.AutoStartConversion = false;
+            fallbackViewModel.ShowNotifications = true;
+            fallbackViewModel.DefaultOutputPath = "";
+
+            // 设置连接状态
+            fallbackViewModel.ConnectionStatus = "未测试";
+            fallbackViewModel.ConnectionStatusColor = "#808080";
+            fallbackViewModel.IsTestingConnection = false;
+
+            // 设置数据库状态
+            fallbackViewModel.DatabasePath = "VideoConversion.db";
+            fallbackViewModel.DatabaseStatus = "离线模式";
+            fallbackViewModel.DatabaseSize = "未知";
+
+            // 设置服务器信息
+            fallbackViewModel.ServerVersion = "离线模式";
+            fallbackViewModel.FfmpegVersion = "离线模式";
+            fallbackViewModel.HardwareAcceleration = "离线模式";
+            fallbackViewModel.Uptime = "离线模式";
+
+            Utils.Logger.Info("SystemSettingsWindow", "✅ 备用ViewModel创建完成");
+            return fallbackViewModel;
         }
 
         #endregion

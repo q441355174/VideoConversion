@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VideoConversion_ClientTo.Application.DTOs;
 using VideoConversion_ClientTo.Application.Interfaces;
+using VideoConversion_ClientTo.Domain.Models;
 using VideoConversion_ClientTo.Domain.ValueObjects;
 using VideoConversion_ClientTo.Infrastructure.Services;
 using VideoConversion_ClientTo.ViewModels;
@@ -122,26 +123,29 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
         #region 转换相关辅助方法
 
         /// <summary>
-        /// 创建转换请求 - 使用当前转换设置
+        /// 创建转换请求 - 使用当前转换设置，正确处理格式转换
         /// </summary>
         private StartConversionRequestDto CreateConversionRequest()
         {
             var settings = ConversionSettingsService.Instance.CurrentSettings;
 
+            // 🔧 将显示名称转换为实际格式值
+            var outputFormat = ConversionOptions.GetFormatValueByDisplayName(settings.OutputFormat ?? "");
+
             return new StartConversionRequestDto
             {
                 TaskName = "批量转换任务",
                 Preset = settings.Preset,
-                OutputFormat = settings.OutputFormat,
+                OutputFormat = outputFormat, // 使用转换后的格式值
                 Resolution = settings.Resolution,
                 VideoCodec = settings.VideoCodec,
                 AudioCodec = settings.AudioCodec,
                 VideoQuality = settings.VideoQuality,
                 AudioBitrate = settings.AudioQuality,
                 EncodingPreset = settings.Preset,
-                HardwareAcceleration = "auto",
-                FastStart = true,
-                TwoPass = false
+                HardwareAcceleration = settings.HardwareAcceleration ?? "auto",
+                FastStart = settings.FastStart,
+                TwoPass = settings.TwoPass
             };
         }
 
@@ -1510,7 +1514,7 @@ namespace VideoConversion_ClientTo.Presentation.ViewModels
                 Utils.Logger.Info("FileUploadViewModel", "⚙️ 打开转换设置");
 
                 // 创建并显示转换设置窗口
-                var settingsWindow = new Views.ConversionSettingsWindow();
+                var settingsWindow = new VideoConversion_ClientTo.Views.ConversionSettingsWindow();
 
                 // 获取主窗口
                 if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null)

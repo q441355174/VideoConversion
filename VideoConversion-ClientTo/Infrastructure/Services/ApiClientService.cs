@@ -34,6 +34,26 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
 
         #endregion
 
+        #region 连接测试
+
+        /// <summary>
+        /// 测试服务器连接（与Client项目一致）
+        /// </summary>
+        public async Task<bool> TestConnectionAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("/api/health");
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
         #region 基础HTTP操作
 
         public async Task<ApiResponseDto<T>> GetAsync<T>(string endpoint)
@@ -106,7 +126,8 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         {
             try
             {
-                var response = await GetAsync<List<ConversionTaskDto>>("/api/tasks/active");
+                // 🔧 修复端点路径，与服务器端一致
+                var response = await GetAsync<List<ConversionTaskDto>>("/api/task/list?status=Processing");
 
                 // 只在失败时记录日志
                 if (!response.Success)
@@ -156,32 +177,7 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         #endregion
 
         #region 文件操作API
-
-        public async Task<ApiResponseDto<string>> UploadFileAsync(string filePath, IProgress<UploadProgressDto>? progress = null)
-        {
-            try
-            {
-                Utils.Logger.Info("ApiClientService", $"📤 开始上传文件: {filePath}");
-                
-                // 简化实现，实际应该实现分片上传和进度报告
-                using var form = new MultipartFormDataContent();
-                using var fileContent = new ByteArrayContent(await System.IO.File.ReadAllBytesAsync(filePath));
-                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
-                form.Add(fileContent, "file", System.IO.Path.GetFileName(filePath));
-
-                var response = await _httpClient.PostAsync("/api/conversion/upload", form);
-                var result = await ProcessResponseAsync<string>(response);
-                
-                // 文件上传结果处理（移除成功日志，保留错误日志）
-                
-                return result;
-            }
-            catch (Exception ex)
-            {
-                Utils.Logger.Error("ApiClientService", $"❌ 文件上传失败: {filePath}", ex);
-                return ApiResponseDto<string>.CreateError($"上传失败: {ex.Message}");
-            }
-        }
+        
 
         public async Task<ApiResponseDto<string>> DownloadFileAsync(string taskId)
         {
@@ -237,21 +233,49 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
             try
             {
                 var content = await response.Content.ReadAsStringAsync();
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     if (typeof(T) == typeof(string))
                     {
                         return ApiResponseDto<T>.CreateSuccess((T)(object)content);
                     }
-                    
-                    var data = JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions
+
+                    // 🔧 处理服务器端的包装响应格式
+                    using var document = JsonDocument.Parse(content);
+                    var root = document.RootElement;
+
+                    // 检查是否是服务器端的标准响应格式 {success: true, data: {...}}
+                    if (root.TryGetProperty("success", out var successProp) && successProp.GetBoolean())
                     {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                        PropertyNameCaseInsensitive = true
-                    });
-                    
-                    return ApiResponseDto<T>.CreateSuccess(data!);
+                        if (root.TryGetProperty("data", out var dataProp))
+                        {
+                            // 反序列化data字段
+                            var data = JsonSerializer.Deserialize<T>(dataProp.GetRawText(), new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                PropertyNameCaseInsensitive = true
+                            });
+
+                            return ApiResponseDto<T>.CreateSuccess(data!);
+                        }
+                        else
+                        {
+                            // 没有data字段，可能是简单的成功响应
+                            return ApiResponseDto<T>.CreateSuccess(default(T)!);
+                        }
+                    }
+                    else
+                    {
+                        // 不是标准格式，尝试直接反序列化
+                        var data = JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                        return ApiResponseDto<T>.CreateSuccess(data!);
+                    }
                 }
                 else
                 {
@@ -270,15 +294,50 @@ namespace VideoConversion_ClientTo.Infrastructure.Services
         {
             try
             {
-                var response = await GetAsync<DiskSpaceDto>("/api/space/info");
+                // 🔧 直接调用服务器API并手动解析，因为服务器返回格式与DiskSpaceDto不匹配
+                var response = await _httpClient.GetAsync("/api/diskspace/usage");
 
-                // 只在失败时记录日志
-                if (!response.Success)
+                if (response.IsSuccessStatusCode)
                 {
-                    Utils.Logger.Warning("ApiClientService", $"⚠️ 磁盘空间信息获取失败: {response.Message}");
-                }
+                    var content = await response.Content.ReadAsStringAsync();
 
-                return response;
+                    // 解析服务器返回的格式
+                    using var document = JsonDocument.Parse(content);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("success", out var successProp) && successProp.GetBoolean() &&
+                        root.TryGetProperty("data", out var dataProp))
+                    {
+                        // 🔧 正确解析服务器返回的完整磁盘空间数据
+                        var totalSpaceGB = dataProp.TryGetProperty("totalSpaceGB", out var totalProp) ? totalProp.GetDouble() : 100.0;
+                        var usedSpaceGB = dataProp.TryGetProperty("usedSpaceGB", out var usedProp) ? usedProp.GetDouble() : 0.0;
+                        var availableSpaceGB = dataProp.TryGetProperty("availableSpaceGB", out var availableProp) ? availableProp.GetDouble() : totalSpaceGB;
+                        var reservedSpaceGB = dataProp.TryGetProperty("reservedSpaceGB", out var reservedProp) ? reservedProp.GetDouble() : 0.0;
+
+                        // 🔧 计算用户可用的总空间：总空间 - 保留空间
+                        var userTotalSpaceGB = totalSpaceGB - reservedSpaceGB;
+
+                        var diskSpaceDto = new DiskSpaceDto
+                        {
+                            TotalSpace = (long)(userTotalSpaceGB * 1024 * 1024 * 1024), // 显示给用户的总空间 = 总空间 - 保留空间
+                            UsedSpace = (long)(usedSpaceGB * 1024 * 1024 * 1024), // 实际已使用空间
+                            AvailableSpace = (long)(availableSpaceGB * 1024 * 1024 * 1024) // 可用空间
+                        };
+
+                        Utils.Logger.Debug("ApiClientService", $"✅ 磁盘空间获取成功: 已用{usedSpaceGB:F1}GB/用户总计{userTotalSpaceGB:F1}GB/可用{availableSpaceGB:F1}GB (物理总计{totalSpaceGB:F1}GB, 保留{reservedSpaceGB:F1}GB)");
+                        return ApiResponseDto<DiskSpaceDto>.CreateSuccess(diskSpaceDto, "获取磁盘空间成功");
+                    }
+                    else
+                    {
+                        Utils.Logger.Warning("ApiClientService", "⚠️ 磁盘空间API返回格式错误");
+                        return ApiResponseDto<DiskSpaceDto>.CreateError("磁盘空间API返回格式错误");
+                    }
+                }
+                else
+                {
+                    Utils.Logger.Warning("ApiClientService", $"⚠️ 磁盘空间HTTP请求失败: {response.StatusCode}");
+                    return ApiResponseDto<DiskSpaceDto>.CreateError($"HTTP错误: {response.StatusCode}");
+                }
             }
             catch (Exception ex)
             {

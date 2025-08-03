@@ -1,9 +1,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using VideoConversion_ClientTo.Application.Interfaces;
 using VideoConversion_ClientTo.Infrastructure.Services;
-using VideoConversion_ClientTo.Infrastructure.Data;
 using VideoConversion_ClientTo.Presentation.ViewModels;
 
 namespace VideoConversion_ClientTo.Infrastructure
@@ -24,11 +22,14 @@ namespace VideoConversion_ClientTo.Infrastructure
             services.AddSingleton<IApiClient, ApiClientService>(); // 🔑 改为单例以支持ChunkedUploadService实时控制
             services.AddScoped<ISignalRClient, SignalRClientService>();
 
+            // 🔧 注册ApiService - SystemSettingsViewModel需要使用
+            services.AddScoped<Services.ApiService>();
+
             // 注册基础设施服务
             services.AddScoped<IFileDialogService, FileDialogService>();
             services.AddScoped<IFilePreprocessorService, FilePreprocessorService>();
             services.AddScoped<IMessageBoxService, MessageBoxService>();
-            services.AddScoped<IDatabaseService, DatabaseService>();
+            // DatabaseService 在 AddDatabaseServices 中注册
 
             // 注册ViewModels
             services.AddTransient<MainWindowViewModel>();
@@ -57,26 +58,14 @@ namespace VideoConversion_ClientTo.Infrastructure
         }
 
         /// <summary>
-        /// 添加数据库服务
+        /// 添加数据库服务 - 使用SqlSugar与Client项目一致
         /// </summary>
         public static IServiceCollection AddDatabaseServices(this IServiceCollection services)
         {
-            // 配置SQLite数据库
-            services.AddDbContext<LocalDbContext>(options =>
-            {
-                var appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
-                var appFolder = System.IO.Path.Combine(appDataPath, "VideoConversion-ClientTo");
+            // 注册SqlSugar数据库服务 - 与Client项目一致
+            services.AddSingleton<IDatabaseService>(provider => SqlSugarDatabaseService.Instance);
 
-                if (!System.IO.Directory.Exists(appFolder))
-                {
-                    System.IO.Directory.CreateDirectory(appFolder);
-                }
-
-                var dbPath = System.IO.Path.Combine(appFolder, "VideoConversion.db");
-                options.UseSqlite($"Data Source={dbPath}");
-            });
-
-            Utils.Logger.Info("ServiceCollectionExtensions", "✅ 数据库服务已注册");
+            Utils.Logger.Info("ServiceCollectionExtensions", "✅ SqlSugar数据库服务已注册");
             return services;
         }
 

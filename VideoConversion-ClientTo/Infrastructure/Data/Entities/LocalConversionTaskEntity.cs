@@ -1,104 +1,99 @@
+using SqlSugar;
 using System;
-using System.ComponentModel.DataAnnotations;
 
 namespace VideoConversion_ClientTo.Infrastructure.Data.Entities
 {
     /// <summary>
-    /// 本地转换任务实体
-    /// 职责: 本地数据库中的任务记录
+    /// 本地转换任务模型 - 与Client项目完全一致
     /// </summary>
+    [SugarTable("LocalConversionTasks")]
     public class LocalConversionTaskEntity
     {
-        /// <summary>
-        /// 主键ID
-        /// </summary>
-        [Key]
-        public int Id { get; set; }
+        // 🔑 核心标识符系统
+        [SugarColumn(IsPrimaryKey = true)]
+        public string LocalId { get; set; } = Guid.NewGuid().ToString();
 
         /// <summary>
-        /// 任务ID（来自服务器）
+        /// 服务器返回的TaskId
         /// </summary>
-        [Required]
-        [MaxLength(50)]
-        public string TaskId { get; set; } = string.Empty;
+        public string? ServerTaskId { get; set; }
 
         /// <summary>
-        /// 任务名称
+        /// 当前使用的TaskId（本地或服务器）
         /// </summary>
-        [Required]
-        [MaxLength(200)]
-        public string TaskName { get; set; } = string.Empty;
+        public string CurrentTaskId { get; set; } = "";
 
         /// <summary>
-        /// 源文件路径
+        /// 批量任务ID
         /// </summary>
-        [Required]
-        [MaxLength(500)]
-        public string SourceFilePath { get; set; } = string.Empty;
+        public string? BatchId { get; set; }
+
+
+        // 🔑 文件信息
+        /// <summary>
+        /// 文件完整路径
+        /// </summary>
+        public string FilePath { get; set; } = "";
 
         /// <summary>
-        /// 源文件名
+        /// 文件名
         /// </summary>
-        [Required]
-        [MaxLength(200)]
-        public string SourceFileName { get; set; } = string.Empty;
+        public string FileName { get; set; } = "";
 
         /// <summary>
-        /// 文件大小（字节）
+        /// 文件大小
         /// </summary>
-        public long FileSize { get; set; }
+        public long FileSize { get; set; } = 0;
 
         /// <summary>
-        /// 输出格式
+        /// 文件扩展名
         /// </summary>
-        [MaxLength(10)]
-        public string? OutputFormat { get; set; }
+        public string FileExtension { get; set; } = "";
 
+        /// <summary>
+        /// 文件MIME类型
+        /// </summary>
+        public string? MimeType { get; set; }
+
+        // 🔑 任务状态和进度
         /// <summary>
         /// 任务状态
         /// </summary>
-        [Required]
-        [MaxLength(20)]
         public string Status { get; set; } = "Pending";
 
         /// <summary>
-        /// 进度百分比
+        /// 进度百分比 (0-100)
         /// </summary>
         public int Progress { get; set; } = 0;
 
         /// <summary>
-        /// 转换速度
+        /// 错误信息
         /// </summary>
-        public double? Speed { get; set; }
-
-        /// <summary>
-        /// 预计剩余时间（秒）
-        /// </summary>
-        public double? EstimatedRemainingSeconds { get; set; }
-
-        /// <summary>
-        /// 错误消息
-        /// </summary>
-        [MaxLength(1000)]
         public string? ErrorMessage { get; set; }
 
         /// <summary>
-        /// 本地文件路径（下载后的路径）
+        /// 详细错误信息
         /// </summary>
-        [MaxLength(500)]
-        public string? LocalFilePath { get; set; }
+        public string? DetailedError { get; set; }
+
+
+        // 🔑 转换配置
+        /// <summary>
+        /// 输出格式
+        /// </summary>
+        public string? OutputFormat { get; set; }
 
         /// <summary>
-        /// 是否有本地文件
+        /// 输出路径
         /// </summary>
-        public bool HasLocalFile { get; set; } = false;
+        public string? OutputPath { get; set; }
 
         /// <summary>
         /// 转换参数（JSON格式）
         /// </summary>
-        [MaxLength(2000)]
         public string? ConversionParameters { get; set; }
 
+        // 🔑 时间戳
         /// <summary>
         /// 创建时间
         /// </summary>
@@ -110,6 +105,11 @@ namespace VideoConversion_ClientTo.Infrastructure.Data.Entities
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
+        /// 服务器任务创建时间
+        /// </summary>
+        public DateTime? ServerTaskCreatedAt { get; set; }
+
+        /// <summary>
         /// 开始时间
         /// </summary>
         public DateTime? StartedAt { get; set; }
@@ -119,10 +119,42 @@ namespace VideoConversion_ClientTo.Infrastructure.Data.Entities
         /// </summary>
         public DateTime? CompletedAt { get; set; }
 
+        // 🔑 性能和统计
+        /// <summary>
+        /// 转换速度
+        /// </summary>
+        public double? Speed { get; set; }
+
+        /// <summary>
+        /// 预计剩余时间（秒）
+        /// </summary>
+        public double? EstimatedRemainingSeconds { get; set; }
+
+        /// <summary>
+        /// 重试次数
+        /// </summary>
+        public int RetryCount { get; set; } = 0;
+
+        /// <summary>
+        /// 最大重试次数
+        /// </summary>
+        public int MaxRetries { get; set; } = 3;
+
+        // 🔑 文件管理
+        /// <summary>
+        /// 本地文件路径（下载后的路径）
+        /// </summary>
+        public string? LocalFilePath { get; set; }
+
+        /// <summary>
+        /// 是否有本地文件
+        /// </summary>
+        public bool HasLocalFile { get; set; } = false;
+
         /// <summary>
         /// 是否已完成
         /// </summary>
-        public bool IsCompleted => Status == "Completed";
+        public bool IsCompleted => Status == "Completed" || Status == "Failed";
 
         /// <summary>
         /// 是否正在进行

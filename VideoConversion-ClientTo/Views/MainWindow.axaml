@@ -60,7 +60,7 @@
                         VerticalAlignment="Center"
                         HorizontalAlignment="Right"
                         ToolTip.Tip="系统设置"
-                        Click="SystemSettingsBtn_Click">
+                        Command="{Binding OpenServerSettingsCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="⚙️" FontSize="16" VerticalAlignment="Center" />
                         <TextBlock Text="设置"
